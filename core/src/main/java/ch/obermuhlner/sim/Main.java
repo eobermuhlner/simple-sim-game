@@ -3,6 +3,7 @@ package ch.obermuhlner.sim;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -10,10 +11,14 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 
-public class Main extends ApplicationAdapter {
+public class Main extends ApplicationAdapter implements InputProcessor {
     private static final int TILE_SIZE = 64;
     private static final int MAP_WIDTH = 200;
     private static final int MAP_HEIGHT = 200;
+
+    private static final float ZOOM_MIN = 0.25f;
+    private static final float ZOOM_MAX = 4.0f;
+    private static final float ZOOM_SPEED = 0.1f;
 
     private SpriteBatch batch;
     private Texture tileset;
@@ -21,6 +26,7 @@ public class Main extends ApplicationAdapter {
     private boolean[][] visible;
     private int[][] map;
 
+    private boolean fogOfWar = true;
     private boolean mouseDown = false;
     private float totalDrag = 0;
     private int lastMouseX, lastMouseY;
@@ -34,7 +40,11 @@ public class Main extends ApplicationAdapter {
         for (int y = 0; y < MAP_HEIGHT; y++) {
             for (int x = 0; x < MAP_WIDTH; x++) {
                 double n = octaveNoise(x * 0.04, y * 0.04, 5, 0.5);
-                map[y][x] = n > 0.05 ? 2 : 1;
+                if      (n < -0.3) map[y][x] = 1; // water
+                else if (n < 0.1)  map[y][x] = 2; // grass
+                else if (n < 0.4)  map[y][x] = 3; // forest
+                else if (n < 0.65) map[y][x] = 4; // stone
+                else               map[y][x] = 5; // snow
             }
         }
 
@@ -44,6 +54,8 @@ public class Main extends ApplicationAdapter {
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.position.set(MAP_WIDTH * TILE_SIZE / 2f, MAP_HEIGHT * TILE_SIZE / 2f, 0);
+
+        Gdx.input.setInputProcessor(this);
     }
 
     @Override
@@ -63,14 +75,14 @@ public class Main extends ApplicationAdapter {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        int startX = Math.max(0, (int) ((camera.position.x - camera.viewportWidth / 2) / TILE_SIZE));
-        int startY = Math.max(0, (int) ((camera.position.y - camera.viewportHeight / 2) / TILE_SIZE));
-        int endX = Math.min(MAP_WIDTH, startX + (int) (camera.viewportWidth / TILE_SIZE) + 2);
-        int endY = Math.min(MAP_HEIGHT, startY + (int) (camera.viewportHeight / TILE_SIZE) + 2);
+        int startX = Math.max(0, (int) ((camera.position.x - camera.viewportWidth / 2 * camera.zoom) / TILE_SIZE));
+        int startY = Math.max(0, (int) ((camera.position.y - camera.viewportHeight / 2 * camera.zoom) / TILE_SIZE));
+        int endX = Math.min(MAP_WIDTH, startX + (int) (camera.viewportWidth / TILE_SIZE * camera.zoom) + 2);
+        int endY = Math.min(MAP_HEIGHT, startY + (int) (camera.viewportHeight / TILE_SIZE * camera.zoom) + 2);
 
         for (int y = startY; y < endY; y++) {
             for (int x = startX; x < endX; x++) {
-                int tile = visible[y][x] ? map[y][x] : 0;
+                int tile = (!fogOfWar || visible[y][x]) ? map[y][x] : 0;
                 batch.draw(tileset,
                     x * TILE_SIZE, y * TILE_SIZE,
                     TILE_SIZE, TILE_SIZE,
@@ -86,6 +98,17 @@ public class Main extends ApplicationAdapter {
     private void handleInput() {
         int mx = Gdx.input.getX();
         int my = Gdx.input.getY();
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
+            fogOfWar = !fogOfWar;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.PAGE_UP) || Gdx.input.isKeyPressed(Input.Keys.PAGE_UP)) {
+            camera.zoom = Math.max(ZOOM_MIN, camera.zoom - ZOOM_SPEED);
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.PAGE_DOWN) || Gdx.input.isKeyPressed(Input.Keys.PAGE_DOWN)) {
+            camera.zoom = Math.min(ZOOM_MAX, camera.zoom + ZOOM_SPEED);
+        }
 
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
             mouseDown = true;
@@ -116,8 +139,8 @@ public class Main extends ApplicationAdapter {
     }
 
     private void clampCamera() {
-        float halfW = camera.viewportWidth / 2;
-        float halfH = camera.viewportHeight / 2;
+        float halfW = camera.viewportWidth / 2 * camera.zoom;
+        float halfH = camera.viewportHeight / 2 * camera.zoom;
         camera.position.x = MathUtils.clamp(camera.position.x, halfW, MAP_WIDTH * TILE_SIZE - halfW);
         camera.position.y = MathUtils.clamp(camera.position.y, halfH, MAP_HEIGHT * TILE_SIZE - halfH);
     }
@@ -140,6 +163,52 @@ public class Main extends ApplicationAdapter {
             }
         }
         return false;
+    }
+
+    @Override
+    public boolean keyDown(int keycode) {
+        return false;
+    }
+
+    @Override
+    public boolean keyUp(int keycode) {
+        return false;
+    }
+
+    @Override
+    public boolean keyTyped(char character) {
+        return false;
+    }
+
+    @Override
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
+    @Override
+    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
+    @Override
+    public boolean touchCancelled(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
+    @Override
+    public boolean touchDragged(int screenX, int screenY, int pointer) {
+        return false;
+    }
+
+    @Override
+    public boolean mouseMoved(int screenX, int screenY) {
+        return false;
+    }
+
+    @Override
+    public boolean scrolled(float amountX, float amountY) {
+        camera.zoom = MathUtils.clamp(camera.zoom - amountY * ZOOM_SPEED, ZOOM_MIN, ZOOM_MAX);
+        return true;
     }
 
     // --- Perlin noise ---
