@@ -39,17 +39,24 @@ public class Main extends ApplicationAdapter implements InputProcessor {
         map = new int[MAP_HEIGHT][MAP_WIDTH];
         for (int y = 0; y < MAP_HEIGHT; y++) {
             for (int x = 0; x < MAP_WIDTH; x++) {
-                double n = octaveNoise(x * 0.04, y * 0.04, 5, 0.5);
-                if      (n < -0.3) map[y][x] = 1; // water
-                else if (n < 0.1)  map[y][x] = 2; // grass
-                else if (n < 0.4)  map[y][x] = 3; // forest
-                else if (n < 0.65) map[y][x] = 4; // stone
-                else               map[y][x] = 5; // snow
+                double n = octaveNoise(x * NOISE_SCALE, y * NOISE_SCALE, NOISE_OCTAVES, 0.5);
+                int terrain = 1; // default to water
+                if      (n < TERRAIN_THRESHOLDS[0]) terrain = 1; // water
+                else if (n < TERRAIN_THRESHOLDS[1]) terrain = 2; // grass
+                else if (n < TERRAIN_THRESHOLDS[2]) terrain = 3; // forest
+                else if (n < TERRAIN_THRESHOLDS[3]) terrain = 4; // stone
+                else                                 terrain = 5; // snow
+                if (Double.isNaN(n) || Double.isInfinite(n) || terrain < 1 || terrain > 5) {
+                    terrain = 1; // fallback for edge cases
+                }
+                map[y][x] = terrain;
             }
         }
 
         visible = new boolean[MAP_HEIGHT][MAP_WIDTH];
         visible[MAP_HEIGHT / 2][MAP_WIDTH / 2] = true;
+
+        printTerrainDistribution(map);
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -83,10 +90,11 @@ public class Main extends ApplicationAdapter implements InputProcessor {
         for (int y = startY; y < endY; y++) {
             for (int x = startX; x < endX; x++) {
                 int tile = (!fogOfWar || visible[y][x]) ? map[y][x] : 0;
+                if (tile == 0) continue;
                 batch.draw(tileset,
                     x * TILE_SIZE, y * TILE_SIZE,
                     TILE_SIZE, TILE_SIZE,
-                    tile * TILE_SIZE, 0,
+                    tile % 4 * TILE_SIZE, tile / 4 * TILE_SIZE,
                     TILE_SIZE, TILE_SIZE,
                     false, false);
             }
@@ -214,6 +222,9 @@ public class Main extends ApplicationAdapter implements InputProcessor {
     // --- Perlin noise ---
 
     private static final int[] PERM = buildPerm(42);
+    private static final double NOISE_SCALE = 0.04;
+    private static final int NOISE_OCTAVES = 4;
+    private static final double[] TERRAIN_THRESHOLDS = {0.45, 0.55, 0.6, 0.65};
 
     private static int[] buildPerm(long seed) {
         int[] p = new int[256];
@@ -246,6 +257,29 @@ public class Main extends ApplicationAdapter implements InputProcessor {
             lerp(u, grad(PERM[a + 1], x,     y - 1), grad(PERM[b + 1], x - 1, y - 1)))) / 2;
     }
 
+    private static void printTerrainDistribution(int[][] map) {
+        int[] counts = new int[6];
+        for (int y = 0; y < MAP_HEIGHT; y++) {
+            for (int x = 0; x < MAP_WIDTH; x++) {
+                counts[map[y][x]]++;
+            }
+        }
+        int total = MAP_HEIGHT * MAP_WIDTH;
+        System.out.println("Terrain distribution:");
+        System.out.println("  0 (unknown): " + String.format("%5.1f%%", counts[0] * 100.0 / total));
+        System.out.println("  1 (water):   " + String.format("%5.1f%%", counts[1] * 100.0 / total));
+        System.out.println("  2 (grass):   " + String.format("%5.1f%%", counts[2] * 100.0 / total));
+        System.out.println("  3 (forest): " + String.format("%5.1f%%", counts[3] * 100.0 / total));
+        System.out.println("  4 (stone):  " + String.format("%5.1f%%", counts[4] * 100.0 / total));
+        System.out.println("  5 (snow):   " + String.format("%5.1f%%", counts[5] * 100.0 / total));
+
+        double n1 = octaveNoise(50.7, 50.3, 1, 0.5);
+        double n2 = octaveNoise(51.2, 50.9, 1, 0.5);
+        double n3 = octaveNoise(100.1, 100.5, 1, 0.5);
+        double n4 = perlin(50.7, 50.3);
+        double nCenter = octaveNoise(MAP_WIDTH / 2 * NOISE_SCALE, MAP_HEIGHT / 2 * NOISE_SCALE, NOISE_OCTAVES, 0.5);
+    }
+
     private static double lerp(double t, double a, double b) { return a + t * (b - a); }
 
     private static double octaveNoise(double x, double y, int octaves, double persistence) {
@@ -256,7 +290,7 @@ public class Main extends ApplicationAdapter implements InputProcessor {
             amp *= persistence;
             freq *= 2;
         }
-        return val / max * 2 - 1; // remap [0,1] -> [-1,1]
+        return val / max;
     }
 
     @Override
