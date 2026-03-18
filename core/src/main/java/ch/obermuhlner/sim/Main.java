@@ -33,7 +33,8 @@ public class Main extends ApplicationAdapter {
         map = new int[MAP_HEIGHT][MAP_WIDTH];
         for (int y = 0; y < MAP_HEIGHT; y++) {
             for (int x = 0; x < MAP_WIDTH; x++) {
-                map[y][x] = 1;
+                double n = octaveNoise(x * 0.04, y * 0.04, 5, 0.5);
+                map[y][x] = n > 0.05 ? 2 : 1;
             }
         }
 
@@ -139,6 +140,54 @@ public class Main extends ApplicationAdapter {
             }
         }
         return false;
+    }
+
+    // --- Perlin noise ---
+
+    private static final int[] PERM = buildPerm(42);
+
+    private static int[] buildPerm(long seed) {
+        int[] p = new int[256];
+        for (int i = 0; i < 256; i++) p[i] = i;
+        java.util.Random rng = new java.util.Random(seed);
+        for (int i = 255; i > 0; i--) {
+            int j = rng.nextInt(i + 1);
+            int tmp = p[i]; p[i] = p[j]; p[j] = tmp;
+        }
+        int[] perm = new int[512];
+        for (int i = 0; i < 512; i++) perm[i] = p[i & 255];
+        return perm;
+    }
+
+    private static double fade(double t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+
+    private static double grad(int hash, double x, double y) {
+        int h = hash & 3;
+        double u = h < 2 ? x : y, v = h < 2 ? y : x;
+        return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
+    }
+
+    private static double perlin(double x, double y) {
+        int X = (int) Math.floor(x) & 255, Y = (int) Math.floor(y) & 255;
+        x -= Math.floor(x); y -= Math.floor(y);
+        double u = fade(x), v = fade(y);
+        int a = PERM[X] + Y, b = PERM[X + 1] + Y;
+        return (1 + lerp(v,
+            lerp(u, grad(PERM[a],     x,     y), grad(PERM[b],     x - 1, y)),
+            lerp(u, grad(PERM[a + 1], x,     y - 1), grad(PERM[b + 1], x - 1, y - 1)))) / 2;
+    }
+
+    private static double lerp(double t, double a, double b) { return a + t * (b - a); }
+
+    private static double octaveNoise(double x, double y, int octaves, double persistence) {
+        double val = 0, amp = 1, max = 0, freq = 1;
+        for (int i = 0; i < octaves; i++) {
+            val += perlin(x * freq, y * freq) * amp;
+            max += amp;
+            amp *= persistence;
+            freq *= 2;
+        }
+        return val / max * 2 - 1; // remap [0,1] -> [-1,1]
     }
 
     @Override
