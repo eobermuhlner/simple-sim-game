@@ -24,6 +24,8 @@ public class Main extends ApplicationAdapter implements InputProcessor {
 
     private SpriteBatch batch;
     private Texture tileset;
+    private Texture treeLargeTexture;
+    private Texture treeSmallTexture;
     private OrthographicCamera camera;
     private HashMap<Long, Chunk> chunks = new HashMap<>();
 
@@ -38,6 +40,7 @@ public class Main extends ApplicationAdapter implements InputProcessor {
         int cx, cy;
         int[][] terrain = new int[CHUNK_SIZE][CHUNK_SIZE];
         boolean[][] fog = new boolean[CHUNK_SIZE][CHUNK_SIZE];
+        int[][] objects = new int[CHUNK_SIZE][CHUNK_SIZE];
         boolean dirty = false;
     }
 
@@ -45,6 +48,8 @@ public class Main extends ApplicationAdapter implements InputProcessor {
     public void create() {
         batch = new SpriteBatch();
         tileset = new Texture("64x64/map.png");
+        treeLargeTexture = new Texture("64x64/objects/tree-large.png");
+        treeSmallTexture = new Texture("64x64/objects/tree-small.png");
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -95,6 +100,22 @@ public class Main extends ApplicationAdapter implements InputProcessor {
                     tile % 4 * TILE_SIZE, tile / 4 * TILE_SIZE,
                     TILE_SIZE, TILE_SIZE,
                     false, false);
+
+                if (chunk.objects[ly][lx] == 1) {
+                    batch.draw(treeLargeTexture,
+                        tx * TILE_SIZE, ty * TILE_SIZE,
+                        TILE_SIZE, TILE_SIZE,
+                        0, 0,
+                        TILE_SIZE, TILE_SIZE,
+                        false, false);
+                } else if (chunk.objects[ly][lx] == 2) {
+                    batch.draw(treeSmallTexture,
+                        tx * TILE_SIZE, ty * TILE_SIZE,
+                        TILE_SIZE, TILE_SIZE,
+                        0, 0,
+                        TILE_SIZE, TILE_SIZE,
+                        false, false);
+                }
             }
         }
 
@@ -196,6 +217,7 @@ public class Main extends ApplicationAdapter implements InputProcessor {
     }
 
     private void generateTerrain(Chunk chunk) {
+        java.util.Random random = new java.util.Random(chunk.cx * 31L + chunk.cy * 17L);
         for (int ly = 0; ly < CHUNK_SIZE; ly++) {
             for (int lx = 0; lx < CHUNK_SIZE; lx++) {
                 int tx = chunk.cx * CHUNK_SIZE + lx;
@@ -208,6 +230,10 @@ public class Main extends ApplicationAdapter implements InputProcessor {
                 else if (n < TERRAIN_THRESHOLDS[3]) terrain = 4;
                 else                                terrain = 5;
                 chunk.terrain[ly][lx] = terrain;
+
+                if (terrain == 3 && random.nextFloat() < 0.5f) {
+                    chunk.objects[ly][lx] = random.nextFloat() < 0.2f ? 2 : 1;
+                }
             }
         }
     }
@@ -314,5 +340,7 @@ public class Main extends ApplicationAdapter implements InputProcessor {
         }
         batch.dispose();
         tileset.dispose();
+        treeLargeTexture.dispose();
+        treeSmallTexture.dispose();
     }
 }
