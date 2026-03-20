@@ -135,7 +135,7 @@ public class Main extends ApplicationAdapter implements InputProcessor {
             float dx = mx - lastMouseX;
             float dy = my - lastMouseY;
             totalDrag += Math.abs(dx) + Math.abs(dy);
-            camera.translate(-dx, dy);
+            camera.translate(-dx * camera.zoom, dy * camera.zoom);
             lastMouseX = mx;
             lastMouseY = my;
         }
