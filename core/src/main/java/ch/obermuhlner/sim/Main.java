@@ -31,6 +31,8 @@ public class Main extends ApplicationAdapter implements InputProcessor {
     private boolean mouseDown = false;
     private float totalDrag = 0;
     private int lastMouseX, lastMouseY;
+    private int lastRevealedTileX = 0;
+    private int lastRevealedTileY = 0;
 
     private static class Chunk {
         int cx, cy;
@@ -114,6 +116,14 @@ public class Main extends ApplicationAdapter implements InputProcessor {
             camera.zoom = Math.min(ZOOM_MAX, camera.zoom + ZOOM_SPEED);
         }
 
+        if (Gdx.input.isKeyJustPressed(Input.Keys.HOME)) {
+            camera.position.set(
+                lastRevealedTileX * TILE_SIZE + TILE_SIZE / 2f,
+                lastRevealedTileY * TILE_SIZE + TILE_SIZE / 2f,
+                0
+            );
+        }
+
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
             mouseDown = true;
             totalDrag = 0;
@@ -152,6 +162,8 @@ public class Main extends ApplicationAdapter implements InputProcessor {
             chunk.fog[ly][lx] = true;
             chunk.dirty = true;
             saveFog(chunk);
+            lastRevealedTileX = tx;
+            lastRevealedTileY = ty;
         }
     }
 
