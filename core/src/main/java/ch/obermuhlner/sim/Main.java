@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -11,10 +12,11 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 
+import java.util.HashMap;
+
 public class Main extends ApplicationAdapter implements InputProcessor {
     private static final int TILE_SIZE = 64;
-    private static final int MAP_WIDTH = 200;
-    private static final int MAP_HEIGHT = 200;
+    private static final int CHUNK_SIZE = 16;
 
     private static final float ZOOM_MIN = 0.25f;
     private static final float ZOOM_MAX = 4.0f;
@@ -23,44 +25,34 @@ public class Main extends ApplicationAdapter implements InputProcessor {
     private SpriteBatch batch;
     private Texture tileset;
     private OrthographicCamera camera;
-    private boolean[][] visible;
-    private int[][] map;
+    private HashMap<Long, Chunk> chunks = new HashMap<>();
 
     private boolean fogOfWar = true;
     private boolean mouseDown = false;
     private float totalDrag = 0;
     private int lastMouseX, lastMouseY;
 
+    private static class Chunk {
+        int cx, cy;
+        int[][] terrain = new int[CHUNK_SIZE][CHUNK_SIZE];
+        boolean[][] fog = new boolean[CHUNK_SIZE][CHUNK_SIZE];
+        boolean dirty = false;
+    }
+
     @Override
     public void create() {
         batch = new SpriteBatch();
         tileset = new Texture("64x64/map.png");
 
-        map = new int[MAP_HEIGHT][MAP_WIDTH];
-        for (int y = 0; y < MAP_HEIGHT; y++) {
-            for (int x = 0; x < MAP_WIDTH; x++) {
-                double n = octaveNoise(x * NOISE_SCALE, y * NOISE_SCALE, NOISE_OCTAVES, 0.5);
-                int terrain = 1; // default to water
-                if      (n < TERRAIN_THRESHOLDS[0]) terrain = 1; // water
-                else if (n < TERRAIN_THRESHOLDS[1]) terrain = 2; // grass
-                else if (n < TERRAIN_THRESHOLDS[2]) terrain = 3; // forest
-                else if (n < TERRAIN_THRESHOLDS[3]) terrain = 4; // stone
-                else                                 terrain = 5; // snow
-                if (Double.isNaN(n) || Double.isInfinite(n) || terrain < 1 || terrain > 5) {
-                    terrain = 1; // fallback for edge cases
-                }
-                map[y][x] = terrain;
-            }
-        }
-
-        visible = new boolean[MAP_HEIGHT][MAP_WIDTH];
-        visible[MAP_HEIGHT / 2][MAP_WIDTH / 2] = true;
-
-        printTerrainDistribution(map);
-
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        camera.position.set(MAP_WIDTH * TILE_SIZE / 2f, MAP_HEIGHT * TILE_SIZE / 2f, 0);
+        camera.position.set(TILE_SIZE / 2f, TILE_SIZE / 2f, 0);
+
+        Chunk startChunk = getChunk(0, 0);
+        if (!startChunk.fog[0][0]) {
+            startChunk.fog[0][0] = true;
+            saveFog(startChunk);
+        }
 
         Gdx.input.setInputProcessor(this);
     }
@@ -69,7 +61,6 @@ public class Main extends ApplicationAdapter implements InputProcessor {
     public void resize(int width, int height) {
         camera.viewportWidth = width;
         camera.viewportHeight = height;
-        clampCamera();
     }
 
     @Override
@@ -82,17 +73,22 @@ public class Main extends ApplicationAdapter implements InputProcessor {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        int startX = Math.max(0, (int) ((camera.position.x - camera.viewportWidth / 2 * camera.zoom) / TILE_SIZE));
-        int startY = Math.max(0, (int) ((camera.position.y - camera.viewportHeight / 2 * camera.zoom) / TILE_SIZE));
-        int endX = Math.min(MAP_WIDTH, startX + (int) (camera.viewportWidth / TILE_SIZE * camera.zoom) + 2);
-        int endY = Math.min(MAP_HEIGHT, startY + (int) (camera.viewportHeight / TILE_SIZE * camera.zoom) + 2);
+        int startX = (int) Math.floor((camera.position.x - camera.viewportWidth / 2 * camera.zoom) / TILE_SIZE);
+        int startY = (int) Math.floor((camera.position.y - camera.viewportHeight / 2 * camera.zoom) / TILE_SIZE);
+        int endX = startX + (int) (camera.viewportWidth / TILE_SIZE * camera.zoom) + 2;
+        int endY = startY + (int) (camera.viewportHeight / TILE_SIZE * camera.zoom) + 2;
 
-        for (int y = startY; y < endY; y++) {
-            for (int x = startX; x < endX; x++) {
-                int tile = (!fogOfWar || visible[y][x]) ? map[y][x] : 0;
-                if (tile == 0) continue;
+        for (int ty = startY; ty < endY; ty++) {
+            for (int tx = startX; tx < endX; tx++) {
+                int cx = Math.floorDiv(tx, CHUNK_SIZE);
+                int cy = Math.floorDiv(ty, CHUNK_SIZE);
+                int lx = Math.floorMod(tx, CHUNK_SIZE);
+                int ly = Math.floorMod(ty, CHUNK_SIZE);
+                Chunk chunk = getChunk(cx, cy);
+                if (fogOfWar && !chunk.fog[ly][lx]) continue;
+                int tile = chunk.terrain[ly][lx];
                 batch.draw(tileset,
-                    x * TILE_SIZE, y * TILE_SIZE,
+                    tx * TILE_SIZE, ty * TILE_SIZE,
                     TILE_SIZE, TILE_SIZE,
                     tile % 4 * TILE_SIZE, tile / 4 * TILE_SIZE,
                     TILE_SIZE, TILE_SIZE,
@@ -130,7 +126,6 @@ public class Main extends ApplicationAdapter implements InputProcessor {
             float dy = my - lastMouseY;
             totalDrag += Math.abs(dx) + Math.abs(dy);
             camera.translate(-dx, dy);
-            clampCamera();
             lastMouseX = mx;
             lastMouseY = my;
         }
@@ -139,79 +134,109 @@ public class Main extends ApplicationAdapter implements InputProcessor {
             mouseDown = false;
             if (totalDrag < 5) {
                 Vector3 worldPos = camera.unproject(new Vector3(mx, my, 0));
-                int tileX = (int) (worldPos.x / TILE_SIZE);
-                int tileY = (int) (worldPos.y / TILE_SIZE);
+                int tileX = (int) Math.floor(worldPos.x / TILE_SIZE);
+                int tileY = (int) Math.floor(worldPos.y / TILE_SIZE);
                 revealTile(tileX, tileY);
             }
         }
     }
 
-    private void clampCamera() {
-        float halfW = camera.viewportWidth / 2 * camera.zoom;
-        float halfH = camera.viewportHeight / 2 * camera.zoom;
-        camera.position.x = MathUtils.clamp(camera.position.x, halfW, MAP_WIDTH * TILE_SIZE - halfW);
-        camera.position.y = MathUtils.clamp(camera.position.y, halfH, MAP_HEIGHT * TILE_SIZE - halfH);
-    }
-
-    private void revealTile(int x, int y) {
-        if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return;
-        if (visible[y][x]) return;
-        if (hasVisibleNeighbor(x, y)) {
-            visible[y][x] = true;
+    private void revealTile(int tx, int ty) {
+        int cx = Math.floorDiv(tx, CHUNK_SIZE);
+        int cy = Math.floorDiv(ty, CHUNK_SIZE);
+        int lx = Math.floorMod(tx, CHUNK_SIZE);
+        int ly = Math.floorMod(ty, CHUNK_SIZE);
+        Chunk chunk = getChunk(cx, cy);
+        if (chunk.fog[ly][lx]) return;
+        if (hasVisibleNeighbor(tx, ty)) {
+            chunk.fog[ly][lx] = true;
+            chunk.dirty = true;
+            saveFog(chunk);
         }
     }
 
-    private boolean hasVisibleNeighbor(int x, int y) {
+    private boolean hasVisibleNeighbor(int tx, int ty) {
         int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
         for (int[] dir : dirs) {
-            int nx = x + dir[0];
-            int ny = y + dir[1];
-            if (nx >= 0 && nx < MAP_WIDTH && ny >= 0 && ny < MAP_HEIGHT && visible[ny][nx]) {
-                return true;
-            }
+            int nx = tx + dir[0];
+            int ny = ty + dir[1];
+            int cx = Math.floorDiv(nx, CHUNK_SIZE);
+            int cy = Math.floorDiv(ny, CHUNK_SIZE);
+            int lx = Math.floorMod(nx, CHUNK_SIZE);
+            int ly = Math.floorMod(ny, CHUNK_SIZE);
+            if (getChunk(cx, cy).fog[ly][lx]) return true;
         }
         return false;
     }
 
-    @Override
-    public boolean keyDown(int keycode) {
-        return false;
+    private Chunk getChunk(int cx, int cy) {
+        long key = ((long) cx << 32) | (cy & 0xFFFFFFFFL);
+        Chunk chunk = chunks.get(key);
+        if (chunk == null) {
+            chunk = new Chunk();
+            chunk.cx = cx;
+            chunk.cy = cy;
+            generateTerrain(chunk);
+            loadFog(chunk);
+            chunks.put(key, chunk);
+        }
+        return chunk;
+    }
+
+    private void generateTerrain(Chunk chunk) {
+        for (int ly = 0; ly < CHUNK_SIZE; ly++) {
+            for (int lx = 0; lx < CHUNK_SIZE; lx++) {
+                int tx = chunk.cx * CHUNK_SIZE + lx;
+                int ty = chunk.cy * CHUNK_SIZE + ly;
+                double n = octaveNoise(tx * NOISE_SCALE, ty * NOISE_SCALE, NOISE_OCTAVES, 0.5);
+                int terrain;
+                if      (n < TERRAIN_THRESHOLDS[0]) terrain = 1;
+                else if (n < TERRAIN_THRESHOLDS[1]) terrain = 2;
+                else if (n < TERRAIN_THRESHOLDS[2]) terrain = 3;
+                else if (n < TERRAIN_THRESHOLDS[3]) terrain = 4;
+                else                                terrain = 5;
+                chunk.terrain[ly][lx] = terrain;
+            }
+        }
+    }
+
+    private void loadFog(Chunk chunk) {
+        FileHandle file = Gdx.files.local("chunks/" + chunk.cx + "_" + chunk.cy + ".fow");
+        if (!file.exists()) return;
+        byte[] data = file.readBytes();
+        if (data.length < CHUNK_SIZE * CHUNK_SIZE / 8) return;
+        for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++) {
+            chunk.fog[i / CHUNK_SIZE][i % CHUNK_SIZE] = ((data[i / 8] >> (i % 8)) & 1) == 1;
+        }
+    }
+
+    private void saveFog(Chunk chunk) {
+        byte[] data = new byte[CHUNK_SIZE * CHUNK_SIZE / 8];
+        for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++) {
+            if (chunk.fog[i / CHUNK_SIZE][i % CHUNK_SIZE]) {
+                data[i / 8] |= (byte) (1 << (i % 8));
+            }
+        }
+        Gdx.files.local("chunks/" + chunk.cx + "_" + chunk.cy + ".fow").writeBytes(data, false);
+        chunk.dirty = false;
     }
 
     @Override
-    public boolean keyUp(int keycode) {
-        return false;
-    }
-
+    public boolean keyDown(int keycode) { return false; }
     @Override
-    public boolean keyTyped(char character) {
-        return false;
-    }
-
+    public boolean keyUp(int keycode) { return false; }
     @Override
-    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        return false;
-    }
-
+    public boolean keyTyped(char character) { return false; }
     @Override
-    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-        return false;
-    }
-
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) { return false; }
     @Override
-    public boolean touchCancelled(int screenX, int screenY, int pointer, int button) {
-        return false;
-    }
-
+    public boolean touchUp(int screenX, int screenY, int pointer, int button) { return false; }
     @Override
-    public boolean touchDragged(int screenX, int screenY, int pointer) {
-        return false;
-    }
-
+    public boolean touchCancelled(int screenX, int screenY, int pointer, int button) { return false; }
     @Override
-    public boolean mouseMoved(int screenX, int screenY) {
-        return false;
-    }
+    public boolean touchDragged(int screenX, int screenY, int pointer) { return false; }
+    @Override
+    public boolean mouseMoved(int screenX, int screenY) { return false; }
 
     @Override
     public boolean scrolled(float amountX, float amountY) {
@@ -257,29 +282,6 @@ public class Main extends ApplicationAdapter implements InputProcessor {
             lerp(u, grad(PERM[a + 1], x,     y - 1), grad(PERM[b + 1], x - 1, y - 1)))) / 2;
     }
 
-    private static void printTerrainDistribution(int[][] map) {
-        int[] counts = new int[6];
-        for (int y = 0; y < MAP_HEIGHT; y++) {
-            for (int x = 0; x < MAP_WIDTH; x++) {
-                counts[map[y][x]]++;
-            }
-        }
-        int total = MAP_HEIGHT * MAP_WIDTH;
-        System.out.println("Terrain distribution:");
-        System.out.println("  0 (unknown): " + String.format("%5.1f%%", counts[0] * 100.0 / total));
-        System.out.println("  1 (water):   " + String.format("%5.1f%%", counts[1] * 100.0 / total));
-        System.out.println("  2 (grass):   " + String.format("%5.1f%%", counts[2] * 100.0 / total));
-        System.out.println("  3 (forest): " + String.format("%5.1f%%", counts[3] * 100.0 / total));
-        System.out.println("  4 (stone):  " + String.format("%5.1f%%", counts[4] * 100.0 / total));
-        System.out.println("  5 (snow):   " + String.format("%5.1f%%", counts[5] * 100.0 / total));
-
-        double n1 = octaveNoise(50.7, 50.3, 1, 0.5);
-        double n2 = octaveNoise(51.2, 50.9, 1, 0.5);
-        double n3 = octaveNoise(100.1, 100.5, 1, 0.5);
-        double n4 = perlin(50.7, 50.3);
-        double nCenter = octaveNoise(MAP_WIDTH / 2 * NOISE_SCALE, MAP_HEIGHT / 2 * NOISE_SCALE, NOISE_OCTAVES, 0.5);
-    }
-
     private static double lerp(double t, double a, double b) { return a + t * (b - a); }
 
     private static double octaveNoise(double x, double y, int octaves, double persistence) {
@@ -295,6 +297,9 @@ public class Main extends ApplicationAdapter implements InputProcessor {
 
     @Override
     public void dispose() {
+        for (Chunk chunk : chunks.values()) {
+            if (chunk.dirty) saveFog(chunk);
+        }
         batch.dispose();
         tileset.dispose();
     }
