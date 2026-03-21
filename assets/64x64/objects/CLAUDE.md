@@ -1,55 +1,58 @@
 # Map Objects
 
-This directory contains 64x64 pixel art sprites for game objects (trees, rocks, buildings, etc.).
+This directory contains 64x64 pixel art sprites for medieval sim game objects (terrain objects, buildings, etc.).
 
 ## Creating New Objects
 
-Use the `pixellab_create_map_object` tool to generate objects:
+Use the Pixellab API to generate objects:
 
-```
-create_map_object(
-  description="Description of the object",
-  width=64,
-  height=64,
-  view="high top-down",
-  background_image={"type": "path", "path": "assets/64x64/single-tiles/grass.png"},
-  inpainting={"type": "oval", "fraction": 0.3}
-)
-```
-
-### Parameters
-
-- **description**: Describe the object clearly (e.g., "pixel art oak tree viewed from top-down")
-- **width/height**: Always `64` for this directory
-- **view**: `"high top-down"` for top-down perspective
-- **background_image**: Reference image for style matching (optional but recommended)
-- **inpainting**: `"oval"` with fraction ~0.3-0.5 depending on object size
-
-### Style Matching
-
-For consistent art style, always provide a reference tile from `single-tiles/`:
-```json
-{"type": "path", "path": "assets/64x64/single-tiles/grass.png"}
+```bash
+curl -X POST "https://api.pixellab.ai/v2/map-objects" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d "$(cat <<'EOF'
+{
+  "description": "A pixel art <object type> viewed from top-down, medieval style",
+  "image_size": {"width": 64, "height": 64},
+  "view": "high top-down",
+  "outline": "single color outline",
+  "shading": "medium shading",
+  "detail": "medium detail"
+}
+EOF
+)"
 ```
 
-This ensures the generated object matches the game's palette and shading.
+The API returns a job ID. Poll the status endpoint or wait for completion.
 
-### Inpainting Shape Guide
+## Style Matching
 
-- **Trees/bushes**: oval fraction 0.3-0.4
-- **Rocks/flowers**: oval fraction 0.2-0.3
-- **Buildings**: rectangle fraction 0.5-0.7
+For consistent art style, reference an existing game object or tile:
+
+```bash
+"background_image": {
+  "base64": "$(base64 -w 0 assets/64x64/objects/tree-large.png)"
+}
+```
+
+Reference images for style:
+- Terrain objects: `single-tiles/grass.png`, `single-tiles/stone.png`
+- Existing objects: any `64x64/objects/*.png`
 
 ## Downloading
 
-After generation, use `pixellab_get_map_object` to get the download URL:
+Download the completed image:
 
 ```bash
-curl --fail -o <object-name>.png "https://api.pixellab.ai/mcp/map-objects/<id>/download"
+curl --fail -o <object-name>.png "https://api.pixellab.ai/mcp/map-objects/<job-id>/download"
 ```
 
 Save to `assets/64x64/objects/<object-name>.png`.
 
+## Object List
+
+See `OBJECTS.md` for the complete list of objects and their intended use.
+
 ## Naming Convention
 
-Use lowercase with hyphens: `tree-oak.png`, `rock-granite.png`, `chest-wooden.png`
+Use lowercase with hyphens: `tree-large.png`, `boulder-large.png`, `house-simple.png`

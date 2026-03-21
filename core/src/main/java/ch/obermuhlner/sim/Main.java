@@ -26,6 +26,9 @@ public class Main extends ApplicationAdapter implements InputProcessor {
     private Texture tileset;
     private Texture treeLargeTexture;
     private Texture treeSmallTexture;
+    private Texture boulderLargeTexture;
+    private Texture boulderSmallTexture;
+    private Texture boulderLargeSnowTexture;
     private OrthographicCamera camera;
     private HashMap<Long, Chunk> chunks = new HashMap<>();
 
@@ -50,6 +53,9 @@ public class Main extends ApplicationAdapter implements InputProcessor {
         tileset = new Texture("64x64/map.png");
         treeLargeTexture = new Texture("64x64/objects/tree-large.png");
         treeSmallTexture = new Texture("64x64/objects/tree-small.png");
+        boulderLargeTexture = new Texture("64x64/objects/boulder-large.png");
+        boulderSmallTexture = new Texture("64x64/objects/boulder-small.png");
+        boulderLargeSnowTexture = new Texture("64x64/objects/boulder-large-snow.png");
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -110,6 +116,27 @@ public class Main extends ApplicationAdapter implements InputProcessor {
                         false, false);
                 } else if (chunk.objects[ly][lx] == 2) {
                     batch.draw(treeSmallTexture,
+                        tx * TILE_SIZE, ty * TILE_SIZE,
+                        TILE_SIZE, TILE_SIZE,
+                        0, 0,
+                        TILE_SIZE, TILE_SIZE,
+                        false, false);
+                } else if (chunk.objects[ly][lx] == 3) {
+                    batch.draw(boulderLargeTexture,
+                        tx * TILE_SIZE, ty * TILE_SIZE,
+                        TILE_SIZE, TILE_SIZE,
+                        0, 0,
+                        TILE_SIZE, TILE_SIZE,
+                        false, false);
+                } else if (chunk.objects[ly][lx] == 4) {
+                    batch.draw(boulderSmallTexture,
+                        tx * TILE_SIZE, ty * TILE_SIZE,
+                        TILE_SIZE, TILE_SIZE,
+                        0, 0,
+                        TILE_SIZE, TILE_SIZE,
+                        false, false);
+                } else if (chunk.objects[ly][lx] == 5) {
+                    batch.draw(boulderLargeSnowTexture,
                         tx * TILE_SIZE, ty * TILE_SIZE,
                         TILE_SIZE, TILE_SIZE,
                         0, 0,
@@ -224,15 +251,31 @@ public class Main extends ApplicationAdapter implements InputProcessor {
                 int ty = chunk.cy * CHUNK_SIZE + ly;
                 double n = octaveNoise(tx * NOISE_SCALE, ty * NOISE_SCALE, NOISE_OCTAVES, 0.5);
                 int terrain;
-                if      (n < TERRAIN_THRESHOLDS[0]) terrain = 1;
-                else if (n < TERRAIN_THRESHOLDS[1]) terrain = 2;
-                else if (n < TERRAIN_THRESHOLDS[2]) terrain = 3;
-                else if (n < TERRAIN_THRESHOLDS[3]) terrain = 4;
-                else                                terrain = 5;
+                if      (n < TERRAIN_THRESHOLDS[0]) terrain = TERRAIN_WATER;
+                else if (n < TERRAIN_THRESHOLDS[1]) terrain = TERRAIN_GRASS;
+                else if (n < TERRAIN_THRESHOLDS[2]) terrain = TERRAIN_FOREST;
+                else if (n < TERRAIN_THRESHOLDS[3]) terrain = TERRAIN_STONE;
+                else                                terrain = TERRAIN_SNOW;
                 chunk.terrain[ly][lx] = terrain;
 
-                if (terrain == 3 && random.nextFloat() < 0.5f) {
-                    chunk.objects[ly][lx] = random.nextFloat() < 0.2f ? 2 : 1;
+                if (terrain == TERRAIN_GRASS) {
+                    if (random.nextFloat() < 0.5f) {
+                        chunk.objects[ly][lx] = random.nextFloat() < 0.2f ? 2 : 1;
+                    } else if (random.nextFloat() < 0.1f) {
+                        chunk.objects[ly][lx] = 3;
+                    } else if (random.nextFloat() < 0.1f) {
+                        chunk.objects[ly][lx] = 4;
+                    }
+                } else if (terrain == TERRAIN_FOREST && random.nextFloat() < 0.2f) {
+                    chunk.objects[ly][lx] = 3;
+                } else if (terrain == TERRAIN_STONE) {
+                    if (random.nextFloat() < 0.4f) {
+                        chunk.objects[ly][lx] = 4;
+                    } else if (random.nextFloat() < 0.2f) {
+                        chunk.objects[ly][lx] = 3;
+                    }
+                } else if (terrain == TERRAIN_SNOW && random.nextFloat() < 0.2f) {
+                    chunk.objects[ly][lx] = 5;
                 }
             }
         }
@@ -289,6 +332,12 @@ public class Main extends ApplicationAdapter implements InputProcessor {
     private static final int NOISE_OCTAVES = 4;
     private static final double[] TERRAIN_THRESHOLDS = {0.45, 0.55, 0.6, 0.65};
 
+    private static final int TERRAIN_WATER = 1;
+    private static final int TERRAIN_GRASS = 2;
+    private static final int TERRAIN_FOREST = 3;
+    private static final int TERRAIN_STONE = 4;
+    private static final int TERRAIN_SNOW = 5;
+
     private static int[] buildPerm(long seed) {
         int[] p = new int[256];
         for (int i = 0; i < 256; i++) p[i] = i;
@@ -342,5 +391,8 @@ public class Main extends ApplicationAdapter implements InputProcessor {
         tileset.dispose();
         treeLargeTexture.dispose();
         treeSmallTexture.dispose();
+        boulderLargeTexture.dispose();
+        boulderSmallTexture.dispose();
+        boulderLargeSnowTexture.dispose();
     }
 }
