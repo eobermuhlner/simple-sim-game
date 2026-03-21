@@ -99,7 +99,7 @@ public class World {
     }
 
     private FileHandle getFogFile(int cx, int cy) {
-        return com.badlogic.gdx.Gdx.files.local("chunks/" + cx + "_" + cy + ".fow");
+        return com.badlogic.gdx.Gdx.files.local("data/chunks/" + cx + "_" + cy + ".fow");
     }
 
     public void saveDirtyChunks() {

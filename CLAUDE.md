@@ -34,6 +34,8 @@ This is a [libGDX](https://libgdx.com/) desktop game using a standard two-module
 
 **Assets** live in `/assets/` and are served to the game at runtime. A Gradle task generates `assets.txt` listing all assets.
 
+**Runtime data** (persisted game state) is written to `data/` within libGDX's local storage directory (e.g. `~/.local/share/simple-sim-game/data/` on Linux). Fog-of-war chunk files live at `data/chunks/{cx}_{cy}.fow`.
+
 **libGDX rendering model:** `Main.create()` initializes resources, `Main.render()` is called every frame (60 FPS, VSync on), `Main.dispose()` cleans up. Use `SpriteBatch` for 2D sprite drawing.
 
 **Key versions:** libGDX 1.14.0, LWJGL3 3.4.1, Java 8 source/target (Construo bundles Java 21 JDK for distribution).
