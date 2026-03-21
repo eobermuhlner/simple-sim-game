@@ -156,22 +156,49 @@
 
 ### 6.1 Module Structure
 ```
-core/          - Game logic, rendering, simulation
-lwjgl3/        - Desktop launcher, window management
-assets/        - Textures, sprites, audio
+core/src/main/java/ch/obermuhlner/sim/
+├── Main.java                 - Entry point, application lifecycle
+├── game/
+│   ├── TerrainType.java      - Terrain enum with properties
+│   ├── TileObject.java       - Interface for tile objects
+│   ├── TileObjectType.java   - Object type enum
+│   ├── TileObjectRegistry.java - Object ID registry
+│   ├── Tile.java             - Tile data container
+│   ├── Chunk.java            - 16x16 tile chunk with fog
+│   ├── World.java            - Infinite world manager
+│   ├── TerrainGenerator.java - Perlin noise terrain generation
+│   ├── render/
+│   │   ├── RenderLayer.java  - Layer interface for rendering
+│   │   ├── Renderer.java     - Orchestrates render layers
+│   │   ├── TerrainRenderLayer.java
+│   │   ├── ObjectRenderLayer.java
+│   │   └── FogOfWarRenderLayer.java
+│   └── mode/
+│       ├── GameMode.java     - Interface for game modes
+│       └── ExploreMode.java  - Exploration mode implementation
 ```
 
-### 6.2 Core Classes
-| Class | Responsibility |
-|-------|---------------|
-| `Main` | Entry point, main game loop, rendering |
-| `Chunk` | Terrain data, fog state, objects |
-| `TerrainGenerator` | Perlin noise, tile assignment |
-| `Settlement` | Settlement data, population, buildings |
-| `RoadNetwork` | Pathfinding, road tile management |
-| `TradeManager` | Route calculation, caravan spawning |
-| `InputHandler` | Camera controls, build mode input |
-| `UIManager` | HUD rendering, panels, menus |
+### 6.2 Extension Points
+
+**Adding a new terrain type:**
+1. Add entry to `TerrainType.java` with tile index and properties
+2. Update `TerrainGenerator.getTerrainFromNoise()` thresholds
+3. Optionally override `TerrainGenerator.generateNaturalObjects()`
+
+**Adding a new object:**
+1. Add constant to `TileObjectRegistry.java`
+2. Register in `TileObjectRegistry.init()` with terrain placement rules
+3. Add texture loading in `ObjectRenderLayer.loadAssets()`
+
+**Adding a render layer:**
+1. Implement `RenderLayer` interface
+2. Add via `renderer.addLayer(new YourLayer(world))`
+3. Set `getOrder()` to control draw order
+
+**Adding a game mode:**
+1. Implement `GameMode` interface
+2. Register via `main.setGameMode(new YourMode())`
+3. Modes can be switched at runtime (explore, build, trade, etc.)
 
 ### 6.3 Data Persistence
 - **Fog of War:** Per-chunk binary files (`chunks/[cx]_[cy].fow`)
