@@ -45,6 +45,69 @@ A top-down 2D settlement-building simulation built with [libGDX](https://libgdx.
 ./gradlew lwjgl3:jarLinux  # Linux JAR
 ```
 
+## Debug Console
+
+A text-based console for testing game functionality without the GUI.
+
+```bash
+./gradlew core:run -PmainClass=ch.obermuhlner.sim.GameConsole
+```
+
+### Commands
+| Command | Description |
+|---------|-------------|
+| `help` | Show available commands |
+| `state` (s) | Full game state |
+| `settlements` (st) | Settlement details |
+| `resources` (r) | Resource summary |
+| `tile <x> <y>` | Single tile info |
+| `map [r] [cx] [cy]` | ASCII map (default 10x10) |
+| `reveal <x> <y>` | Reveal area around point |
+| `spawn <x> <y> [name]` | Create settlement |
+| `build <x> <y> [id]` | Place building on tile |
+
+### Example Session
+```
+> state
+=== GAME STATE ===
+--- SETTLEMENTS ---
+No settlements.
+
+--- RESOURCES ---
+Settlements: 0
+Total Population: 0
+Total Buildings: 0
+
+> spawn 5 5 MyTown
+Created settlement 'MyTown' at (5, 5)
+
+> map 5
+Map around (5, 5), radius 5:
+  (fog=#, grass=G, forest=F, stone=S, water=W, snow=X)
+  10: ##########~####
+   9: ##########~####
+   8: #######~~.~~##
+   7: ######~~...~##
+   6: #####~..T..~##
+   5: ####~..T@...##
+   4: ####~...FF..##
+   3: #####~~.FF.~~#
+   2: ######~~...~##
+   1: #######~~..~~#
+      0123456789
+```
+
+### Programmatic Access
+
+Use `GameDebugger` class to get text representations of game state:
+
+```java
+GameDebugger debugger = new GameDebugger(world);
+String state = debugger.getState();
+String map = debugger.getMapAround(0, 0, 10);
+String tile = debugger.getTileInfo(5, 5);
+```
+
 ## Project Structure
 
 ```

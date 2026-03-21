@@ -19,6 +19,14 @@ public class World {
         this.chunkSize = chunkSize;
         this.terrainGenerator = new TerrainGenerator(seed);
     }
+    
+    public World(int chunkSize, long seed, boolean headless) {
+        this.chunkSize = chunkSize;
+        this.terrainGenerator = new TerrainGenerator(seed);
+        this.headless = headless;
+    }
+    
+    private boolean headless = false;
 
     public Settlement createSettlement(String name, int tx, int ty) {
         Tile tile = getTile(tx, ty);
@@ -139,8 +147,10 @@ public class World {
     private Chunk createChunk(int cx, int cy) {
         Chunk chunk = new Chunk(cx, cy, chunkSize);
         terrainGenerator.generate(chunk);
-        FileHandle fogFile = getFogFile(cx, cy);
-        chunk.loadFog(fogFile);
+        if (!headless) {
+            FileHandle fogFile = getFogFile(cx, cy);
+            chunk.loadFog(fogFile);
+        }
         return chunk;
     }
 
@@ -149,6 +159,7 @@ public class World {
     }
 
     public void saveDirtyChunks() {
+        if (headless) return;
         for (Chunk chunk : chunks.values()) {
             if (chunk.dirty) {
                 chunk.saveFog(getFogFile(chunk.cx, chunk.cy));

@@ -1,6 +1,6 @@
 package ch.obermuhlner.sim.game.mode;
 
-import ch.obermuhlner.sim.Main;
+import ch.obermuhlner.sim.game.GameController;
 import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.World;
 import com.badlogic.gdx.Input;
@@ -14,7 +14,7 @@ public class ExploreMode implements GameMode {
 
     private World world;
     private OrthographicCamera camera;
-    private Main main;
+    private GameController controller;
     private boolean fogOfWar = true;
     private boolean mouseDown = false;
     private float totalDrag = 0;
@@ -34,8 +34,8 @@ public class ExploreMode implements GameMode {
         world.reveal(0, 0);
     }
     
-    public void setMain(Main main) {
-        this.main = main;
+    public void setMain(GameController controller) {
+        this.controller = controller;
     }
 
     @Override
@@ -61,10 +61,9 @@ public class ExploreMode implements GameMode {
             );
             return true;
         }
-        if (keycode == Input.Keys.B && main != null) {
-            BuildMode newMode = new BuildMode(main);
-            newMode.init(world, camera);
-            main.setGameMode(newMode);
+        if (keycode == Input.Keys.B && controller != null) {
+            BuildMode newMode = new BuildMode(controller);
+            controller.setGameMode(newMode);
             return true;
         }
         return false;

@@ -1,13 +1,12 @@
 package ch.obermuhlner.sim.game.mode;
 
-import ch.obermuhlner.sim.Main;
+import ch.obermuhlner.sim.game.GameController;
 import ch.obermuhlner.sim.game.*;
 import ch.obermuhlner.sim.game.render.BuildingRenderLayer;
 import ch.obermuhlner.sim.game.ui.BuildToolbar;
 import ch.obermuhlner.sim.game.ui.SettlementInfoPanel;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -17,7 +16,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 public class BuildMode implements GameMode {
     private World world;
     private OrthographicCamera camera;
-    private Main main;
+    private GameController controller;
     private SpriteBatch uiBatch;
     
     private boolean placingSettlement = false;
@@ -36,9 +35,15 @@ public class BuildMode implements GameMode {
     private boolean mouseDown = false;
     private int lastMouseX, lastMouseY;
     private boolean wasDragging = false;
+    
+    private BuildToolbar toolbar;
 
-    public BuildMode(Main main) {
-        this.main = main;
+    public BuildMode(GameController controller) {
+        this.controller = controller;
+    }
+    
+    public void setToolbar(BuildToolbar toolbar) {
+        this.toolbar = toolbar;
     }
 
     @Override
@@ -104,33 +109,33 @@ public class BuildMode implements GameMode {
     public boolean keyDown(int keycode) {
         if (keycode == Input.Keys.ESCAPE) {
             clearSelection();
-            main.setGameMode(new ExploreMode());
+            controller.setGameMode(new ExploreMode());
             return true;
         }
         if (keycode == Input.Keys.S) {
             startSettlementPlacement();
+            if (toolbar != null) toolbar.select(0);
             return true;
         }
         if (keycode >= Input.Keys.NUM_1 && keycode <= Input.Keys.NUM_9) {
             int index = keycode - Input.Keys.NUM_1;
             if (index < BuildingType.values().length) {
                 startBuildingPlacement(BuildingType.values()[index].getId());
+                if (toolbar != null) toolbar.select(index + 1);
             }
             return true;
         }
         if (keycode == Input.Keys.F) {
-            main.setGameMode(new ExploreMode());
+            controller.setGameMode(new ExploreMode());
             return true;
         }
         if (keycode == Input.Keys.HOME) {
-            Settlement lastSettlement = null;
-            for (Settlement s : world.getSettlements()) {
-                lastSettlement = s;
-            }
-            if (lastSettlement != null) {
+            java.util.List<Settlement> settlements = world.getSettlements();
+            if (!settlements.isEmpty()) {
+                Settlement last = settlements.get(settlements.size() - 1);
                 camera.position.set(
-                    lastSettlement.centerX * 64 + 32f,
-                    lastSettlement.centerY * 64 + 32f,
+                    last.centerX * 64 + 32f,
+                    last.centerY * 64 + 32f,
                     0
                 );
             }
@@ -170,17 +175,35 @@ public class BuildMode implements GameMode {
         if (button == Input.Buttons.LEFT && !wasDragging) {
             mouseDown = false;
             
+            // Check if click was on toolbar
+            if (toolbar != null) {
+                int screenWidth = Gdx.graphics.getWidth();
+                int screenHeight = Gdx.graphics.getHeight();
+                int buttonIndex = toolbar.getButtonAt(screenX, screenY, screenWidth, screenHeight);
+                if (buttonIndex >= 0) {
+                    handleToolbarClick(buttonIndex);
+                    return true;
+                }
+            }
+            
             Vector3 worldPos = camera.unproject(new Vector3(screenX, screenY, 0));
             int tileX = (int) Math.floor(worldPos.x / 64);
             int tileY = (int) Math.floor(worldPos.y / 64);
             
-            if (!world.isRevealed(tileX, tileY)) return true;
+            // Handle fog reveal - if tile not revealed, reveal it
+            if (!world.isRevealed(tileX, tileY)) {
+                if (world.hasRevealedNeighbor(tileX, tileY)) {
+                    world.reveal(tileX, tileY);
+                }
+                return true;
+            }
             
             if (placingSettlement) {
                 placeSettlement(tileX, tileY);
             } else if (placingBuilding) {
                 placeBuilding(tileX, tileY);
             } else {
+                // Select a settlement if clicking on one
                 Settlement clicked = world.getSettlementAt(tileX, tileY);
                 if (clicked != null) {
                     selectSettlement(clicked);
@@ -190,6 +213,21 @@ public class BuildMode implements GameMode {
         }
         mouseDown = false;
         return false;
+    }
+    
+    private void handleToolbarClick(int buttonIndex) {
+        if (buttonIndex == 0) {
+            // Settlement button
+            startSettlementPlacement();
+            toolbar.select(0);
+        } else {
+            // Building button - index 1 = first building
+            int buildingIndex = buttonIndex - 1;
+            if (buildingIndex < BuildingType.values().length) {
+                startBuildingPlacement(BuildingType.values()[buildingIndex].getId());
+                toolbar.select(buttonIndex);
+            }
+        }
     }
 
     @Override
@@ -252,7 +290,11 @@ public class BuildMode implements GameMode {
     }
 
     private void placeSettlement(int tx, int ty) {
-        if (!validPlacement) return;
+        // Check if tile is valid for settlement
+        Tile tile = world.getTile(tx, ty);
+        if (!tile.terrain.isBuildable()) return;
+        if (world.getSettlementAt(tx, ty) != null) return;
+        if (!world.hasRevealedNeighbor(tx, ty)) return;
         
         String name = "Settlement " + (world.getSettlements().size() + 1);
         Settlement settlement = world.createSettlement(name, tx, ty);
@@ -263,9 +305,16 @@ public class BuildMode implements GameMode {
     }
 
     private void placeBuilding(int tx, int ty) {
-        if (!validPlacement || selectedSettlement == null) return;
+        if (selectedSettlement == null) return;
         
         Tile tile = world.getTile(tx, ty);
+        if (!tile.terrain.isBuildable()) return;
+        if (tile.hasBuilding()) return;
+        
+        int dx = Math.abs(tx - selectedSettlement.centerX);
+        int dy = Math.abs(ty - selectedSettlement.centerY);
+        if (dx > 3 || dy > 3) return;
+        
         tile.buildingId = selectedBuildingType;
         selectedSettlement.addBuilding(selectedBuildingType);
         
@@ -276,6 +325,7 @@ public class BuildMode implements GameMode {
     }
 
     public void renderUI() {
+        if (uiBatch == null) return;
         if (camera == null) return;
         if (hoverTileX < 0 || hoverTileY < 0) return;
         if (!world.isRevealed(hoverTileX, hoverTileY)) return;
@@ -296,22 +346,27 @@ public class BuildMode implements GameMode {
     }
 
     public void renderPanel(SettlementInfoPanel panel) {
-        if (selectedSettlement != null && uiBatch.isDrawing()) {
+        if (uiBatch == null) return;
+        if (selectedSettlement == null) return;
+        
+        if (uiBatch.isDrawing()) {
             uiBatch.end();
         }
-        if (selectedSettlement != null) {
-            int screenWidth = Gdx.graphics.getWidth();
-            int screenHeight = Gdx.graphics.getHeight();
-            uiBatch.setProjectionMatrix(new com.badlogic.gdx.math.Matrix4().setToOrtho2D(0, 0, screenWidth, screenHeight));
-            uiBatch.begin();
-            panel.render(selectedSettlement, uiBatch, screenWidth, screenHeight);
-            uiBatch.end();
-        }
+        
+        int screenWidth = Gdx.graphics.getWidth();
+        int screenHeight = Gdx.graphics.getHeight();
+        uiBatch.setProjectionMatrix(new com.badlogic.gdx.math.Matrix4().setToOrtho2D(0, 0, screenWidth, screenHeight));
+        uiBatch.begin();
+        panel.render(selectedSettlement, uiBatch, screenWidth, screenHeight);
+        uiBatch.end();
     }
 
     public void renderToolbar(BuildToolbar toolbar) {
+        if (uiBatch == null) return;
+        
         int screenWidth = Gdx.graphics.getWidth();
         int screenHeight = Gdx.graphics.getHeight();
+        
         uiBatch.setProjectionMatrix(new com.badlogic.gdx.math.Matrix4().setToOrtho2D(0, 0, screenWidth, screenHeight));
         uiBatch.begin();
         toolbar.render(uiBatch, screenWidth, screenHeight);
@@ -333,12 +388,17 @@ public class BuildMode implements GameMode {
     public Settlement getSelectedSettlement() {
         return selectedSettlement;
     }
-
+    
+    public SpriteBatch getUiBatch() {
+        return uiBatch;
+    }
+    
     @Override
     public void dispose() {
-        uiBatch.dispose();
-        validTexture.dispose();
-        invalidTexture.dispose();
-        settlementTexture.dispose();
+        if (uiBatch != null) uiBatch.dispose();
+        if (validTexture != null) validTexture.dispose();
+        if (invalidTexture != null) invalidTexture.dispose();
+        if (settlementTexture != null) settlementTexture.dispose();
     }
 }
+

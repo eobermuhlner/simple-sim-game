@@ -30,9 +30,11 @@ public class BuildToolbar {
         int height = TOOLBAR_HEIGHT;
         
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.1f, 0.1f, 0.15f, 0.9f));
+        // Semi-transparent dark background
+        pixmap.setColor(new Color(0.15f, 0.15f, 0.2f, 0.95f));
         pixmap.fill();
-        pixmap.setColor(new Color(0.3f, 0.3f, 0.4f, 1f));
+        // Border
+        pixmap.setColor(new Color(0.4f, 0.4f, 0.5f, 1f));
         pixmap.drawRectangle(0, 0, width, height);
         backgroundTexture = new Texture(pixmap);
         pixmap.dispose();
@@ -41,7 +43,7 @@ public class BuildToolbar {
     private void createFonts() {
         font = new BitmapFont();
         font.setColor(Color.WHITE);
-        font.getData().setScale(0.6f);
+        font.getData().setScale(1.5f);
     }
     
     private void createButtons() {
@@ -110,8 +112,10 @@ public class BuildToolbar {
     public void render(SpriteBatch batch, int screenWidth, int screenHeight) {
         int toolbarWidth = getWidth();
         
+        // Center horizontally, place at top with margin
+        // With Y increasing upward, top of screen is screenHeight
         float panelX = (screenWidth - toolbarWidth) / 2f;
-        float panelY = 20;
+        float panelY = screenHeight - TOOLBAR_HEIGHT - 20;
         
         batch.draw(backgroundTexture, panelX, panelY, toolbarWidth, TOOLBAR_HEIGHT);
         
@@ -130,9 +134,9 @@ public class BuildToolbar {
             
             batch.draw(tex, bx, by, BUTTON_SIZE, BUTTON_SIZE);
             
-            float labelWidth = button.label.length() * 6;
-            float labelX = bx + (BUTTON_SIZE - labelWidth) / 2;
-            float labelY = by + BUTTON_SIZE / 2 + 4;
+            // Text: position above button center (Y decreases going down)
+            float labelX = bx + 4;
+            float labelY = by + 15; // Near top of button
             font.draw(batch, button.label, labelX, labelY);
         }
     }

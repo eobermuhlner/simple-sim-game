@@ -1,5 +1,6 @@
 package ch.obermuhlner.sim;
 
+import ch.obermuhlner.sim.game.GameController;
 import ch.obermuhlner.sim.game.TileObjectRegistry;
 import ch.obermuhlner.sim.game.World;
 import ch.obermuhlner.sim.game.mode.BuildMode;
@@ -10,13 +11,14 @@ import ch.obermuhlner.sim.game.ui.BuildToolbar;
 import ch.obermuhlner.sim.game.ui.SettlementInfoPanel;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
 
-public class Main extends ApplicationAdapter {
+public class Main extends ApplicationAdapter implements GameController {
     private static final int TILE_SIZE = 64;
     private static final int CHUNK_SIZE = 16;
     private static final long WORLD_SEED = 42L;
@@ -28,7 +30,6 @@ public class Main extends ApplicationAdapter {
     private InputMultiplexer inputMultiplexer;
     private GameMode currentMode;
     
-    private BuildMode buildMode;
     private SettlementInfoPanel settlementPanel;
     private BuildToolbar buildToolbar;
     private boolean showBuildUI = false;
@@ -51,7 +52,6 @@ public class Main extends ApplicationAdapter {
         renderer.addLayer(new SettlementRenderLayer(world, true));
         renderer.addLayer(new FogOfWarRenderLayer(world));
 
-        buildMode = new BuildMode(this);
         settlementPanel = new SettlementInfoPanel();
         buildToolbar = new BuildToolbar();
 
@@ -78,6 +78,11 @@ public class Main extends ApplicationAdapter {
         }
         
         showBuildUI = (mode instanceof BuildMode);
+        
+        if (mode instanceof BuildMode) {
+            ((BuildMode) mode).init(world, camera);
+            ((BuildMode) mode).setToolbar(buildToolbar);
+        }
     }
 
     @Override
@@ -92,10 +97,13 @@ public class Main extends ApplicationAdapter {
 
         renderer.render();
         
-        if (showBuildUI) {
-            buildMode.renderUI();
-            buildMode.renderToolbar(buildToolbar);
-            buildMode.renderPanel(settlementPanel);
+        if (showBuildUI && currentMode instanceof BuildMode) {
+            BuildMode bm = (BuildMode) currentMode;
+            if (bm.getUiBatch() != null) {
+                bm.renderToolbar(buildToolbar);
+                bm.renderUI();
+                bm.renderPanel(settlementPanel);
+            }
         }
     }
 
@@ -106,5 +114,10 @@ public class Main extends ApplicationAdapter {
         settlementPanel.dispose();
         buildToolbar.dispose();
         batch.dispose();
+    }
+    
+    @Override
+    public World getWorld() {
+        return world;
     }
 }
