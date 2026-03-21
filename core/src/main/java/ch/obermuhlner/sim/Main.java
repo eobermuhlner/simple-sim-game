@@ -2,12 +2,12 @@ package ch.obermuhlner.sim;
 
 import ch.obermuhlner.sim.game.TileObjectRegistry;
 import ch.obermuhlner.sim.game.World;
+import ch.obermuhlner.sim.game.mode.BuildMode;
 import ch.obermuhlner.sim.game.mode.ExploreMode;
 import ch.obermuhlner.sim.game.mode.GameMode;
-import ch.obermuhlner.sim.game.render.ObjectRenderLayer;
-import ch.obermuhlner.sim.game.render.Renderer;
-import ch.obermuhlner.sim.game.render.TerrainRenderLayer;
-import ch.obermuhlner.sim.game.render.FogOfWarRenderLayer;
+import ch.obermuhlner.sim.game.render.*;
+import ch.obermuhlner.sim.game.ui.BuildToolbar;
+import ch.obermuhlner.sim.game.ui.SettlementInfoPanel;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -27,6 +27,11 @@ public class Main extends ApplicationAdapter {
     private Renderer renderer;
     private InputMultiplexer inputMultiplexer;
     private GameMode currentMode;
+    
+    private BuildMode buildMode;
+    private SettlementInfoPanel settlementPanel;
+    private BuildToolbar buildToolbar;
+    private boolean showBuildUI = false;
 
     @Override
     public void create() {
@@ -42,10 +47,17 @@ public class Main extends ApplicationAdapter {
         renderer = new Renderer(world, batch, camera);
         renderer.addLayer(new TerrainRenderLayer(world, true));
         renderer.addLayer(new ObjectRenderLayer(world, true));
+        renderer.addLayer(new BuildingRenderLayer(world, true));
+        renderer.addLayer(new SettlementRenderLayer(world, true));
         renderer.addLayer(new FogOfWarRenderLayer(world));
+
+        buildMode = new BuildMode(this);
+        settlementPanel = new SettlementInfoPanel();
+        buildToolbar = new BuildToolbar();
 
         ExploreMode exploreMode = new ExploreMode();
         exploreMode.init(world, camera);
+        exploreMode.setMain(this);
         setGameMode(exploreMode);
 
         Gdx.input.setInputProcessor(inputMultiplexer);
@@ -64,6 +76,8 @@ public class Main extends ApplicationAdapter {
         if (Gdx.input.getInputProcessor() == null || Gdx.input.getInputProcessor() == inputMultiplexer) {
             Gdx.input.setInputProcessor(inputMultiplexer);
         }
+        
+        showBuildUI = (mode instanceof BuildMode);
     }
 
     @Override
@@ -77,12 +91,20 @@ public class Main extends ApplicationAdapter {
         ScreenUtils.clear(0.15f, 0.15f, 0.2f, 1f);
 
         renderer.render();
+        
+        if (showBuildUI) {
+            buildMode.renderUI();
+            buildMode.renderToolbar(buildToolbar);
+            buildMode.renderPanel(settlementPanel);
+        }
     }
 
     @Override
     public void dispose() {
         world.saveDirtyChunks();
         renderer.dispose();
+        settlementPanel.dispose();
+        buildToolbar.dispose();
         batch.dispose();
     }
 }

@@ -4,14 +4,60 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.LongMap;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
 public class World {
     private final int chunkSize;
     private final LongMap<Chunk> chunks = new LongMap<>();
     private final TerrainGenerator terrainGenerator;
+    private final List<Settlement> settlements = new ArrayList<>();
+    private int nextSettlementId = 1;
 
     public World(int chunkSize, long seed) {
         this.chunkSize = chunkSize;
         this.terrainGenerator = new TerrainGenerator(seed);
+    }
+
+    public Settlement createSettlement(String name, int tx, int ty) {
+        Tile tile = getTile(tx, ty);
+        if (!tile.terrain.isBuildable()) {
+            return null;
+        }
+        Settlement settlement = new Settlement(name, tx, ty);
+        settlements.add(settlement);
+        revealArea(tx, ty, 3);
+        return settlement;
+    }
+
+    public void removeSettlement(int id) {
+        settlements.removeIf(s -> s.id == id);
+    }
+
+    public Settlement getSettlement(int id) {
+        for (Settlement s : settlements) {
+            if (s.id == id) return s;
+        }
+        return null;
+    }
+
+    public Settlement getSettlementAt(int tx, int ty) {
+        for (Settlement s : settlements) {
+            if (s.centerX == tx && s.centerY == ty) return s;
+            int dx = Math.abs(tx - s.centerX);
+            int dy = Math.abs(ty - s.centerY);
+            if (dx <= 2 && dy <= 2) return s;
+        }
+        return null;
+    }
+
+    public List<Settlement> getSettlements() {
+        return settlements;
+    }
+
+    public void forEachSettlement(Consumer<Settlement> consumer) {
+        settlements.forEach(consumer);
     }
 
     public int getChunkSize() {

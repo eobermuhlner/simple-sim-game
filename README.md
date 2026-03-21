@@ -1,33 +1,78 @@
-# simple-sim-game
+# Simple Sim Game
 
-A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+A top-down 2D settlement-building simulation built with [libGDX](https://libgdx.com/).
 
-This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.
+**Core Loop:** Explore procedurally generated world → Establish settlements → Build structures → Manage population → Expand your network.
 
-## Platforms
+## Features
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+### Terrain System
+- **5 terrain types:** Water, Grass, Forest, Stone, Snow
+- **Procedural generation:** Perlin noise with multiple octaves
+- **Natural objects:** Trees and boulders spawn based on terrain
+- **Infinite world:** Chunk-based loading for unlimited exploration
 
-## Gradle
+### Fog of War
+- Tiles must be revealed by clicking adjacent to explored areas
+- Revealed state persists across sessions
+- Toggle fog overlay with `F`
+- Return to last revealed tile with `HOME`
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
+### Settlement System
+- **4 levels:** Village → Town → City → Metropolis
+- **55 building types:** Houses, farms, markets, workshops, temples, castles, and more
+- **Population growth:** Buildings add population capacity
+- **Upgrade system:** Reach population thresholds to level up settlements
 
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
+### Controls
+| Input | Action |
+|-------|--------|
+| Left Click | Reveal fog / Place |
+| Drag | Pan camera |
+| Scroll | Zoom in/out |
+| `B` | Enter build mode |
+| `S` | Start settlement placement (in build mode) |
+| `1-9` | Select building type |
+| `ESC` | Exit build mode |
+| `F` | Toggle fog of war |
+| `HOME` | Center on last revealed tile |
 
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
+## Building
+
+```bash
+./gradlew lwjgl3:run    # Run the game
+./gradlew lwjgl3:jar     # Build JAR
+./gradlew lwjgl3:jarLinux  # Linux JAR
+```
+
+## Project Structure
+
+```
+core/src/main/java/ch/obermuhlner/sim/
+├── Main.java              - Entry point
+└── game/
+    ├── World.java         - Infinite world manager
+    ├── Chunk.java         - 16x16 tile chunks
+    ├── TerrainType.java   - Terrain enum
+    ├── Settlement.java     - Settlement data
+    ├── BuildingType.java   - 55 building types
+    ├── render/
+    │   ├── Renderer.java
+    │   ├── TerrainRenderLayer.java
+    │   ├── ObjectRenderLayer.java
+    │   ├── BuildingRenderLayer.java
+    │   ├── SettlementRenderLayer.java
+    │   └── FogOfWarRenderLayer.java
+    └── mode/
+        ├── GameMode.java
+        ├── ExploreMode.java
+        └── BuildMode.java
+```
+
+## Implementation Phases
+
+- [x] Phase 1: Foundation (terrain, fog, camera)
+- [x] Phase 2: Settlement Building
+- [ ] Phase 3: Road Network
+- [ ] Phase 4: Economy
+- [ ] Phase 5: Polish

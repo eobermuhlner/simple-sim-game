@@ -209,7 +209,7 @@ core/src/main/java/ch/obermuhlner/sim/
 
 ## 7. Implementation Phases
 
-### Phase 1: Foundation (Complete)
+### Phase 1: Foundation (Complete) 
 - [x] Tile rendering with texture atlas
 - [x] Perlin noise terrain generation
 - [x] Chunk-based world loading
@@ -217,10 +217,10 @@ core/src/main/java/ch/obermuhlner/sim/
 - [x] Camera pan/zoom controls
 
 ### Phase 2: Settlement Building
-- [ ] Settlement placement system
-- [ ] Settlement selection and info panel
-- [ ] Building placement mechanics
-- [ ] Population system
+- [x] Settlement placement system
+- [x] Settlement selection and info panel
+- [x] Building placement mechanics
+- [x] Population system
 
 ### Phase 3: Road Network
 - [ ] Road tile rendering
