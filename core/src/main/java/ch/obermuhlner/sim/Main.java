@@ -1,6 +1,7 @@
 package ch.obermuhlner.sim;
 
 import ch.obermuhlner.sim.game.BuildingType;
+import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.GameController;
 import ch.obermuhlner.sim.game.RoadType;
 import ch.obermuhlner.sim.game.Settlement;
@@ -96,6 +97,7 @@ public class Main extends ApplicationAdapter implements GameController {
     private boolean respecMode = false;
     private Texture roadIcon;
     private Texture destroyIcon;
+    private GameConfig gameConfig;
 
     @Override
     public void create() {
@@ -127,6 +129,7 @@ public class Main extends ApplicationAdapter implements GameController {
 
         roadIcon = new Texture(Gdx.files.internal("64x64/single-tiles/road-dirt-ns.png"));
         destroyIcon = createDestroyIcon();
+        gameConfig = new GameConfig();
 
         settlementPanel = new SettlementInfoPanel();
         buildToolbar = new BuildToolbar();
@@ -341,6 +344,19 @@ public class Main extends ApplicationAdapter implements GameController {
         return null;
     }
 
+    private Settlement getClosestSettlement(int tx, int ty) {
+        Settlement closest = null;
+        double closestDist = Double.MAX_VALUE;
+        for (Settlement s : world.getSettlements()) {
+            double dist = Math.hypot(tx - s.centerX, ty - s.centerY);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closest = s;
+            }
+        }
+        return closest;
+    }
+
     private void executeTool(int toolId) {
         switch (toolId) {
             case TOOL_NEW_SETTLEMENT:
@@ -382,9 +398,15 @@ public class Main extends ApplicationAdapter implements GameController {
             case TOOL_RESPEC_MODE:
                 respecMode = true;
                 break;
-            case TOOL_BUILD_ROAD:
-                world.placeRoad(selectedTileX, selectedTileY, RoadType.DIRT);
+            case TOOL_BUILD_ROAD: {
+                float roadCost = gameConfig.getRoadCost(RoadType.DIRT);
+                Settlement payer = getClosestSettlement(selectedTileX, selectedTileY);
+                if (payer != null && payer.gold < roadCost) break;
+                if (world.placeRoad(selectedTileX, selectedTileY, RoadType.DIRT) && payer != null) {
+                    payer.gold -= roadCost;
+                }
                 break;
+            }
             case TOOL_DESTROY:
                 destroyTile(selectedTileX, selectedTileY);
                 break;
@@ -445,10 +467,13 @@ public class Main extends ApplicationAdapter implements GameController {
         Tile tile = world.getTile(tx, ty);
         if (!tile.isBuildable()) return;
 
+        BuildingType type = BuildingType.fromId(buildingId);
+        float cost = type != null ? gameConfig.getBuildingCost(type) : 0f;
+        if (settlement.gold < cost) return;
+
+        settlement.gold -= cost;
         world.setBuilding(tx, ty, buildingId);
         settlement.addBuilding(buildingId);
-
-        BuildingType type = BuildingType.fromId(buildingId);
         if (type != null) {
             settlement.addPopulation(type.getPopulationCapacity());
         }
