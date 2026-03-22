@@ -1,5 +1,6 @@
 package ch.obermuhlner.sim.game.ui;
 
+import ch.obermuhlner.sim.game.ResourceType;
 import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.Specialization;
 import com.badlogic.gdx.Gdx;
@@ -12,7 +13,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 
 public class SettlementInfoPanel {
     private static final int PANEL_WIDTH = 260;
-    private static final int PANEL_HEIGHT = 220;
+    private static final int PANEL_HEIGHT = 330;
     private static final int PADDING = 15;
     private static final int LINE_HEIGHT = 18;
 
@@ -125,6 +126,38 @@ public class SettlementInfoPanel {
                 font.draw(batch, "To next level: " + toNext + " pop", textX, textY);
             }
         }
+        textY -= LINE_HEIGHT + 3;
+
+        // Resources section
+        font.setColor(new Color(0.5f, 0.5f, 0.7f, 1f));
+        font.draw(batch, "--- Resources ---", textX, textY);
+        font.setColor(Color.WHITE);
+        textY -= LINE_HEIGHT;
+
+        drawResource(batch, font, textX, textY, "Wood",  settlement.wood,  settlement.smoothedWoodProd,  settlement.woodPriceMult);
+        textY -= LINE_HEIGHT;
+        drawResource(batch, font, textX, textY, "Stone", settlement.stone, settlement.smoothedStoneProd, settlement.stonePriceMult);
+        textY -= LINE_HEIGHT;
+        drawResource(batch, font, textX, textY, "Food",  settlement.food,  settlement.smoothedFoodProd,  settlement.foodPriceMult);
+        textY -= LINE_HEIGHT;
+        drawResource(batch, font, textX, textY, "Goods", settlement.goods, settlement.smoothedGoodsProd, settlement.goodsPriceMult);
+        textY -= LINE_HEIGHT;
+        font.draw(batch, String.format("Gold:  %6.1f", settlement.gold), textX, textY);
+    }
+
+    private void drawResource(SpriteBatch batch, BitmapFont font,
+                               float x, float y, String name,
+                               float amount, float prod, float priceMult) {
+        // Color-code by price: green=surplus (low price), red=shortage (high price)
+        if (priceMult < 0.8f) {
+            font.setColor(new Color(0.4f, 0.9f, 0.4f, 1f));  // surplus
+        } else if (priceMult > 1.3f) {
+            font.setColor(new Color(1f, 0.4f, 0.4f, 1f));    // shortage
+        } else {
+            font.setColor(Color.WHITE);
+        }
+        font.draw(batch, String.format("%-5s %5.0f +%-4.1f", name, amount, prod), x, y);
+        font.setColor(Color.WHITE);
     }
 
     private Color getSpecializationColor(Specialization spec) {

@@ -2,14 +2,22 @@ package ch.obermuhlner.sim.game.debug;
 
 import ch.obermuhlner.sim.game.*;
 import ch.obermuhlner.sim.game.RoadType;
+import ch.obermuhlner.sim.game.systems.SimulationSystem;
 
 import java.util.StringJoiner;
 
 public class GameDebugger {
     private final World world;
-    
+    private final SimulationSystem simulation;
+
     public GameDebugger(World world) {
         this.world = world;
+        this.simulation = null;
+    }
+
+    public GameDebugger(World world, SimulationSystem simulation) {
+        this.world = world;
+        this.simulation = simulation;
     }
     
     public String getState() {
@@ -43,6 +51,10 @@ public class GameDebugger {
                 sb.append(String.format("  Position: (%d, %d)\n", s.centerX, s.centerY));
                 sb.append(String.format("  Buildings: %d/%d\n",
                     s.buildingIds.size(), s.getMaxBuildings()));
+                sb.append(String.format("  Resources: W:%.0f S:%.0f F:%.0f G:%.0f Gold:%.0f\n",
+                    s.wood, s.stone, s.food, s.goods, s.gold));
+                sb.append(String.format("  Prod/tick: W:%.1f S:%.1f F:%.1f G:%.2f\n",
+                    s.smoothedWoodProd, s.smoothedStoneProd, s.smoothedFoodProd, s.smoothedGoodsProd));
                 if (s.needsSpecializationChoice()) {
                     sb.append("  Status: Choose a specialization!\n");
                 } else if (s.needsUpgrade()) {
@@ -70,7 +82,12 @@ public class GameDebugger {
         sb.append(String.format("Settlements: %d\n", settlements));
         sb.append(String.format("Total Population: %d\n", totalPop));
         sb.append(String.format("Total Buildings: %d\n", totalBuildings));
-        
+        sb.append(String.format("Trade Routes: %d\n", world.getTradeRoutes().size()));
+        sb.append(String.format("Active Caravans: %d\n", world.getCaravans().size()));
+        if (simulation != null) {
+            sb.append(String.format("Simulation Tick: %d\n", simulation.getTickCount()));
+        }
+
         return sb.toString();
     }
     

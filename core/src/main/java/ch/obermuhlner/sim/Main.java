@@ -7,12 +7,15 @@ import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.Specialization;
 import ch.obermuhlner.sim.game.Tile;
 import ch.obermuhlner.sim.game.TileObjectRegistry;
+import ch.obermuhlner.sim.game.TradeRoute;
 import ch.obermuhlner.sim.game.World;
 import ch.obermuhlner.sim.game.mode.BuildMode;
 import ch.obermuhlner.sim.game.mode.ExploreMode;
 import ch.obermuhlner.sim.game.mode.GameMode;
 import ch.obermuhlner.sim.game.render.*;
+import ch.obermuhlner.sim.game.render.CaravanRenderLayer;
 import ch.obermuhlner.sim.game.render.RoadRenderLayer;
+import ch.obermuhlner.sim.game.systems.SimulationSystem;
 import ch.obermuhlner.sim.game.ui.BuildToolbar;
 import ch.obermuhlner.sim.game.ui.SettlementInfoPanel;
 import com.badlogic.gdx.ApplicationAdapter;
@@ -23,7 +26,9 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.utils.ScreenUtils;
 
 import java.util.ArrayList;
@@ -62,15 +67,20 @@ public class Main extends ApplicationAdapter implements GameController {
     private static final int TOOL_RESPEC_TRADE   = 33;
     private static final int TOOL_BUILD_ROAD     = 50;
 
+    private static final float TICK_INTERVAL = 1.0f;
+
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private World world;
     private Renderer renderer;
     private InputMultiplexer inputMultiplexer;
     private GameMode currentMode;
+    private SimulationSystem simulation;
+    private float tickAccumulator = 0f;
 
     private SettlementInfoPanel settlementPanel;
     private BuildToolbar buildToolbar;
+    private BitmapFont hudFont;
 
     private int selectedTileX = -1;
     private int selectedTileY = -1;
@@ -99,18 +109,22 @@ public class Main extends ApplicationAdapter implements GameController {
 
         world.createStarterSettlement();
 
+        simulation = new SimulationSystem(world);
+
         renderer = new Renderer(world, batch, camera);
         renderer.addLayer(new TerrainRenderLayer(world, true));
         renderer.addLayer(new ObjectRenderLayer(world, true));
         renderer.addLayer(new RoadRenderLayer(world, true));
         renderer.addLayer(new BuildingRenderLayer(world, true));
         renderer.addLayer(new SettlementRenderLayer(world, true));
+        renderer.addLayer(new CaravanRenderLayer(world));
         renderer.addLayer(new FogOfWarRenderLayer(world));
 
         roadIcon = new Texture(Gdx.files.internal("64x64/single-tiles/road-dirt-ns.png"));
 
         settlementPanel = new SettlementInfoPanel();
         buildToolbar = new BuildToolbar();
+        createHudFont();
 
         createSelectionTextures();
         createSpecializationIcons();
@@ -122,6 +136,18 @@ public class Main extends ApplicationAdapter implements GameController {
         setGameMode(exploreMode);
 
         Gdx.input.setInputProcessor(inputMultiplexer);
+    }
+
+    private void createHudFont() {
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(
+            Gdx.files.internal("fonts/JetBrainsMono-Regular.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        params.size = 13;
+        params.color = Color.WHITE;
+        params.borderColor = new Color(0, 0, 0, 0.7f);
+        params.borderWidth = 1f;
+        hudFont = generator.generateFont(params);
+        generator.dispose();
     }
 
     private void createSelectionTextures() {
@@ -447,6 +473,13 @@ public class Main extends ApplicationAdapter implements GameController {
 
     @Override
     public void render() {
+        float delta = Gdx.graphics.getDeltaTime();
+        tickAccumulator += delta;
+        while (tickAccumulator >= TICK_INTERVAL) {
+            simulation.tick(TICK_INTERVAL);
+            tickAccumulator -= TICK_INTERVAL;
+        }
+
         ScreenUtils.clear(0.15f, 0.15f, 0.2f, 1f);
 
         renderer.render();
@@ -478,7 +511,34 @@ public class Main extends ApplicationAdapter implements GameController {
                 settlementPanel.render(settlement, uiBatch, screenWidth, screenHeight);
             }
         }
+        renderResourceHud(uiBatch, screenWidth, screenHeight);
         uiBatch.end();
+    }
+
+    private void renderResourceHud(SpriteBatch b, int sw, int sh) {
+        if (hudFont == null) return;
+        // Aggregate resources across all settlements
+        float totalWood = 0, totalStone = 0, totalFood = 0, totalGoods = 0, totalGold = 0;
+        for (Settlement s : world.getSettlements()) {
+            totalWood  += s.wood;
+            totalStone += s.stone;
+            totalFood  += s.food;
+            totalGoods += s.goods;
+            totalGold  += s.gold;
+        }
+        int routes = world.getTradeRoutes().size();
+        int caravans = world.getCaravans().size();
+
+        float x = 15;
+        float y = sh - 15;
+        int lineH = 17;
+
+        hudFont.setColor(new Color(0.85f, 0.85f, 1f, 1f));
+        hudFont.draw(b, String.format("Wood:  %5.0f   Stone: %5.0f", totalWood,  totalStone), x, y); y -= lineH;
+        hudFont.draw(b, String.format("Food:  %5.0f   Goods: %5.0f", totalFood,  totalGoods), x, y); y -= lineH;
+        hudFont.draw(b, String.format("Gold:  %5.0f   Routes: %d  Caravans: %d",
+            totalGold, routes, caravans), x, y);
+        hudFont.setColor(Color.WHITE);
     }
 
     @Override
@@ -498,6 +558,7 @@ public class Main extends ApplicationAdapter implements GameController {
             tex.dispose();
         }
         if (roadIcon != null) roadIcon.dispose();
+        if (hudFont != null) hudFont.dispose();
     }
 
     @Override

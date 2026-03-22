@@ -821,15 +821,17 @@ These formulas determine pacing, balance, and player experience. Test and iterat
 - [ ] Traffic capacity visualization
 - [ ] Road upkeep system
 
-### Phase 5: Trade & Economy
-- [ ] Resource gathering from tiles
-- [ ] Resource storage per settlement
-- [ ] Trade route establishment
-- [ ] Dynamic pricing with autonomous demand
-- [ ] Caravan movement with non-linear upkeep
-- [ ] Trade policies (import/export priorities)
-- [ ] Caravan animation
-- [ ] Export backlog pressure system
+### Phase 5: Trade & Economy (Complete)
+- [x] Resource gathering from tiles (terrain scan radius 3)
+- [x] Resource storage per settlement (wood, stone, food, goods, gold)
+- [x] Trade route establishment (BFS pathfinding through road tiles)
+- [x] Dynamic pricing with autonomous demand (lerp-smoothed price multipliers)
+- [x] Caravan movement with non-linear upkeep (moves along road path, upkeep per tile)
+- [x] Caravan animation (orange dot moving along road)
+- [x] Population growth from food surplus / starvation from deficit
+- [x] Resource HUD (top-left: totals across all settlements)
+- [ ] Trade policies (import/export priorities) — deferred to Phase 9
+- [ ] Export backlog pressure system — deferred to Phase 9
 
 ### Phase 6: Exploration Rewards
 - [ ] Resource cache spawning

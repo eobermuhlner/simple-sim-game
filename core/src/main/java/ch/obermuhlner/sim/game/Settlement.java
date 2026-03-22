@@ -15,6 +15,27 @@ public class Settlement {
     public int settlementLevelIndex;
     public Specialization specialization = Specialization.NONE;
 
+    // Resource stockpiles
+    public float wood  = 0f;
+    public float stone = 0f;
+    public float food  = 0f;
+    public float goods = 0f;
+    public float gold  = 50f;
+
+    public float storageCapacity = 500f;
+
+    // Smoothed production rates (exponential moving average)
+    public float smoothedWoodProd  = 0f;
+    public float smoothedStoneProd = 0f;
+    public float smoothedFoodProd  = 0f;
+    public float smoothedGoodsProd = 0f;
+
+    // Dynamic price multipliers (clamped to [0.5, 2.0])
+    public float woodPriceMult  = 1f;
+    public float stonePriceMult = 1f;
+    public float foodPriceMult  = 1f;
+    public float goodsPriceMult = 1f;
+
     public Settlement(String name, int centerX, int centerY) {
         this.id = nextId++;
         this.name = name;
@@ -126,5 +147,68 @@ public class Settlement {
             SettlementLevel newLevel = levels[settlementLevelIndex];
             population = newLevel.getMinPopulation();
         }
+    }
+
+    public float getResource(ResourceType type) {
+        switch (type) {
+            case WOOD:  return wood;
+            case STONE: return stone;
+            case FOOD:  return food;
+            case GOODS: return goods;
+            case GOLD:  return gold;
+            default:    return 0f;
+        }
+    }
+
+    public void addResource(ResourceType type, float amount) {
+        switch (type) {
+            case WOOD:  wood  = Math.max(0, Math.min(storageCapacity, wood  + amount)); break;
+            case STONE: stone = Math.max(0, Math.min(storageCapacity, stone + amount)); break;
+            case FOOD:  food  = Math.max(0, Math.min(storageCapacity, food  + amount)); break;
+            case GOODS: goods = Math.max(0, Math.min(storageCapacity, goods + amount)); break;
+            case GOLD:  gold  = Math.max(0, gold + amount); break;
+        }
+    }
+
+    public float getPriceMult(ResourceType type) {
+        switch (type) {
+            case WOOD:  return woodPriceMult;
+            case STONE: return stonePriceMult;
+            case FOOD:  return foodPriceMult;
+            case GOODS: return goodsPriceMult;
+            default:    return 1f;
+        }
+    }
+
+    public void setPriceMult(ResourceType type, float value) {
+        switch (type) {
+            case WOOD:  woodPriceMult  = value; break;
+            case STONE: stonePriceMult = value; break;
+            case FOOD:  foodPriceMult  = value; break;
+            case GOODS: goodsPriceMult = value; break;
+        }
+    }
+
+    public float getSmoothedProd(ResourceType type) {
+        switch (type) {
+            case WOOD:  return smoothedWoodProd;
+            case STONE: return smoothedStoneProd;
+            case FOOD:  return smoothedFoodProd;
+            case GOODS: return smoothedGoodsProd;
+            default:    return 0f;
+        }
+    }
+
+    public void setSmoothedProd(ResourceType type, float value) {
+        switch (type) {
+            case WOOD:  smoothedWoodProd  = value; break;
+            case STONE: smoothedStoneProd = value; break;
+            case FOOD:  smoothedFoodProd  = value; break;
+            case GOODS: smoothedGoodsProd = value; break;
+        }
+    }
+
+    public float getCurrentPrice(ResourceType type) {
+        return type.basePrice * getPriceMult(type);
     }
 }

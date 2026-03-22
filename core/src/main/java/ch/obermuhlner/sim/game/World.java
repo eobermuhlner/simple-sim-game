@@ -5,7 +5,12 @@ import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.LongMap;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.function.Consumer;
 
 public class World {
@@ -14,6 +19,10 @@ public class World {
     private final TerrainGenerator terrainGenerator;
     private final List<Settlement> settlements = new ArrayList<>();
     private int nextSettlementId = 1;
+
+    private final List<TradeRoute> tradeRoutes = new ArrayList<>();
+    private final List<Caravan> caravans = new ArrayList<>();
+    public boolean routesDirty = true;
 
     public World(int chunkSize, long seed) {
         this.chunkSize = chunkSize;
@@ -83,11 +92,15 @@ public class World {
         Settlement settlement = new Settlement(name, tx, ty);
         settlements.add(settlement);
         revealArea(tx, ty, 3);
+        routesDirty = true;
         return settlement;
     }
 
     public void removeSettlement(int id) {
         settlements.removeIf(s -> s.id == id);
+        tradeRoutes.removeIf(r -> r.connects(id));
+        caravans.removeIf(c -> c.fromSettlementId == id || c.toSettlementId == id);
+        routesDirty = true;
     }
 
     public Settlement getSettlement(int id) {
@@ -233,6 +246,7 @@ public class World {
         updateRoadConnections(tx, ty - 1);
         updateRoadConnections(tx + 1, ty);
         updateRoadConnections(tx - 1, ty);
+        routesDirty = true;
         return true;
     }
 
@@ -247,6 +261,7 @@ public class World {
         updateRoadConnections(tx, ty - 1);
         updateRoadConnections(tx + 1, ty);
         updateRoadConnections(tx - 1, ty);
+        routesDirty = true;
         return true;
     }
 
@@ -262,6 +277,113 @@ public class World {
         if (getTile(tx + 1, ty).roadType != 0) conn |= ROAD_EAST;
         if (getTile(tx - 1, ty).roadType != 0) conn |= ROAD_WEST;
         tile.roadConnection = conn;
+    }
+
+    // ---- Trade route & caravan management ----
+
+    public List<TradeRoute> getTradeRoutes() { return tradeRoutes; }
+    public List<Caravan> getCaravans() { return caravans; }
+
+    public TradeRoute getTradeRoute(int idA, int idB) {
+        int lo = Math.min(idA, idB), hi = Math.max(idA, idB);
+        for (TradeRoute r : tradeRoutes) {
+            if (r.idA == lo && r.idB == hi) return r;
+        }
+        return null;
+    }
+
+    public void addTradeRoute(TradeRoute route) {
+        tradeRoutes.add(route);
+    }
+
+    public void removeTradeRoute(int routeId) {
+        tradeRoutes.removeIf(r -> r.id == routeId);
+        caravans.removeIf(c -> c.routeId == routeId);
+    }
+
+    public TradeRoute getTradeRouteById(int routeId) {
+        for (TradeRoute r : tradeRoutes) {
+            if (r.id == routeId) return r;
+        }
+        return null;
+    }
+
+    /**
+     * BFS pathfinding through road tiles.
+     * Tiles within 2 of start or end are treated as walkable even without a road
+     * to bridge the gap between settlement centers and the road network.
+     * Returns null if no path exists. Max search: 300 tiles Manhattan distance.
+     */
+    public List<int[]> findRoadPath(int x1, int y1, int x2, int y2) {
+        int maxManhattan = 300;
+        if (Math.abs(x2 - x1) + Math.abs(y2 - y1) > maxManhattan) return null;
+
+        Map<Long, Long> parent = new HashMap<>();
+        Queue<int[]> queue = new LinkedList<>();
+        long startKey = encodePos(x1, y1);
+        parent.put(startKey, -1L);
+        queue.add(new int[]{x1, y1});
+
+        int[][] dirs = {{0,1},{0,-1},{1,0},{-1,0}};
+
+        while (!queue.isEmpty()) {
+            int[] cur = queue.poll();
+            int cx = cur[0], cy = cur[1];
+
+            if (Math.abs(cx - x2) <= 2 && Math.abs(cy - y2) <= 2) {
+                return reconstructPath(parent, encodePos(cx, cy), x2, y2);
+            }
+
+            for (int[] dir : dirs) {
+                int nx = cx + dir[0], ny = cy + dir[1];
+                if (Math.abs(nx - x1) + Math.abs(ny - y1) > maxManhattan) continue;
+                long nKey = encodePos(nx, ny);
+                if (parent.containsKey(nKey)) continue;
+
+                boolean nearStart = Math.abs(nx - x1) <= 2 && Math.abs(ny - y1) <= 2;
+                boolean nearEnd   = Math.abs(nx - x2) <= 2 && Math.abs(ny - y2) <= 2;
+                boolean hasRoad   = getTile(nx, ny).roadType > 0;
+
+                if (hasRoad || nearStart || nearEnd) {
+                    parent.put(nKey, encodePos(cx, cy));
+                    queue.add(new int[]{nx, ny});
+                }
+            }
+        }
+        return null;
+    }
+
+    private List<int[]> reconstructPath(Map<Long, Long> parent, long endKey, int x2, int y2) {
+        List<int[]> path = new ArrayList<>();
+        long cur = endKey;
+        while (cur != -1L) {
+            int tx = decodeX(cur), ty = decodeY(cur);
+            path.add(new int[]{tx, ty});
+            Long p = parent.get(cur);
+            if (p == null) break;
+            cur = p;
+        }
+        // Add destination endpoint if not already at exact position
+        if (!path.isEmpty()) {
+            int[] last = path.get(0); // path is reversed at this point
+            if (last[0] != x2 || last[1] != y2) {
+                path.add(0, new int[]{x2, y2});
+            }
+        }
+        Collections.reverse(path);
+        return path;
+    }
+
+    private static long encodePos(int tx, int ty) {
+        return ((long)(tx + 1000000)) * 3000000L + (ty + 1000000);
+    }
+
+    private static int decodeX(long encoded) {
+        return (int)(encoded / 3000000L) - 1000000;
+    }
+
+    private static int decodeY(long encoded) {
+        return (int)(encoded % 3000000L) - 1000000;
     }
 
     public void forEachVisibleChunk(int startTx, int startTy, int endTx, int endTy, ChunkConsumer consumer) {
