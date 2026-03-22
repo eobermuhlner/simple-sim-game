@@ -2,6 +2,7 @@ package ch.obermuhlner.sim;
 
 import ch.obermuhlner.sim.game.BuildingType;
 import ch.obermuhlner.sim.game.GameController;
+import ch.obermuhlner.sim.game.RoadType;
 import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.Specialization;
 import ch.obermuhlner.sim.game.Tile;
@@ -11,6 +12,7 @@ import ch.obermuhlner.sim.game.mode.BuildMode;
 import ch.obermuhlner.sim.game.mode.ExploreMode;
 import ch.obermuhlner.sim.game.mode.GameMode;
 import ch.obermuhlner.sim.game.render.*;
+import ch.obermuhlner.sim.game.render.RoadRenderLayer;
 import ch.obermuhlner.sim.game.ui.BuildToolbar;
 import ch.obermuhlner.sim.game.ui.SettlementInfoPanel;
 import com.badlogic.gdx.ApplicationAdapter;
@@ -41,6 +43,7 @@ public class Main extends ApplicationAdapter implements GameController {
     //   20      – Upgrade (Town → City, City → Metropolis)
     //   21      – Enter re-specialize mode
     //   30–33   – Re-specialization choice (drop one level + new spec)
+    //   50      – Build Dirt Road
     private static final int TOOL_NEW_SETTLEMENT = 0;
     private static final int TOOL_HOUSE   = 1;
     private static final int TOOL_FARM    = 2;
@@ -57,6 +60,7 @@ public class Main extends ApplicationAdapter implements GameController {
     private static final int TOOL_RESPEC_MINING  = 31;
     private static final int TOOL_RESPEC_FARMING = 32;
     private static final int TOOL_RESPEC_TRADE   = 33;
+    private static final int TOOL_BUILD_ROAD     = 50;
 
     private SpriteBatch batch;
     private OrthographicCamera camera;
@@ -79,6 +83,7 @@ public class Main extends ApplicationAdapter implements GameController {
     private Texture settlementTexture;
     private boolean tileSelected = false;
     private boolean respecMode = false;
+    private Texture roadIcon;
 
     @Override
     public void create() {
@@ -97,9 +102,12 @@ public class Main extends ApplicationAdapter implements GameController {
         renderer = new Renderer(world, batch, camera);
         renderer.addLayer(new TerrainRenderLayer(world, true));
         renderer.addLayer(new ObjectRenderLayer(world, true));
+        renderer.addLayer(new RoadRenderLayer(world, true));
         renderer.addLayer(new BuildingRenderLayer(world, true));
         renderer.addLayer(new SettlementRenderLayer(world, true));
         renderer.addLayer(new FogOfWarRenderLayer(world));
+
+        roadIcon = new Texture(Gdx.files.internal("64x64/single-tiles/road-dirt-ns.png"));
 
         settlementPanel = new SettlementInfoPanel();
         buildToolbar = new BuildToolbar();
@@ -206,6 +214,10 @@ public class Main extends ApplicationAdapter implements GameController {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_RESPEC_MODE, "Re-spec", null));
             }
 
+            if (tile.terrain.isTraversable()) {
+                availableTools.add(new BuildToolbar.ToolButton(TOOL_BUILD_ROAD, "Build Road", roadIcon));
+            }
+
             if (isBuildable && nearby != null) {
                 addBuildingButton(TOOL_HOUSE,     BuildingType.HOUSE_SIMPLE);
                 addBuildingButton(TOOL_FARM,      BuildingType.FARM_SMALL);
@@ -291,6 +303,10 @@ public class Main extends ApplicationAdapter implements GameController {
             // Enter re-specialize mode
             case TOOL_RESPEC_MODE:
                 respecMode = true;
+                break;
+            // Road building
+            case TOOL_BUILD_ROAD:
+                world.placeRoad(selectedTileX, selectedTileY, RoadType.DIRT);
                 break;
             // Re-specialization choice
             case TOOL_RESPEC_LOGGING:
@@ -385,6 +401,20 @@ public class Main extends ApplicationAdapter implements GameController {
         selectTile(tileX, tileY);
     }
 
+    @Override
+    public boolean handleDrag(int screenX, int screenY) {
+        if (selectedToolId != TOOL_BUILD_ROAD) return false;
+
+        com.badlogic.gdx.math.Vector3 worldPos = camera.unproject(new com.badlogic.gdx.math.Vector3(screenX, screenY, 0));
+        int tileX = (int) Math.floor(worldPos.x / 64);
+        int tileY = (int) Math.floor(worldPos.y / 64);
+
+        if (world.isRevealed(tileX, tileY)) {
+            world.placeRoad(tileX, tileY, RoadType.DIRT);
+        }
+        return true;
+    }
+
     public int getSelectedTileX() { return selectedTileX; }
     public int getSelectedTileY() { return selectedTileY; }
     public boolean hasTileSelected() { return tileSelected; }
@@ -467,6 +497,7 @@ public class Main extends ApplicationAdapter implements GameController {
         for (Texture tex : specializationIcons.values()) {
             tex.dispose();
         }
+        if (roadIcon != null) roadIcon.dispose();
     }
 
     @Override

@@ -116,7 +116,13 @@ public class ExploreMode implements GameMode {
             float dx = screenX - lastMouseX;
             float dy = screenY - lastMouseY;
             totalDrag += Math.abs(dx) + Math.abs(dy);
-            camera.translate(-dx * camera.zoom, dy * camera.zoom);
+
+            // Let controller consume the drag (e.g. road drag-to-place), otherwise pan
+            boolean consumed = controller != null && controller.handleDrag(screenX, screenY);
+            if (!consumed) {
+                camera.translate(-dx * camera.zoom, dy * camera.zoom);
+            }
+
             lastMouseX = screenX;
             lastMouseY = screenY;
             return true;

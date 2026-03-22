@@ -468,4 +468,9 @@ public class GameWithConsole extends ApplicationAdapter implements GameControlle
             bm.touchUp(screenX, screenY, 0, com.badlogic.gdx.Input.Buttons.LEFT);
         }
     }
+
+    @Override
+    public boolean handleDrag(int screenX, int screenY) {
+        return false;
+    }
 }

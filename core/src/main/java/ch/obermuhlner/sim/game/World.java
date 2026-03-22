@@ -215,6 +215,55 @@ public class World {
         }
     }
 
+    // Road connection bitmask constants
+    public static final int ROAD_NORTH = 1;
+    public static final int ROAD_SOUTH = 2;
+    public static final int ROAD_EAST  = 4;
+    public static final int ROAD_WEST  = 8;
+
+    public boolean placeRoad(int tx, int ty, RoadType type) {
+        Tile tile = getTile(tx, ty);
+        if (!tile.terrain.isTraversable()) return false;
+
+        tile.roadType = type.getId();
+
+        // Update connections for this tile and its 4 neighbors
+        updateRoadConnections(tx, ty);
+        updateRoadConnections(tx, ty + 1);
+        updateRoadConnections(tx, ty - 1);
+        updateRoadConnections(tx + 1, ty);
+        updateRoadConnections(tx - 1, ty);
+        return true;
+    }
+
+    public boolean removeRoad(int tx, int ty) {
+        Tile tile = getTile(tx, ty);
+        if (tile.roadType == 0) return false;
+
+        tile.roadType = 0;
+        tile.roadConnection = 0;
+
+        updateRoadConnections(tx, ty + 1);
+        updateRoadConnections(tx, ty - 1);
+        updateRoadConnections(tx + 1, ty);
+        updateRoadConnections(tx - 1, ty);
+        return true;
+    }
+
+    private void updateRoadConnections(int tx, int ty) {
+        Tile tile = getTile(tx, ty);
+        if (tile.roadType == 0) {
+            tile.roadConnection = 0;
+            return;
+        }
+        int conn = 0;
+        if (getTile(tx, ty + 1).roadType != 0) conn |= ROAD_NORTH;
+        if (getTile(tx, ty - 1).roadType != 0) conn |= ROAD_SOUTH;
+        if (getTile(tx + 1, ty).roadType != 0) conn |= ROAD_EAST;
+        if (getTile(tx - 1, ty).roadType != 0) conn |= ROAD_WEST;
+        tile.roadConnection = conn;
+    }
+
     public void forEachVisibleChunk(int startTx, int startTy, int endTx, int endTy, ChunkConsumer consumer) {
         int startCx = Math.floorDiv(startTx, chunkSize);
         int endCx = (int) Math.ceil((double) endTx / chunkSize);

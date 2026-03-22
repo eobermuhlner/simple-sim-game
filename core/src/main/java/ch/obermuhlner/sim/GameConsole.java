@@ -159,7 +159,22 @@ public class GameConsole {
                     }
                 }
                 return "Usage: build <x> <y> [buildingId]";
-            
+
+            case "road":
+                if (parts.length >= 3) {
+                    try {
+                        int tx = Integer.parseInt(parts[1]);
+                        int ty = Integer.parseInt(parts[2]);
+                        world.reveal(tx, ty);
+                        boolean placed = world.placeRoad(tx, ty, ch.obermuhlner.sim.game.RoadType.DIRT);
+                        return placed ? "Placed dirt road at (" + tx + ", " + ty + ")"
+                                      : "Cannot place road at (" + tx + ", " + ty + ")";
+                    } catch (NumberFormatException e) {
+                        return "Invalid coordinates";
+                    }
+                }
+                return "Usage: road <x> <y>";
+
             default:
                 return "Unknown command: " + cmd + "\nType 'help' for available commands";
         }

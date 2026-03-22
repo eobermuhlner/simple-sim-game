@@ -813,11 +813,11 @@ These formulas determine pacing, balance, and player experience. Test and iterat
 - [x] Re-specialization mechanic
 - [x] Visual identity per specialization type
 
-### Phase 4: Road Network
-- [ ] Road tile rendering (multiple types)
-- [ ] Road placement tool with drag
-- [ ] Road type upgrades (in-place)
-- [ ] Path connectivity detection
+### Phase 4: Road Network (Complete)
+- [x] Road tile rendering (dirt road with connection-based sprite selection + rotation)
+- [x] Road placement tool with drag (select "Build Road" tool, then click or drag)
+- [ ] Road type upgrades (in-place) — Stone/Cobblestone/Roman textures pending
+- [ ] Path connectivity detection (settlement-to-settlement graph)
 - [ ] Traffic capacity visualization
 - [ ] Road upkeep system
 

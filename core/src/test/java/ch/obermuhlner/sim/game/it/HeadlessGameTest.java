@@ -72,6 +72,11 @@ public abstract class HeadlessGameTest implements GameController {
         }
     }
 
+    @Override
+    public boolean handleDrag(int screenX, int screenY) {
+        return false;
+    }
+
     protected void setInputProcessor(InputProcessor processor) {
         Gdx.input.setInputProcessor(processor);
     }

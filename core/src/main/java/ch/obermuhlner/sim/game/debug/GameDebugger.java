@@ -1,6 +1,7 @@
 package ch.obermuhlner.sim.game.debug;
 
 import ch.obermuhlner.sim.game.*;
+import ch.obermuhlner.sim.game.RoadType;
 
 import java.util.StringJoiner;
 
@@ -109,18 +110,25 @@ public class GameDebugger {
             BuildingType building = BuildingType.fromId(tile.buildingId);
             sb.append(String.format("  Building: %s\n", building != null ? building.getDisplayName() : "unknown"));
         }
-        
+
+        if (tile.hasRoad()) {
+            RoadType roadType = RoadType.fromId(tile.roadType);
+            sb.append(String.format("  Road: %s (conn=0b%s)\n",
+                roadType != null ? roadType.getDisplayName() : "unknown",
+                Integer.toBinaryString(tile.roadConnection)));
+        }
+
         if (settlement != null) {
             sb.append(String.format("  Settlement: %s [%s]\n", settlement.name, settlement.getLevel().getDisplayName()));
         }
-        
+
         return sb.toString();
     }
     
     public String getMapAround(int centerX, int centerY, int radius) {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("Map around (%d, %d), radius %d:\n", centerX, centerY, radius));
-        sb.append("  (fog=#, grass=G, forest=F, stone=S, water=W, snow=X)\n");
+        sb.append("  (fog=#, grass=G, forest=F, stone=S, water=W, snow=X, road=R, settlement=@, building=B)\n");
         
         for (int y = centerY + radius; y >= centerY - radius; y--) {
             StringBuilder row = new StringBuilder();
@@ -136,6 +144,8 @@ public class GameDebugger {
                         row.append('@');
                     } else if (tile.hasBuilding()) {
                         row.append('B');
+                    } else if (tile.hasRoad()) {
+                        row.append('R');
                     } else {
                         switch (tile.terrain) {
                             case WATER: row.append('~'); break;
