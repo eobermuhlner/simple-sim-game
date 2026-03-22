@@ -77,4 +77,22 @@ public class Caravan {
         if (effectivePath == null || effectivePath.isEmpty()) return 0;
         return effectivePath.get(Math.min(pathIndex, effectivePath.size() - 1))[1];
     }
+
+    /**
+     * Returns the movement direction ("south", "north", "east", "west")
+     * based on the vector from the current tile to the next tile in the path.
+     */
+    public String getDirection() {
+        if (effectivePath == null || effectivePath.size() < 2) return "south";
+        int cur  = Math.min(pathIndex, effectivePath.size() - 1);
+        int next = Math.min(pathIndex + 1, effectivePath.size() - 1);
+        if (cur == next) return "south";
+        int dx = effectivePath.get(next)[0] - effectivePath.get(cur)[0];
+        int dy = effectivePath.get(next)[1] - effectivePath.get(cur)[1];
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            return dx >= 0 ? "east" : "west";
+        } else {
+            return dy >= 0 ? "north" : "south";
+        }
+    }
 }
