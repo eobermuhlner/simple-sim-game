@@ -365,8 +365,8 @@ public class World {
 
             if (curCost > dist.getOrDefault(curKey, Double.MAX_VALUE)) continue;
 
-            if (Math.abs(cx - x2) <= 2 && Math.abs(cy - y2) <= 2) {
-                return reconstructPath(parent, curKey, x2, y2);
+            if (cx == x2 && cy == y2) {
+                return reconstructPath(parent, curKey);
             }
 
             for (int[] dir : dirs) {
@@ -400,22 +400,14 @@ public class World {
         return null;
     }
 
-    private List<int[]> reconstructPath(Map<Long, Long> parent, long endKey, int x2, int y2) {
+    private List<int[]> reconstructPath(Map<Long, Long> parent, long endKey) {
         List<int[]> path = new ArrayList<>();
         long cur = endKey;
         while (cur != -1L) {
-            int tx = decodeX(cur), ty = decodeY(cur);
-            path.add(new int[]{tx, ty});
+            path.add(new int[]{decodeX(cur), decodeY(cur)});
             Long p = parent.get(cur);
             if (p == null) break;
             cur = p;
-        }
-        // Add destination endpoint if not already at exact position
-        if (!path.isEmpty()) {
-            int[] last = path.get(0); // path is reversed at this point
-            if (last[0] != x2 || last[1] != y2) {
-                path.add(0, new int[]{x2, y2});
-            }
         }
         Collections.reverse(path);
         return path;
