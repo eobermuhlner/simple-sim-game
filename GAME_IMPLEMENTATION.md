@@ -9,7 +9,12 @@
 
 **Early Game:** Player begins with a single settlement (one hut) auto-placed on suitable terrain (grass, large area, adjacent to multiple terrain types). Settlement produces resources slowly. Player explores to find resource caches and promising locations for next settlement. The game truly begins when the second settlement is founded and trade becomes possible.
 
-**Key Moment — First Trade Connection:** When the second settlement connects via road, the first caravan spawns, gold income begins, and the UI highlights trade activation.
+**Key Moment — First Trade Connection:** When the second settlement connects via road:
+1. First caravan spawns with visible animation
+2. Gold income begins
+3. UI highlights trade activation with notification
+4. **Brief time slowdown (0.5s)** to let player register the event
+5. Tutorial hint: "Trade routes generate income based on caravan deliveries"
 
 **Design Pillars:**
 - Simplicity over complexity
@@ -70,8 +75,9 @@ The simulation runs on a **fixed tick system** to ensure deterministic behavior 
 
 #### Tick System
 - **Tick Rate:** 1 tick per second (1 Hz)
-- **Update Order:** Resources → Population → Caravan Movement → Pricing → Upkeep
+- **Update Order:** Resources → Population → Caravan Movement → **Trade** → **Pricing** → Upkeep
 - **Rendering:** Interpolated between ticks for smooth visuals at 60 FPS
+- **Note:** Trade (delivery resolution) runs before Pricing so prices reflect latest deliveries
 
 #### Per-Tick Updates
 | System | Update |
@@ -79,9 +85,14 @@ The simulation runs on a **fixed tick system** to ensure deterministic behavior 
 | Resource Production | Calculate production based on terrain, buildings, specialization |
 | Population Growth | Apply growth formula based on food surplus/deficit |
 | Caravan Movement | Advance caravans along routes (fractional tile movement) |
-| Dynamic Pricing | Recalculate local prices based on supply/demand ratio |
+| **Trade** | Process completed deliveries, apply export backlog pressure, spawn new caravans |
+| **Dynamic Pricing** | Recalculate local prices based on smoothed supply/demand |
 | Upkeep | Deduct gold for roads, caravans, buildings |
-| Trade | Process completed deliveries, spawn new caravans |
+
+#### Determinism & Precision
+- **Quantize critical values:** Resource amounts, positions, and time use integer or fixed-point representation where possible
+- **Smoothed values:** Use `lerp(prev, current, 0.1)` to prevent floating-point drift and price oscillation
+- **Batch updates:** Process all entities of one type before moving to the next system
 
 ---
 
@@ -134,10 +145,19 @@ Settlements start generic and specialize at the Village → Town upgrade:
 - Grants production bonuses and unlocks a tech branch
 - Limits other production types
 
+**Trade Hub Diminishing Returns:** Trade income bonus scales with `sqrt(connections)` instead of linearly:
+```
+tradeBonus = baseBonus * sqrt(activeRoutes)
+```
+- 1 route = 1.0x bonus
+- 4 routes = 2.0x bonus (vs 4.0x linear)
+- 9 routes = 3.0x bonus (vs 9.0x linear)
+- This prevents single central hub from dominating while keeping the fantasy intact
+
 **Re-specialization:** Settlement can re-specialize, but drops one level (Town → Village) and must upgrade again. Cost scales naturally — changing a City hurts more than changing a Town.
 
 #### Population Growth Formula
-- **Food Consumption:** `foodConsumed = population * 0.1` per tick
+- **Food Consumption:** `foodConsumed = population * 0.15` per tick (tuned for slower early growth)
 - **Growth Condition:**
   - `surplus = foodProduction - foodConsumed`
   - If `surplus > 0`: Growth = `surplus * growthRate * levelMultiplier`
@@ -159,6 +179,8 @@ Settlements start generic and specialize at the Village → Town upgrade:
 
 **Starvation Behavior:** Population decreases but never below 1. Visual degradation appears when population declining.
 
+**Balance Note:** 1 grass tile produces ~0.5 food/tick, with 0.15 per pop this supports ~3-4 population per food tile (reduced from 5). This creates meaningful early survival pressure.
+
 ### 3.4 Resource System
 
 #### Core Resources
@@ -176,10 +198,22 @@ Settlements start generic and specialize at the Village → Town upgrade:
 - Goods → generate gold via trade
 - Gold → used for expansion and upgrades
 
-#### Resource Storage (MVP)
-- **Infinite storage** — no caps, no spoilage
-- Overflow resources flow to trade (simplifies early game)
-- Add constraints later if gameplay depth requires
+#### Resource Storage & Export Backlog
+- **Storage:** Infinite (no hard caps)
+- **Export Backlog Pressure:** Soft pressure prevents logistics from becoming irrelevant:
+  - Each settlement tracks `exportBacklog[resource]` = resources waiting for transport
+  - If `backlog > 0`: Effective export price reduced by `backlog * penaltyFactor`
+  - Formula: `effectivePrice = basePrice * max(0.5, 1.0 - backlog * 0.01)`
+  - Backlog grows when production exceeds caravan transport capacity
+  - Backlog shrinks when caravans deliver goods
+
+**Why This Works:**
+- Infinite storage prevents frustration from lost resources
+- Export backlog creates soft pressure to expand transport (caravans, roads)
+- Logistics remains the bottleneck without hard caps
+- Player sees backlog growing → knows to invest in transport
+
+**Visual Indicator:** Settlement panel shows backlog status: "Export backlog: 50 wood waiting"
 
 #### Resource Production Formula
 - **Base Rate:** Determined by terrain and objects
@@ -230,11 +264,13 @@ Each road type enables a new transport class. Higher types support all lower tie
 - **Congestion:** Ignored for routing (only affects speed)
 
 #### Caravan Spawn Logic
-- **Spawn Interval:** Deterministic per route, scaled by settlement sizes
-- **Formula:** `interval = baseInterval / (sqrt(sizeA) * sqrt(sizeB))`
+- **Spawn Interval:** Deterministic per route, scaled by combined settlement sizes
+- **Formula (flattened):** `interval = baseInterval / sqrt(sizeA + sizeB)`
+  - Prevents rapid saturation of 3-caravan cap
+  - Example: size 50+200 = 250 → factor ~16 (vs 100x with product formula)
 - **Max Caravans:** 3 per route (prevents spam, ensures traffic variety)
 - **Spawn Rate Scaling:**
-  - Settlement size increases spawn frequency
+  - Combined settlement size increases spawn frequency
   - Road capacity limits effective throughput
 
 #### Movement & Speed
@@ -263,9 +299,12 @@ Each road type enables a new transport class. Higher types support all lower tie
 - Faster roads reduce travel days → reduce upkeep
 
 #### Relay Settlements
-- **Rule:** Settlement must be Town level or higher to act as relay
+- **Rules (both required):**
+  1. Settlement must be Town level or higher
+  2. Settlement must have active trade participation (imports OR exports in the last 30 ticks)
 - **Effect:** Route splits into segments; each segment incurs separate upkeep
 - **Benefit:** Shorter legs = cheaper total upkeep despite extra caravans
+- **Anti-exploit:** Prevents building minimal Towns purely as structural relays without economic integration
 
 **Visual Feedback:**
 - Busy roads = thriving economy
@@ -290,18 +329,28 @@ Each road type enables a new transport class. Higher types support all lower tie
 - Per settlement, per resource: Import / Export / Neutral
 - Policies filter which resources flow (MVP: "export surplus" / "import needed")
 
-#### Dynamic Pricing Formula
+#### Dynamic Pricing Formula (Stabilized)
 - **Base Price:** Fixed per resource (e.g., Food=5, Wood=3, Stone=4, Goods=10 gold)
 
 - **Price Calculation (per settlement, per resource):**
   ```
-  supplyRatio = localStock / (localPopulation * 0.5)
-  demandRatio = localDemand / (localPopulation * 0.3)
-  ratio = supplyRatio / max(demandRatio, 0.1)
+  // Use smoothed production rate, not volatile stock
+  avgProduction = lerp(prevProduction, currentProduction, 0.1)
   
-  priceMultiplier = clamp(1.0 / ratio, 0.5, 2.0)
+  // Production vs demand ratio (not stock-based)
+  productionPerCapita = avgProduction / population
+  demandPerCapita = baseDemand * demandMultiplier
+  ratio = productionPerCapita / demandPerCapita
+  
+  // Smoothed price multiplier prevents oscillation
+  priceMultiplier = lerp(prevMultiplier, clamp(ratio, 0.5, 2.0), 0.2)
   currentPrice = basePrice * priceMultiplier
   ```
+
+- **Why Production-Based:**
+  - Stock swings from single caravan deliveries no longer cause price spikes
+  - Prices reflect sustainable economics, not inventory fluctuations
+  - Lerp smoothing (0.1 for production, 0.2 for price) prevents flicker
 
 - **Demand is Autonomous:**
   - `demand = baseDemandPerCapita * population * demandMultiplier`
@@ -310,11 +359,11 @@ Each road type enables a new transport class. Higher types support all lower tie
 
 - **Supply is Player-Controlled:**
   - Production rate from terrain, buildings, specialization
-  - Trade imports add to supply
+  - Trade imports add to effective production rate
   - Direct player resource management
 
-- **Price Update Frequency:** Every 10 ticks (10 seconds)
-- **Clamping:** Prices bounded to [50%, 200%] of base price to prevent extremes
+- **Price Update:** Every tick (smoothed values update continuously)
+- **Clamping:** Prices bounded to [50%, 200%] of base price
 
 **Price Modifiers Display:**
 - Show supply/demand modifiers (e.g., "Food shortage +40% price", "Oversupply -25% price")
@@ -465,13 +514,19 @@ Each road type enables a new transport class. Higher types support all lower tie
 **Trade Route Visuals:**
 - Trade routes visibly animate direction
 - **Route identity** — color-coded or labeled routes to distinguish at scale
+- **Hover highlight** — hover over a route to highlight it, dims all other routes
+  - Prevents color overload when many routes exist
+  - Shows route-specific info (caravans, throughput, profit)
 
 ### 7.5 Information Overlays
 - Highlight trade routes
 - Show resource flow
 - Simple overlays for efficiency
-- **Route cost previews** — show estimated caravan upkeep before building
+- **Route cost previews** — show estimated caravan upkeep including expected congestion penalty
+  - Preview calculates: `baseUpkeep * distance^1.5 * expectedCongestionMultiplier`
+  - Helps player make informed routing decisions without changing actual routing
 - **Congestion indicators** — highlight bottleneck roads that need upgrading
+- **Export backlog display** — shows resources waiting for transport
 
 ---
 
@@ -481,7 +536,9 @@ Each road type enables a new transport class. Higher types support all lower tie
 - **Top-Left:** Current resources (Wood, Stone, Food, Gold)
 - **Top-Right:** Minimap (toggleable)
 - **Bottom:** Build toolbar (when in build mode)
-- **Resource indicators:** ↑/↓ per resource showing supply/demand
+- **Resource indicators:** ↑/↓ per resource with reason breakdown:
+  - "Food ↑ Low supply" / "Food ↓ High demand" / "Food ↓ Export backlog"
+  - Simple icons with tooltip showing exact cause
 
 ### 8.2 Settlement Panel
 - Appears when settlement selected
@@ -542,6 +599,13 @@ core/src/main/java/ch/obermuhlner/sim/
 │   │   ├── CaravanSystem.java          - Movement, spawning, pathfinding
 │   │   ├── UpkeepSystem.java           - Road, caravan, building costs
 │   │   └── TechSystem.java              - Research progression
+│   ├── event/                - Event system for decoupled communication
+│   │   ├── EventBus.java              - Central event dispatcher
+│   │   ├── GameEvent.java             - Base event interface
+│   │   ├── ResourceChangedEvent.java
+│   │   ├── CaravanArrivedEvent.java
+│   │   ├── SettlementUpgradedEvent.java
+│   │   └── ... (other events)
 │   ├── render/
 │   │   ├── RenderLayer.java  - Layer interface for rendering
 │   │   ├── Renderer.java     - Orchestrates render layers
@@ -595,6 +659,25 @@ Systems contain simulation logic; entities are data containers. Each system:
 | CaravanSystem | Settlements, routes, roads | Caravan.position, Caravan.cargo |
 | UpkeepSystem | Roads, caravans, settlements | Settlement.gold |
 | TechSystem | Settlements, gold | TechTree.researchProgress |
+
+#### Event System
+
+Systems emit events for UI/rendering; subscribers react without tight coupling.
+
+**Core Events:**
+| Event | Payload | Use Case |
+|-------|---------|----------|
+| `ResourceChangedEvent` | settlement, resource, delta | Update HUD, settlement panel |
+| `CaravanArrivedEvent` | caravan, settlement, cargo | Trigger deliveries, animations |
+| `CaravanSpawnedEvent` | caravan, route | Route visualization |
+| `SettlementUpgradedEvent` | settlement, oldLevel, newLevel | UI notification, specialization choice |
+| `PopulationChangedEvent` | settlement, oldPop, newPop | Visual updates |
+| `PriceChangedEvent` | settlement, resource, oldPrice, newPrice | Price indicators |
+| `TradeCompletedEvent` | route, gold | Income notifications |
+| `ResearchCompletedEvent` | tech | Unlock notifications |
+| `ExportBacklogChangedEvent` | settlement, resource, backlog | Backlog warnings |
+
+**Event Bus:** Singleton `EventBus` instance. Systems register listeners; events dispatched synchronously after tick updates.
 
 ### 9.3 Extension Points
 
@@ -652,23 +735,29 @@ These formulas determine pacing, balance, and player experience. Test and iterat
 |---------|------------|-------------|
 | Population Growth | `growth = surplus * 0.01 * levelMult` | 1% of food surplus per tick |
 | Population Starvation | `starve = deficit * 0.02` | 2% of food deficit per tick, capped |
-| Food Consumption | `consumed = population * 0.1` | Per tick |
+| Food Consumption | `consumed = population * 0.15` | Per tick (tuned for slower growth) |
 | Caravan Upkeep | `upkeep = baseCost * days^1.5` | Non-linear distance cost |
 | Caravan Speed | `speed = baseSpeed * roadMultiplier` | Tiles per tick |
-| Price Multiplier | `priceMult = clamp(1/ratio, 0.5, 2.0)` | Based on supply/demand |
-| Traffic Slowdown | `slowdown = 1 - (traffic-cap)/cap * 0.5` | Min 0.2, max 1.0 |
+| Traffic Slowdown | `slowdown = clamp(1 - (traffic-cap)/cap * 0.5, 0.2, 1.0)` | Based on traffic ratio |
+| Caravan Spawn | `interval = baseInterval / sqrt(sizeA + sizeB)` | Flattened scaling |
+| Export Backlog Penalty | `priceMult = max(0.5, 1.0 - backlog * 0.01)` | Soft transport pressure |
+| Price Smoothing | `smoothed = lerp(prev, target, 0.1-0.2)` | Prevents price oscillation |
+| Trade Hub Bonus | `bonus = baseBonus * sqrt(connections)` | Diminishing returns |
 
 ### 10.2 Test Values (Tunable)
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
 | Tick Rate | 1 Hz | 1 tick per second |
-| Base Food/Capita | 0.5 | Food production per population |
+| Food Production | 0.5/tile | Grass produces food |
+| Food Consumption | 0.15/pop/tick | Slower than before |
 | Growth Rate | 0.01 | Fraction of surplus per tick |
 | Starvation Rate | 0.02 | Fraction of deficit per tick |
 | Caravan Base Speed | 1 tile/tick | On dirt road |
 | Caravan Base Upkeep | 1 gold | Per day (tick) |
-| Price Update Interval | 10 ticks | 10 seconds |
+| Price Smoothing | 0.1-0.2 | Lerp factor for production and price |
+| Export Backlog Penalty | 0.01 | Price reduction per backlog unit |
+| Trade Hub Connections | sqrt(n) | Diminishing returns scaling |
 
 ### 10.3 Road Properties
 
@@ -738,6 +827,7 @@ These formulas determine pacing, balance, and player experience. Test and iterat
 - [ ] Caravan movement with non-linear upkeep
 - [ ] Trade policies (import/export priorities)
 - [ ] Caravan animation
+- [ ] Export backlog pressure system
 
 ### Phase 6: Exploration Rewards
 - [ ] Resource cache spawning
@@ -759,11 +849,14 @@ These formulas determine pacing, balance, and player experience. Test and iterat
 
 ### Phase 9: Polish
 - [ ] Visual feedback (congestion, struggling settlements)
-- [ ] Route cost previews
+- [ ] Route cost previews with congestion
 - [ ] Minimap
 - [ ] Save/Load system
+- [ ] Event system implementation
 - [ ] Sound effects
 - [ ] Particle effects
+- [ ] First trade moment time slowdown
+- [ ] Route hover highlight
 
 ---
 
@@ -802,6 +895,10 @@ Sandbox mode — no forced win. Optional player goals:
 | Tech Tree | Research system unlocking new capabilities |
 | Relay Settlement | Settlement breaking long trade routes into cheaper short legs |
 | Resource Cache | One-time exploration reward pickup |
+| Export Backlog | Resources waiting for caravan transport; causes price penalty |
+| Lerp | Linear interpolation: `lerp(a, b, t) = a + (b - a) * t` |
+| Tick | 1-second simulation step; all systems update once per tick |
+| Fixed-point | Integer representation for precise calculations (avoid float drift) |
 
 ---
 
