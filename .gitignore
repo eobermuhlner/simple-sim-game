@@ -168,3 +168,4 @@ Thumbs.db
 /data/
 /assets/data/chunks/
 /.claude/settings.local.json
+/assets/data/settlements.dat
