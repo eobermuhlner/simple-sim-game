@@ -90,7 +90,7 @@ public class World {
 
     public Settlement createSettlement(String name, int tx, int ty) {
         Tile tile = getTile(tx, ty);
-        if (!tile.terrain.isBuildable()) {
+        if (!tile.isBuildable()) {
             return null;
         }
         Settlement settlement = new Settlement(name, tx, ty);
@@ -245,7 +245,7 @@ public class World {
 
     public boolean placeRoad(int tx, int ty, RoadType type) {
         Tile tile = getTile(tx, ty);
-        if (!tile.terrain.isTraversable()) return false;
+        if (!tile.terrain.isTraversable() || tile.hasObject()) return false;
 
         tile.roadType = type.getId();
 

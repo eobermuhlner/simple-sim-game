@@ -265,7 +265,7 @@ public class Main extends ApplicationAdapter implements GameController {
         availableTools.clear();
 
         Tile tile = world.getTile(selectedTileX, selectedTileY);
-        boolean isBuildable = tile.terrain.isBuildable();
+        boolean isBuildable = tile.isBuildable();
         Settlement onTile = world.getSettlementAt(selectedTileX, selectedTileY);
         Settlement nearby = getNearbySettlement(selectedTileX, selectedTileY);
 
@@ -288,7 +288,7 @@ public class Main extends ApplicationAdapter implements GameController {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_RESPEC_MODE, "Re-spec", null));
             }
 
-            if (tile.terrain.isTraversable()) {
+            if (tile.terrain.isTraversable() && !tile.hasObject()) {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_BUILD_ROAD, "Build Road", roadIcon));
             }
 
@@ -430,7 +430,7 @@ public class Main extends ApplicationAdapter implements GameController {
 
     private void placeSettlement(int tx, int ty) {
         Tile tile = world.getTile(tx, ty);
-        if (!tile.terrain.isBuildable()) return;
+        if (!tile.isBuildable()) return;
         if (world.getSettlementAt(tx, ty) != null) return;
         if (!world.hasRevealedNeighbor(tx, ty)) return;
 
@@ -443,8 +443,7 @@ public class Main extends ApplicationAdapter implements GameController {
         if (settlement == null) return;
 
         Tile tile = world.getTile(tx, ty);
-        if (!tile.terrain.isBuildable()) return;
-        if (tile.hasBuilding()) return;
+        if (!tile.isBuildable()) return;
 
         world.setBuilding(tx, ty, buildingId);
         settlement.addBuilding(buildingId);
