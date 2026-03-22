@@ -66,6 +66,7 @@ public class Main extends ApplicationAdapter implements GameController {
     private static final int TOOL_RESPEC_FARMING = 32;
     private static final int TOOL_RESPEC_TRADE   = 33;
     private static final int TOOL_BUILD_ROAD     = 50;
+    private static final int TOOL_DESTROY        = 51;
 
     private static final float TICK_INTERVAL = 1.0f;
 
@@ -94,6 +95,7 @@ public class Main extends ApplicationAdapter implements GameController {
     private boolean tileSelected = false;
     private boolean respecMode = false;
     private Texture roadIcon;
+    private Texture destroyIcon;
 
     @Override
     public void create() {
@@ -124,6 +126,7 @@ public class Main extends ApplicationAdapter implements GameController {
         renderer.addLayer(new FogOfWarRenderLayer(world));
 
         roadIcon = new Texture(Gdx.files.internal("64x64/single-tiles/road-dirt-ns.png"));
+        destroyIcon = createDestroyIcon();
 
         settlementPanel = new SettlementInfoPanel();
         buildToolbar = new BuildToolbar();
@@ -180,6 +183,48 @@ public class Main extends ApplicationAdapter implements GameController {
         createSpecIcon(Specialization.MINING_TOWN,     new Color(0.6f, 0.6f, 0.6f, 1f));
         createSpecIcon(Specialization.FARMING_VILLAGE, new Color(0.2f, 0.8f, 0.2f, 1f));
         createSpecIcon(Specialization.TRADE_HUB,       new Color(1.0f, 0.85f, 0.1f, 1f));
+    }
+
+    private Texture createDestroyIcon() {
+        int size = 48;
+        Pixmap p = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+        p.setColor(new Color(0.25f, 0f, 0f, 1f));
+        p.fill();
+        p.setColor(new Color(0.9f, 0.15f, 0.15f, 1f));
+        // Draw thick X (3-pixel wide diagonals)
+        for (int i = 4; i < size - 4; i++) {
+            for (int w = -1; w <= 1; w++) {
+                p.drawPixel(i + w, i);
+                p.drawPixel(size - 1 - i + w, i);
+            }
+        }
+        Texture t = new Texture(p);
+        p.dispose();
+        return t;
+    }
+
+    private void destroyTile(int tx, int ty) {
+        if (!world.isRevealed(tx, ty)) return;
+        Tile tile = world.getTile(tx, ty);
+
+        if (tile.hasBuilding()) {
+            int bid = tile.buildingId;
+            Settlement s = getNearbySettlement(tx, ty);
+            if (s != null) {
+                s.buildingIds.remove(Integer.valueOf(bid));
+                BuildingType type = BuildingType.fromId(bid);
+                if (type != null) {
+                    s.addPopulation(-type.getPopulationCapacity());
+                }
+            }
+            world.setBuilding(tx, ty, 0);
+        } else if (tile.hasObject()) {
+            world.removeObject(tx, ty);
+        } else if (tile.roadType != 0) {
+            world.removeRoad(tx, ty);
+        }
+
+        updateAvailableTools();
     }
 
     private void createSpecIcon(Specialization spec, Color color) {
@@ -245,6 +290,10 @@ public class Main extends ApplicationAdapter implements GameController {
 
             if (tile.terrain.isTraversable()) {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_BUILD_ROAD, "Build Road", roadIcon));
+            }
+
+            if (tile.hasObject() || tile.hasBuilding() || tile.roadType != 0) {
+                availableTools.add(new BuildToolbar.ToolButton(TOOL_DESTROY, "Destroy", destroyIcon));
             }
 
             if (isBuildable && nearby != null) {
@@ -333,8 +382,11 @@ public class Main extends ApplicationAdapter implements GameController {
             case TOOL_RESPEC_MODE:
                 respecMode = true;
                 break;
-            // Road building: activating the tool does not place a road immediately
             case TOOL_BUILD_ROAD:
+                world.placeRoad(selectedTileX, selectedTileY, RoadType.DIRT);
+                break;
+            case TOOL_DESTROY:
+                destroyTile(selectedTileX, selectedTileY);
                 break;
             // Re-specialization choice
             case TOOL_RESPEC_LOGGING:
@@ -411,15 +463,9 @@ public class Main extends ApplicationAdapter implements GameController {
 
         int toolId = buildToolbar.getToolIdAt(screenX, glY, screenWidth, screenHeight);
         if (toolId >= 0 && tileSelected) {
-            if (toolId == TOOL_BUILD_ROAD && selectedToolId == TOOL_BUILD_ROAD) {
-                // Toggle road tool off
-                selectedToolId = -1;
-                buildToolbar.deselectTool();
-            } else {
-                selectedToolId = toolId;
-                buildToolbar.selectTool(toolId);
-                executeTool(toolId);
-            }
+            selectedToolId = toolId;
+            buildToolbar.selectTool(toolId);
+            executeTool(toolId);
             return;
         }
 
@@ -432,14 +478,6 @@ public class Main extends ApplicationAdapter implements GameController {
         com.badlogic.gdx.math.Vector3 worldPos = camera.unproject(new com.badlogic.gdx.math.Vector3(screenX, screenY, 0));
         int tileX = (int) Math.floor(worldPos.x / 64);
         int tileY = (int) Math.floor(worldPos.y / 64);
-
-        if (selectedToolId == TOOL_BUILD_ROAD) {
-            // Road tool active: place road on clicked tile without changing selection
-            if (world.isRevealed(tileX, tileY)) {
-                world.placeRoad(tileX, tileY, RoadType.DIRT);
-            }
-            return;
-        }
 
         selectTile(tileX, tileY);
     }
@@ -568,6 +606,7 @@ public class Main extends ApplicationAdapter implements GameController {
             tex.dispose();
         }
         if (roadIcon != null) roadIcon.dispose();
+        if (destroyIcon != null) destroyIcon.dispose();
         if (hudFont != null) hudFont.dispose();
     }
 

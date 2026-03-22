@@ -281,6 +281,11 @@ public class World {
         markTileDirty(tx, ty);
     }
 
+    public void removeObject(int tx, int ty) {
+        getTile(tx, ty).objectId = TileObjectRegistry.NONE;
+        markTileDirty(tx, ty);
+    }
+
     private void markTileDirty(int tx, int ty) {
         int cx = Math.floorDiv(tx, chunkSize);
         int cy = Math.floorDiv(ty, chunkSize);

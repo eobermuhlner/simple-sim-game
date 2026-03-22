@@ -98,12 +98,12 @@ public class Chunk {
     }
 
     /**
-     * Saves road and building tile data.
-     * Format: 3 bytes per tile (roadType, roadConnection, buildingId), row-major order.
+     * Saves road, building, and object tile data.
+     * Format: 4 bytes per tile (roadType, roadConnection, buildingId, objectId), row-major order.
      */
     public void saveTileData(FileHandle file) {
         int size = tiles.length;
-        byte[] data = new byte[size * size * 3];
+        byte[] data = new byte[size * size * 4];
         int idx = 0;
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
@@ -111,19 +111,22 @@ public class Chunk {
                 data[idx++] = (byte) t.roadType;
                 data[idx++] = (byte) t.roadConnection;
                 data[idx++] = (byte) t.buildingId;
+                data[idx++] = (byte) t.objectId;
             }
         }
         file.writeBytes(data, false);
     }
 
     /**
-     * Loads road and building tile data saved by {@link #saveTileData}.
+     * Loads road, building, and object tile data saved by {@link #saveTileData}.
+     * Supports the legacy 3-byte format (objectId not overwritten).
      */
     public void loadTileData(FileHandle file) {
         if (!file.exists()) return;
         byte[] data = file.readBytes();
         int size = tiles.length;
         if (data.length < size * size * 3) return;
+        boolean hasObjectId = data.length >= size * size * 4;
         int idx = 0;
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
@@ -131,6 +134,9 @@ public class Chunk {
                 t.roadType       = data[idx++] & 0xFF;
                 t.roadConnection = data[idx++] & 0xFF;
                 t.buildingId     = data[idx++] & 0xFF;
+                if (hasObjectId) {
+                    t.objectId = data[idx++] & 0xFF;
+                }
             }
         }
     }
