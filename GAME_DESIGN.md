@@ -13,6 +13,8 @@ The player begins with a single settlement (one hut) auto-placed on a suitable l
 
 **Gradual complexity:** Early gameplay uses only 2–3 core resources. Dynamic pricing, upkeep systems, and specialization depth are introduced progressively as the player founds more settlements.
 
+**Key moment — first trade connection:** When the second settlement connects via road, the first caravan visibly spawns, gold income begins, and the UI highlights trade activation. This is the "aha" moment where the core loop clicks.
+
 **Design Pillars:**
 
 * Simplicity over complexity
@@ -35,7 +37,7 @@ Settlements start generic and specialize as they grow:
   * **Logging Camp** → High wood production
   * **Mining Town** → High stone production
   * **Farming Village** → High food production
-  * **Trade Hub** → Boosts trade income and caravan speed; gains bonus per connected settlement
+  * **Trade Hub** → Boosts trade income and caravan speed; gains bonus per connected settlement (diminishing returns — e.g., square root scaling)
 
 Each specialization:
 
@@ -54,6 +56,7 @@ Each specialization:
 * **Upkeep is non-linear** — longer trips cost disproportionately more (e.g., `cost = baseCost * days^1.5`). Short routes are cheap, long routes get expensive fast.
 * Faster roads reduce travel days, which reduces upkeep — giving road upgrades a second purpose beyond traffic capacity
 * Relay settlements break long routes into cheaper short legs
+* **Anti-spam:** settlements require a minimum viable population before they can serve as trade relay points, preventing empty waypoint settlements
 
 ➡️ Promotes smart network layout and road investment instead of brute expansion
 
@@ -214,6 +217,7 @@ Visual feedback:
 * **Demand is autonomous** — settlements develop needs based on population size and growth (e.g., a growing town demands more food whether the player planned for it or not)
 * **Supply is player-controlled** — production and trade routes are the player's levers
 * High supply → low price, low supply → high price
+* **Demand floor:** Essential resources (food, basic goods) always have a minimum demand level, preventing economic stagnation from demand collapse
 
 **Optional:** External NPC traders occasionally arrive offering to buy/sell at their own prices, adding market variety.
 
@@ -294,8 +298,12 @@ Examples:
 ### 10.2 Visual Feedback
 
 * Growing settlements visually evolve
+* **Specialization identity** — each specialization has a distinct visual style (e.g., Logging Camps have timber structures, Mining Towns have stone buildings)
 * Roads show traffic density
+* **Congestion through behavior** — caravans visibly queue and slow at bottlenecks
 * Trade routes visibly animate direction
+* **Route identity** — color-coded or labeled routes to distinguish them at scale
+* Struggling settlements show subtle visual degradation (dimmed, shrinking)
 
 ### 10.3 Information Clarity
 
