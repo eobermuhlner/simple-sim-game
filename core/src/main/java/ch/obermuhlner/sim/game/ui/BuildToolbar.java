@@ -1,39 +1,57 @@
 package ch.obermuhlner.sim.game.ui;
 
 import ch.obermuhlner.sim.game.BuildingType;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class BuildToolbar {
-    private static final int BUTTON_SIZE = 64;
+    private static final int BUTTON_WIDTH = 80;
+    private static final int BUTTON_HEIGHT = 80;
     private static final int BUTTON_PADDING = 8;
     private static final int MAX_COLUMNS = 6;
+    private static final int ICON_SIZE = 48;
+    private static final int FONT_SIZE = 10;
     
-    private static final int TOOLBAR_HEIGHT = BUTTON_SIZE + BUTTON_PADDING * 3;
+    private static final int TOOLBAR_HEIGHT = BUTTON_HEIGHT + BUTTON_PADDING * 3;
     
     private java.util.List<BuildingButton> buttons = new java.util.ArrayList<>();
     private Texture backgroundTexture;
     private BitmapFont font;
     private int selectedIndex = -1;
+    private Map<Integer, Texture> buildingTextures = new HashMap<>();
     
     public BuildToolbar() {
         createBackground();
         createFonts();
+        loadBuildingTextures();
         createButtons();
     }
     
+    private void loadBuildingTextures() {
+        for (BuildingType type : BuildingType.values()) {
+            try {
+                Texture tex = new Texture(type.getTexturePath());
+                buildingTextures.put(type.getId(), tex);
+            } catch (Exception e) {
+            }
+        }
+    }
+    
     private void createBackground() {
-        int width = BUTTON_SIZE * MAX_COLUMNS + BUTTON_PADDING * (MAX_COLUMNS + 1);
+        int width = BUTTON_WIDTH * MAX_COLUMNS + BUTTON_PADDING * (MAX_COLUMNS + 1);
         int height = TOOLBAR_HEIGHT;
         
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        // Semi-transparent dark background
         pixmap.setColor(new Color(0.15f, 0.15f, 0.2f, 0.95f));
         pixmap.fill();
-        // Border
         pixmap.setColor(new Color(0.4f, 0.4f, 0.5f, 1f));
         pixmap.drawRectangle(0, 0, width, height);
         backgroundTexture = new Texture(pixmap);
@@ -41,9 +59,14 @@ public class BuildToolbar {
     }
     
     private void createFonts() {
-        font = new BitmapFont();
-        font.setColor(Color.WHITE);
-        font.getData().setScale(1.5f);
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/JetBrainsMono-Regular.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        params.size = FONT_SIZE;
+        params.color = Color.WHITE;
+        params.borderColor = new Color(0, 0, 0, 0.5f);
+        params.borderWidth = 0.5f;
+        font = generator.generateFont(params);
+        generator.dispose();
     }
     
     private void createButtons() {
@@ -62,28 +85,29 @@ public class BuildToolbar {
         button.column = column;
         button.label = label;
         button.buildingType = buildingType;
+        button.iconTexture = buildingTextures.get(buildingType);
         
-        Pixmap normalPixmap = new Pixmap(BUTTON_SIZE, BUTTON_SIZE, Pixmap.Format.RGBA8888);
+        Pixmap normalPixmap = new Pixmap(BUTTON_WIDTH, BUTTON_HEIGHT, Pixmap.Format.RGBA8888);
         normalPixmap.setColor(new Color(0.2f, 0.2f, 0.3f, 1f));
         normalPixmap.fill();
         normalPixmap.setColor(new Color(0.4f, 0.4f, 0.5f, 1f));
-        normalPixmap.drawRectangle(0, 0, BUTTON_SIZE, BUTTON_SIZE);
+        normalPixmap.drawRectangle(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT);
         button.normalTexture = new Texture(normalPixmap);
         normalPixmap.dispose();
         
-        Pixmap selectedPixmap = new Pixmap(BUTTON_SIZE, BUTTON_SIZE, Pixmap.Format.RGBA8888);
+        Pixmap selectedPixmap = new Pixmap(BUTTON_WIDTH, BUTTON_HEIGHT, Pixmap.Format.RGBA8888);
         selectedPixmap.setColor(new Color(0.4f, 0.6f, 0.8f, 1f));
         selectedPixmap.fill();
         selectedPixmap.setColor(new Color(0.6f, 0.8f, 1f, 1f));
-        selectedPixmap.drawRectangle(0, 0, BUTTON_SIZE, BUTTON_SIZE);
+        selectedPixmap.drawRectangle(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT);
         button.selectedTexture = new Texture(selectedPixmap);
         selectedPixmap.dispose();
         
-        Pixmap hoverPixmap = new Pixmap(BUTTON_SIZE, BUTTON_SIZE, Pixmap.Format.RGBA8888);
+        Pixmap hoverPixmap = new Pixmap(BUTTON_WIDTH, BUTTON_HEIGHT, Pixmap.Format.RGBA8888);
         hoverPixmap.setColor(new Color(0.3f, 0.3f, 0.4f, 1f));
         hoverPixmap.fill();
         hoverPixmap.setColor(new Color(0.5f, 0.5f, 0.6f, 1f));
-        hoverPixmap.drawRectangle(0, 0, BUTTON_SIZE, BUTTON_SIZE);
+        hoverPixmap.drawRectangle(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT);
         button.hoverTexture = new Texture(hoverPixmap);
         hoverPixmap.dispose();
         
@@ -102,7 +126,7 @@ public class BuildToolbar {
     }
     
     public int getWidth() {
-        return BUTTON_SIZE * MAX_COLUMNS + BUTTON_PADDING * (MAX_COLUMNS + 1);
+        return BUTTON_WIDTH * MAX_COLUMNS + BUTTON_PADDING * (MAX_COLUMNS + 1);
     }
     
     public int getHeight() {
@@ -112,8 +136,6 @@ public class BuildToolbar {
     public void render(SpriteBatch batch, int screenWidth, int screenHeight) {
         int toolbarWidth = getWidth();
         
-        // Center horizontally, place at top with margin
-        // With Y increasing upward, top of screen is screenHeight
         float panelX = (screenWidth - toolbarWidth) / 2f;
         float panelY = screenHeight - TOOLBAR_HEIGHT - 20;
         
@@ -129,15 +151,18 @@ public class BuildToolbar {
                 tex = button.normalTexture;
             }
             
-            float bx = panelX + BUTTON_PADDING + button.column * (BUTTON_SIZE + BUTTON_PADDING);
+            float bx = panelX + BUTTON_PADDING + button.column * (BUTTON_WIDTH + BUTTON_PADDING);
             float by = panelY + BUTTON_PADDING;
             
-            batch.draw(tex, bx, by, BUTTON_SIZE, BUTTON_SIZE);
+            batch.draw(tex, bx, by, BUTTON_WIDTH, BUTTON_HEIGHT);
             
-            // Text: position above button center (Y decreases going down)
-            float labelX = bx + 4;
-            float labelY = by + 15; // Near top of button
-            font.draw(batch, button.label, labelX, labelY);
+            if (button.iconTexture != null) {
+                float iconX = bx + (BUTTON_WIDTH - ICON_SIZE) / 2f;
+                float iconY = by + BUTTON_HEIGHT - ICON_SIZE - 6;
+                batch.draw(button.iconTexture, iconX, iconY, ICON_SIZE, ICON_SIZE);
+            }
+            
+            font.draw(batch, button.label, bx + 4, by + 12);
         }
     }
     
@@ -145,12 +170,12 @@ public class BuildToolbar {
         int toolbarWidth = getWidth();
         
         float panelX = (screenWidth - toolbarWidth) / 2f;
-        float panelY = 20;
+        float panelY = screenHeight - TOOLBAR_HEIGHT - 20;
         
         if (screenX < panelX || screenX > panelX + toolbarWidth) return -1;
         if (screenY < panelY || screenY > panelY + TOOLBAR_HEIGHT) return -1;
         
-        int col = (int) ((screenX - panelX - BUTTON_PADDING) / (BUTTON_SIZE + BUTTON_PADDING));
+        int col = (int) ((screenX - panelX - BUTTON_PADDING) / (BUTTON_WIDTH + BUTTON_PADDING));
         
         for (int i = 0; i < buttons.size(); i++) {
             if (buttons.get(i).column == col) {
@@ -169,6 +194,9 @@ public class BuildToolbar {
             if (button.selectedTexture != null) button.selectedTexture.dispose();
             if (button.hoverTexture != null) button.hoverTexture.dispose();
         }
+        for (Texture tex : buildingTextures.values()) {
+            tex.dispose();
+        }
     }
     
     private static class BuildingButton {
@@ -178,5 +206,6 @@ public class BuildToolbar {
         Texture normalTexture;
         Texture selectedTexture;
         Texture hoverTexture;
+        Texture iconTexture;
     }
 }

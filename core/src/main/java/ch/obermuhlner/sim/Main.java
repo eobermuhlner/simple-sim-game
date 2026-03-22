@@ -45,6 +45,8 @@ public class Main extends ApplicationAdapter implements GameController {
 
         world = new World(CHUNK_SIZE, WORLD_SEED);
         
+        world.createStarterSettlement();
+        
         renderer = new Renderer(world, batch, camera);
         renderer.addLayer(new TerrainRenderLayer(world, true));
         renderer.addLayer(new ObjectRenderLayer(world, true));

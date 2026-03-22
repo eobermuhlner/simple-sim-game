@@ -182,6 +182,7 @@ public class GameConsole {
     
     public static void main(String[] args) {
         World world = new World(16, 42L, true);
+        world.createStarterSettlement();
         GameConsole console = new GameConsole(world);
         console.run();
     }

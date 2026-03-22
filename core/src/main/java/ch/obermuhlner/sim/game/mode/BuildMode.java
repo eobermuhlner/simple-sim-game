@@ -109,7 +109,10 @@ public class BuildMode implements GameMode {
     public boolean keyDown(int keycode) {
         if (keycode == Input.Keys.ESCAPE) {
             clearSelection();
-            controller.setGameMode(new ExploreMode());
+            ExploreMode newMode = new ExploreMode();
+            newMode.init(controller.getWorld(), camera);
+            newMode.setMain(controller);
+            controller.setGameMode(newMode);
             return true;
         }
         if (keycode == Input.Keys.S) {
@@ -126,7 +129,10 @@ public class BuildMode implements GameMode {
             return true;
         }
         if (keycode == Input.Keys.F) {
-            controller.setGameMode(new ExploreMode());
+            ExploreMode newMode = new ExploreMode();
+            newMode.init(controller.getWorld(), camera);
+            newMode.setMain(controller);
+            controller.setGameMode(newMode);
             return true;
         }
         if (keycode == Input.Keys.HOME) {

@@ -1,11 +1,13 @@
 package ch.obermuhlner.sim.game.ui;
 
 import ch.obermuhlner.sim.game.Settlement;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 
 public class SettlementInfoPanel {
     private static final int PANEL_WIDTH = 260;
@@ -35,13 +37,23 @@ public class SettlementInfoPanel {
     }
     
     private void createFonts() {
-        font = new BitmapFont();
-        font.setColor(Color.WHITE);
-        font.getData().setScale(0.8f);
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/JetBrainsMono-Regular.ttf"));
         
-        titleFont = new BitmapFont();
-        titleFont.setColor(new Color(0.9f, 0.9f, 1f, 1f));
-        titleFont.getData().setScale(1.0f);
+        FreeTypeFontGenerator.FreeTypeFontParameter fontParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        fontParams.size = 12;
+        fontParams.color = Color.WHITE;
+        fontParams.borderColor = new Color(0, 0, 0, 0.5f);
+        fontParams.borderWidth = 0.5f;
+        font = generator.generateFont(fontParams);
+        
+        FreeTypeFontGenerator.FreeTypeFontParameter titleParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        titleParams.size = 14;
+        titleParams.color = new Color(0.9f, 0.9f, 1f, 1f);
+        titleParams.borderColor = new Color(0, 0, 0, 0.5f);
+        titleParams.borderWidth = 0.5f;
+        titleFont = generator.generateFont(titleParams);
+        
+        generator.dispose();
     }
     
     public int getWidth() {

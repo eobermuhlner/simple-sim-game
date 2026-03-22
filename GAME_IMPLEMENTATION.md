@@ -22,6 +22,8 @@
 - Visible, living systems
 - Relaxed but engaging gameplay
 
+For details on the design refer to [GAME_DESIGN.md](GAME_DESIGN.md).
+
 ---
 
 ## 2. Visual Specification
@@ -803,7 +805,7 @@ These formulas determine pacing, balance, and player experience. Test and iterat
 - [x] Settlement selection and info panel
 - [x] Building placement mechanics
 - [x] Population system
-- [ ] Auto-placed starter settlement
+- [x] Auto-placed starter settlement
 
 ### Phase 3: Settlement Specialization
 - [ ] Specialization choice at Town upgrade

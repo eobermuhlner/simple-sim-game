@@ -28,6 +28,53 @@ public class World {
     
     private boolean headless = false;
 
+    public Settlement createStarterSettlement() {
+        for (int radius = 0; radius < 50; radius++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                for (int dx = -radius; dx <= radius; dx++) {
+                    if (Math.abs(dx) != radius && Math.abs(dy) != radius) continue;
+                    int tx = dx;
+                    int ty = dy;
+                    if (isSuitableForStarter(tx, ty)) {
+                        Settlement settlement = createSettlement("Starter Village", tx, ty);
+                        if (settlement != null) {
+                            return settlement;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean isSuitableForStarter(int tx, int ty) {
+        TerrainType terrain = getTerrain(tx, ty);
+        if (terrain != TerrainType.GRASS) {
+            return false;
+        }
+
+        int grassCount = 0;
+        for (int dy = -2; dy <= 2; dy++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                if (getTerrain(tx + dx, ty + dy) == TerrainType.GRASS) {
+                    grassCount++;
+                }
+            }
+        }
+        if (grassCount < 15) {
+            return false;
+        }
+
+        java.util.Set<TerrainType> neighbors = new java.util.HashSet<>();
+        for (int dy = -2; dy <= 2; dy++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                if (dx == 0 && dy == 0) continue;
+                neighbors.add(getTerrain(tx + dx, ty + dy));
+            }
+        }
+        return neighbors.size() >= 2;
+    }
+
     public Settlement createSettlement(String name, int tx, int ty) {
         Tile tile = getTile(tx, ty);
         if (!tile.terrain.isBuildable()) {
