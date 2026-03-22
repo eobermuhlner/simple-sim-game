@@ -17,7 +17,7 @@ public class SimulationSystem {
     private static final float STARVATION_RATE = 0.02f;
     private static final float PRICE_LERP_ALPHA = 0.2f;
     private static final float SMOOTHING_ALPHA = 0.15f;
-    private static final float CARAVAN_BASE_SPEED = 1.0f;  // tiles per tick on dirt road
+    private static final float CARAVAN_BASE_SPEED = 0.5f;  // tiles per second on dirt road
     private static final float CARGO_THRESHOLD = 0.2f;     // send cargo when stock > 20% of capacity
     private static final float CARGO_BATCH = 0.3f;         // send up to 30% of capacity per trip
 
@@ -35,6 +35,10 @@ public class SimulationSystem {
 
     public long getTickCount() { return tickCount; }
 
+    /**
+     * 1 Hz simulation tick: economy, population, pricing, route discovery, caravan spawning.
+     * Caravan movement is NOT updated here — call updateCaravans() every render frame instead.
+     */
     public void tick(float deltaTime) {
         List<Settlement> settlements = world.getSettlements();
         gatherResources(settlements);
@@ -45,8 +49,14 @@ public class SimulationSystem {
             world.routesDirty = false;
         }
         tickSpawnTimers(deltaTime, settlements);
-        tickCaravans(deltaTime);
         tickCount++;
+    }
+
+    /**
+     * Called every render frame (60 fps) to smoothly advance caravan positions.
+     */
+    public void updateCaravans(float deltaTime) {
+        tickCaravans(deltaTime);
     }
 
     // ---- Resource Production ----
