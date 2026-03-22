@@ -11,6 +11,8 @@ Start with a settlement → Explore outward → Discover resources and strategic
 **Early Game:**
 The player begins with a single settlement (one hut) auto-placed on a suitable location (grass terrain, large enough area, adjacent to multiple terrain types). The settlement produces resources slowly. The player explores outward to find resource caches (one-time pickups) and promising locations for their next settlement. The real game begins when the second settlement is founded and trade becomes possible.
 
+**Gradual complexity:** Early gameplay uses only 2–3 core resources. Dynamic pricing, upkeep systems, and specialization depth are introduced progressively as the player founds more settlements.
+
 **Design Pillars:**
 
 * Simplicity over complexity
@@ -33,7 +35,7 @@ Settlements start generic and specialize as they grow:
   * **Logging Camp** → High wood production
   * **Mining Town** → High stone production
   * **Farming Village** → High food production
-  * **Trade Hub** → Boosts trade income and caravan speed
+  * **Trade Hub** → Boosts trade income and caravan speed; gains bonus per connected settlement
 
 Each specialization:
 
@@ -90,7 +92,8 @@ Terrain now affects gameplay:
 | Stone   | High stone                        |
 | Grass   | Balanced, good for food           |
 | Snow    | Slow growth, rare bonuses         |
-| Water   | Impassable (bridges unlock later) |
+| Shallow Sea | Coastal waters, explorable with harbor + ships |
+| Deep Sea    | Open ocean, requires large ships               |
 
 ---
 
@@ -116,6 +119,25 @@ Rewards are tiered by tech progression — early exploration reveals basic rewar
 **Rewards and specialization:** Location rewards give flat bonuses independent of the settlement built there. A Farming Village on Rich Deposits gets food production AND a stone bonus. However, a matching settlement (e.g., Mining Town on Rich Deposits) benefits more naturally since its higher base production makes the flat bonus more impactful. This makes scouting locations before choosing specialization a meaningful part of the game.
 
 ➡️ Exploration stays relevant throughout the game, not just at the start
+
+### 3.3 Sea Exploration
+
+Sea exploration has its own progression, turning water from a barrier into a strategic frontier.
+
+**From land:** Only 1 adjacent sea tile can be revealed (coastline visibility).
+
+**Harbor:** A building for coastal settlements (general tech). Does not auto-reveal sea tiles, but allows the player to explore sea tiles within a radius determined by ship size. Explored sea tiles must connect back to the harbor.
+
+**Ship tiers:**
+
+| Ship        | Sea Access    | Exploration Radius | Tech Required    |
+| ----------- | ------------- | ------------------ | ---------------- |
+| Small Ship  | Shallow Sea   | Short              | General tech     |
+| Large Ship  | Deep Sea      | Long               | Trade Hub branch |
+
+**Sea trade routes:** Two coastal settlements with harbors can trade by sea, bypassing land routes. This makes coastal locations strategically valuable.
+
+➡️ Water becomes a progression system — from barrier to coastline to shallow exploration to deep sea trade
 
 ---
 
@@ -157,7 +179,8 @@ Each road type enables a new transport class. Higher road types also support all
 
 * Each road type has a traffic capacity
 * When traffic exceeds capacity, caravans slow down
-* Congestion is a signal to upgrade the road type, not to build parallel routes
+* **Primary solution:** upgrade the road type
+* **Alternative:** build parallel routes (slightly less efficient than upgrading, but allows spatial creativity)
 * **In-place upgrade:** click an existing road, pay the cost difference, it becomes the next tier — no tear-down required
 
 ➡️ Traffic pressure drives road progression naturally without frustrating the player
@@ -183,6 +206,7 @@ Visual feedback:
 
 * Automatically created when settlements connect
 * Require supply & demand to function
+* **Simple trade policies** per settlement: import/export priorities (e.g., "prefer food imports", "export surplus only") — keeps automation while giving the player agency
 
 ### 6.2 Dynamic Pricing
 
@@ -194,6 +218,8 @@ Visual feedback:
 **Optional:** External NPC traders occasionally arrive offering to buy/sell at their own prices, adding market variety.
 
 **Future:** NPC settlements that trade independently, creating competition and a living economy.
+
+**Visibility:** Display supply/demand modifiers clearly (e.g., "Food shortage +40% price", "Oversupply -25% price") with simple ↑/↓ indicators per resource.
 
 ➡️ The player controls production but not demand — pricing reflects real internal pressure
 
@@ -207,6 +233,9 @@ The game applies gentle downward pressure through existing mechanics:
 * **Caravan upkeep** — long routes cost disproportionately more (see §2.2)
 * **Building maintenance** — buildings require stone/gold to maintain
 * **Population consumes food** — growth without food supply causes decline
+* **Gold sources** — trade income, settlement taxes, resource caches. Multiple sources prevent a single-point-of-failure death spiral.
+
+**Failure is gradual and visible:** Struggling settlements shrink visually, caravan traffic thins, buildings appear dimmed. Decline is always reversible — the player can redirect resources to recover.
 
 ➡️ Expansion has ongoing costs, preventing unchecked snowballing
 
@@ -219,20 +248,22 @@ The game applies gentle downward pressure through existing mechanics:
 * **Global research queue** — one active research at a time
 * **Fueled by Gold** — a functioning trade economy is required to advance
 * **Gated by specialization** — tech branches only appear once you have the matching settlement type
-* **Discovery-based UI** — players see only what they can currently research, not the full tree
+* **Discovery-based UI** — players see only what they can currently research, not the full tree. Locked tech shows hints (e.g., "Requires Mining Town") so the player can plan ahead without being overwhelmed.
 
 ### 8.2 General Tech (available to all)
 
 * Bridges (cross water)
 * Basic road building
 * Exploration improvements
+* Harbor construction (requires coastal settlement)
+* Small ships (shallow sea exploration and trade)
 
 ### 8.3 Specialization Tech (requires matching settlement)
 
 * **Logging Camp branch** → forestry upgrades, advanced wood buildings, tree farming
 * **Mining Town branch** → deep mining, stone processing, quarry upgrades
 * **Farming Village branch** → irrigation, crop variety, food storage
-* **Trade Hub branch** → caravan improvements, road upgrades, trade route optimization
+* **Trade Hub branch** → caravan improvements, road upgrades, trade route optimization, large ships (deep sea)
 
 ➡️ The player needs multiple specialized settlements to access the full tech tree, directly driving expansion
 
@@ -271,6 +302,8 @@ Examples:
 * Highlight trade routes
 * Show resource flow
 * Simple overlays for efficiency
+* **Route cost previews** — show estimated caravan upkeep before building a route
+* **Congestion indicators** — highlight bottleneck roads that need upgrading
 
 ---
 
@@ -294,9 +327,11 @@ To keep scope realistic:
 * Full specialization tech branches
 * Exploration rewards (tiered by tech)
 * Re-specialization mechanic
+* Trade policies (import/export priorities)
 
 **Defer:**
 
+* Sea exploration (harbor, ships, sea trade routes)
 * NPC traders
 * NPC settlements
 * Seasons, events
