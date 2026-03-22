@@ -11,10 +11,9 @@ import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
+import java.util.PriorityQueue;
 import java.util.function.Consumer;
 
 public class World {
@@ -336,8 +335,9 @@ public class World {
     }
 
     /**
-     * BFS pathfinding through road tiles.
-     * Tiles within 2 of start or end are treated as walkable even without a road
+     * Dijkstra pathfinding through road tiles, preferring higher-quality roads.
+     * Cost per tile = 1 / speedMultiplier (Roman=0.33, Stone=0.67, Dirt=1.0).
+     * Tiles within 2 of start or end are walkable without a road (cost=2.0)
      * to bridge the gap between settlement centers and the road network.
      * Returns null if no path exists. Max search: 300 tiles Manhattan distance.
      */
@@ -346,34 +346,54 @@ public class World {
         if (Math.abs(x2 - x1) + Math.abs(y2 - y1) > maxManhattan) return null;
 
         Map<Long, Long> parent = new HashMap<>();
-        Queue<int[]> queue = new LinkedList<>();
+        Map<Long, Double> dist = new HashMap<>();
+        // [cost, x, y]
+        PriorityQueue<double[]> pq = new PriorityQueue<>((a, b) -> Double.compare(a[0], b[0]));
+
         long startKey = encodePos(x1, y1);
         parent.put(startKey, -1L);
-        queue.add(new int[]{x1, y1});
+        dist.put(startKey, 0.0);
+        pq.add(new double[]{0.0, x1, y1});
 
         int[][] dirs = {{0,1},{0,-1},{1,0},{-1,0}};
 
-        while (!queue.isEmpty()) {
-            int[] cur = queue.poll();
-            int cx = cur[0], cy = cur[1];
+        while (!pq.isEmpty()) {
+            double[] cur = pq.poll();
+            double curCost = cur[0];
+            int cx = (int) cur[1], cy = (int) cur[2];
+            long curKey = encodePos(cx, cy);
+
+            if (curCost > dist.getOrDefault(curKey, Double.MAX_VALUE)) continue;
 
             if (Math.abs(cx - x2) <= 2 && Math.abs(cy - y2) <= 2) {
-                return reconstructPath(parent, encodePos(cx, cy), x2, y2);
+                return reconstructPath(parent, curKey, x2, y2);
             }
 
             for (int[] dir : dirs) {
                 int nx = cx + dir[0], ny = cy + dir[1];
                 if (Math.abs(nx - x1) + Math.abs(ny - y1) > maxManhattan) continue;
-                long nKey = encodePos(nx, ny);
-                if (parent.containsKey(nKey)) continue;
 
                 boolean nearStart = Math.abs(nx - x1) <= 2 && Math.abs(ny - y1) <= 2;
                 boolean nearEnd   = Math.abs(nx - x2) <= 2 && Math.abs(ny - y2) <= 2;
-                boolean hasRoad   = getTile(nx, ny).roadType > 0;
+                int roadType = getTile(nx, ny).roadType;
+                boolean hasRoad = roadType > 0;
 
-                if (hasRoad || nearStart || nearEnd) {
-                    parent.put(nKey, encodePos(cx, cy));
-                    queue.add(new int[]{nx, ny});
+                if (!hasRoad && !nearStart && !nearEnd) continue;
+
+                double stepCost;
+                if (hasRoad) {
+                    RoadType rt = RoadType.fromId(roadType);
+                    stepCost = rt != null ? 1.0 / rt.getSpeedMultiplier() : 1.0;
+                } else {
+                    stepCost = 2.0; // off-road bridge zone: passable but expensive
+                }
+
+                double newDist = curCost + stepCost;
+                long nKey = encodePos(nx, ny);
+                if (newDist < dist.getOrDefault(nKey, Double.MAX_VALUE)) {
+                    dist.put(nKey, newDist);
+                    parent.put(nKey, curKey);
+                    pq.add(new double[]{newDist, nx, ny});
                 }
             }
         }

@@ -174,10 +174,12 @@ public class SimulationSystem {
 
                 if (path != null && path.size() >= 2) {
                     if (route == null) {
-                        // New route
                         world.addTradeRoute(new TradeRoute(a.id, b.id, path));
+                    } else {
+                        // Update path so caravans use newly built or upgraded roads
+                        route.path = path;
+                        route.pathLength = path.size();
                     }
-                    // Existing route: keep as-is (path may have changed but caravans in transit)
                 } else {
                     if (route != null) {
                         world.removeTradeRoute(route.id);

@@ -12,8 +12,8 @@ public class TradeRoute {
     public final int id;
     public final int idA;  // lower id first
     public final int idB;
-    public final List<int[]> path;  // tile coords [{x,y},...] from A.center to B.center
-    public final float pathLength;
+    public List<int[]> path;  // tile coords [{x,y},...] from A.center to B.center
+    public int pathLength;
     public int activeCaravans = 0;
 
     public static final int MAX_CARAVANS = 3;
