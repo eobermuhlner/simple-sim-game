@@ -37,6 +37,10 @@ public class ExploreMode implements GameMode {
     public void setMain(GameController controller) {
         this.controller = controller;
     }
+    
+    public GameController getController() {
+        return controller;
+    }
 
     @Override
     public void update(float delta) {
@@ -59,11 +63,6 @@ public class ExploreMode implements GameMode {
                 lastRevealedTileY * 64 + 32f,
                 0
             );
-            return true;
-        }
-        if (keycode == Input.Keys.B && controller != null) {
-            BuildMode newMode = new BuildMode(controller);
-            controller.setGameMode(newMode);
             return true;
         }
         return false;
@@ -94,7 +93,12 @@ public class ExploreMode implements GameMode {
                 Vector3 worldPos = camera.unproject(new Vector3(screenX, screenY, 0));
                 int tileX = (int) Math.floor(worldPos.x / 64);
                 int tileY = (int) Math.floor(worldPos.y / 64);
-                revealTile(tileX, tileY);
+                
+                if (controller != null) {
+                    controller.handleClick(screenX, screenY);
+                } else {
+                    revealTile(tileX, tileY);
+                }
             }
             return true;
         }

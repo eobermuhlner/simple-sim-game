@@ -20,11 +20,11 @@ public class Settlement {
         this.centerX = centerX;
         this.centerY = centerY;
         this.population = 10;
-        this.settlementLevelIndex = 0;
+        this.settlementLevelIndex = SettlementLevel.VILLAGE.ordinal();
     }
 
     public SettlementLevel getLevel() {
-        return SettlementLevel.fromPopulation(population);
+        return SettlementLevel.values()[Math.min(settlementLevelIndex, SettlementLevel.values().length - 1)];
     }
 
     public void addPopulation(int amount) {
@@ -38,7 +38,7 @@ public class Settlement {
     }
 
     private void updateLevel() {
-        settlementLevelIndex = getLevel().ordinal();
+        settlementLevelIndex = SettlementLevel.fromPopulation(population).ordinal();
     }
 
     public boolean addBuilding(int buildingId) {
@@ -67,6 +67,8 @@ public class Settlement {
         if (needsUpgrade()) {
             SettlementLevel[] levels = SettlementLevel.values();
             settlementLevelIndex = Math.min(settlementLevelIndex + 1, levels.length - 1);
+            SettlementLevel newLevel = levels[settlementLevelIndex];
+            population = newLevel.getMinPopulation();
         }
     }
 }

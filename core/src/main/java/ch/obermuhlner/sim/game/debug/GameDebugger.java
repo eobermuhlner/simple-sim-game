@@ -69,12 +69,12 @@ public class GameDebugger {
     
     public String getControlsInfo() {
         return "---\nCONTROLS:\n" +
-               "B - Build mode\n" +
-               "S - Place settlement\n" +
-               "1-9 - Select building\n" +
-               "ESC - Exit mode\n" +
+               "Click - Select tile / Reveal fog\n" +
+               "Drag - Pan camera\n" +
+               "Scroll - Zoom\n" +
                "F - Toggle fog\n" +
-               "HOME - Return to start\n";
+               "HOME - Return to start\n" +
+               "1-9 - Quick select building\n";
     }
     
     public String getTileInfo(int tx, int ty) {

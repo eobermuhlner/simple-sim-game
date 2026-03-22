@@ -1,47 +1,55 @@
 package ch.obermuhlner.sim.game.mode;
 
-import ch.obermuhlner.sim.game.GameController;
 import ch.obermuhlner.sim.game.*;
-import ch.obermuhlner.sim.game.render.BuildingRenderLayer;
 import ch.obermuhlner.sim.game.ui.BuildToolbar;
 import ch.obermuhlner.sim.game.ui.SettlementInfoPanel;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class BuildMode implements GameMode {
+    public static final int TOOL_NEW_SETTLEMENT = 0;
+    public static final int TOOL_BUILD_HOUSE = 1;
+    public static final int TOOL_BUILD_FARM = 2;
+    public static final int TOOL_BUILD_MARKET = 3;
+    public static final int TOOL_BUILD_WAREHOUSE = 4;
+    public static final int TOOL_BUILD_WELL = 5;
+
     private World world;
     private OrthographicCamera camera;
     private GameController controller;
     private SpriteBatch uiBatch;
-    
-    private boolean placingSettlement = false;
-    private boolean placingBuilding = false;
-    private int selectedBuildingType = 0;
-    private Settlement selectedSettlement = null;
-    
-    private int hoverTileX = -1;
-    private int hoverTileY = -1;
-    private boolean validPlacement = false;
-    
-    private Texture validTexture;
-    private Texture invalidTexture;
+
+    private int selectedTileX = 0;
+    private int selectedTileY = 0;
+    private int selectedToolId = -1;
+
+    private Texture selectionTexture;
     private Texture settlementTexture;
-    
+
     private boolean mouseDown = false;
     private int lastMouseX, lastMouseY;
     private boolean wasDragging = false;
-    
+
     private BuildToolbar toolbar;
+    private List<BuildToolbar.ToolButton> availableTools = new ArrayList<>();
+    private Map<Integer, Texture> buildingTextures = new HashMap<>();
 
     public BuildMode(GameController controller) {
         this.controller = controller;
     }
-    
+
     public void setToolbar(BuildToolbar toolbar) {
         this.toolbar = toolbar;
     }
@@ -56,49 +64,32 @@ public class BuildMode implements GameMode {
         this.world = world;
         this.camera = camera;
         this.uiBatch = new SpriteBatch();
-        this.uiBatch.setProjectionMatrix(camera.combined);
-        
-        Pixmap validMap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
-        validMap.setColor(0, 1, 0, 0.3f);
-        validMap.fill();
-        validTexture = new Texture(validMap);
-        validMap.dispose();
-        
-        Pixmap invalidMap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
-        invalidMap.setColor(1, 0, 0, 0.3f);
-        invalidMap.fill();
-        invalidTexture = new Texture(invalidMap);
-        invalidMap.dispose();
-        
+
+        Pixmap selectionMap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
+        selectionMap.setColor(new Color(0.3f, 0.7f, 0.3f, 0.5f));
+        selectionMap.fill();
+        selectionMap.setColor(Color.WHITE);
+        selectionMap.drawRectangle(0, 0, 64, 64);
+        selectionTexture = new Texture(selectionMap);
+        selectionMap.dispose();
+
         Pixmap settlementMap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
-        settlementMap.setColor(0.3f, 0.7f, 0.3f, 0.5f);
+        settlementMap.setColor(new Color(0.3f, 0.7f, 0.3f, 0.5f));
         settlementMap.fillCircle(32, 32, 28);
         settlementTexture = new Texture(settlementMap);
         settlementMap.dispose();
+
+        loadBuildingTextures();
     }
 
-    public void startSettlementPlacement() {
-        placingSettlement = true;
-        placingBuilding = false;
-        selectedSettlement = null;
-    }
-
-    public void startBuildingPlacement(int buildingType) {
-        placingBuilding = true;
-        placingSettlement = false;
-        selectedBuildingType = buildingType;
-    }
-
-    public void selectSettlement(Settlement settlement) {
-        selectedSettlement = settlement;
-        placingSettlement = false;
-        placingBuilding = false;
-    }
-
-    public void clearSelection() {
-        selectedSettlement = null;
-        placingSettlement = false;
-        placingBuilding = false;
+    private void loadBuildingTextures() {
+        for (BuildingType type : BuildingType.values()) {
+            try {
+                Texture tex = new Texture(type.getTexturePath());
+                buildingTextures.put(type.getId(), tex);
+            } catch (Exception e) {
+            }
+        }
     }
 
     @Override
@@ -108,24 +99,9 @@ public class BuildMode implements GameMode {
     @Override
     public boolean keyDown(int keycode) {
         if (keycode == Input.Keys.ESCAPE) {
-            clearSelection();
-            ExploreMode newMode = new ExploreMode();
-            newMode.init(controller.getWorld(), camera);
-            newMode.setMain(controller);
-            controller.setGameMode(newMode);
-            return true;
-        }
-        if (keycode == Input.Keys.S) {
-            startSettlementPlacement();
-            if (toolbar != null) toolbar.select(0);
-            return true;
-        }
-        if (keycode >= Input.Keys.NUM_1 && keycode <= Input.Keys.NUM_9) {
-            int index = keycode - Input.Keys.NUM_1;
-            if (index < BuildingType.values().length) {
-                startBuildingPlacement(BuildingType.values()[index].getId());
-                if (toolbar != null) toolbar.select(index + 1);
-            }
+            selectedToolId = -1;
+            toolbar.deselectTool();
+            updateAvailableTools();
             return true;
         }
         if (keycode == Input.Keys.F) {
@@ -136,7 +112,7 @@ public class BuildMode implements GameMode {
             return true;
         }
         if (keycode == Input.Keys.HOME) {
-            java.util.List<Settlement> settlements = world.getSettlements();
+            List<Settlement> settlements = world.getSettlements();
             if (!settlements.isEmpty()) {
                 Settlement last = settlements.get(settlements.size() - 1);
                 camera.position.set(
@@ -144,6 +120,14 @@ public class BuildMode implements GameMode {
                     last.centerY * 64 + 32f,
                     0
                 );
+            }
+            return true;
+        }
+        if (keycode >= Input.Keys.NUM_1 && keycode <= Input.Keys.NUM_9) {
+            int index = keycode - Input.Keys.NUM_1;
+            if (index < availableTools.size()) {
+                selectedToolId = availableTools.get(index).id;
+                toolbar.selectTool(selectedToolId);
             }
             return true;
         }
@@ -170,7 +154,9 @@ public class BuildMode implements GameMode {
             return true;
         }
         if (button == Input.Buttons.RIGHT) {
-            clearSelection();
+            selectedToolId = -1;
+            toolbar.deselectTool();
+            updateAvailableTools();
             return true;
         }
         return false;
@@ -180,59 +166,162 @@ public class BuildMode implements GameMode {
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
         if (button == Input.Buttons.LEFT && !wasDragging) {
             mouseDown = false;
-            
-            // Check if click was on toolbar
-            if (toolbar != null) {
-                int screenWidth = Gdx.graphics.getWidth();
-                int screenHeight = Gdx.graphics.getHeight();
-                int buttonIndex = toolbar.getButtonAt(screenX, screenY, screenWidth, screenHeight);
-                if (buttonIndex >= 0) {
-                    handleToolbarClick(buttonIndex);
-                    return true;
-                }
+
+            int screenWidth = Gdx.graphics.getWidth();
+            int screenHeight = Gdx.graphics.getHeight();
+
+            int toolId = toolbar.getToolIdAt(screenX, screenY, screenWidth, screenHeight);
+            if (toolId >= 0) {
+                selectedToolId = toolId;
+                toolbar.selectTool(toolId);
+                executeTool(toolId, selectedTileX, selectedTileY);
+                return true;
             }
-            
+
             Vector3 worldPos = camera.unproject(new Vector3(screenX, screenY, 0));
             int tileX = (int) Math.floor(worldPos.x / 64);
             int tileY = (int) Math.floor(worldPos.y / 64);
-            
-            // Handle fog reveal - if tile not revealed, reveal it
-            if (!world.isRevealed(tileX, tileY)) {
-                if (world.hasRevealedNeighbor(tileX, tileY)) {
-                    world.reveal(tileX, tileY);
-                }
-                return true;
-            }
-            
-            if (placingSettlement) {
-                placeSettlement(tileX, tileY);
-            } else if (placingBuilding) {
-                placeBuilding(tileX, tileY);
-            } else {
-                // Select a settlement if clicking on one
-                Settlement clicked = world.getSettlementAt(tileX, tileY);
-                if (clicked != null) {
-                    selectSettlement(clicked);
-                }
-            }
+
+            selectTile(tileX, tileY);
             return true;
         }
         mouseDown = false;
         return false;
     }
-    
-    private void handleToolbarClick(int buttonIndex) {
-        if (buttonIndex == 0) {
-            // Settlement button
-            startSettlementPlacement();
-            toolbar.select(0);
-        } else {
-            // Building button - index 1 = first building
-            int buildingIndex = buttonIndex - 1;
-            if (buildingIndex < BuildingType.values().length) {
-                startBuildingPlacement(BuildingType.values()[buildingIndex].getId());
-                toolbar.select(buttonIndex);
+
+    private void selectTile(int tileX, int tileY) {
+        selectedTileX = tileX;
+        selectedTileY = tileY;
+
+        if (!world.isRevealed(tileX, tileY)) {
+            if (world.hasRevealedNeighbor(tileX, tileY)) {
+                world.reveal(tileX, tileY);
             }
+        }
+
+        updateAvailableTools();
+    }
+
+    private void updateAvailableTools() {
+        availableTools.clear();
+
+        Tile tile = world.getTile(selectedTileX, selectedTileY);
+        boolean isBuildable = tile.terrain.isBuildable();
+        Settlement nearbySettlement = getNearbySettlement(selectedTileX, selectedTileY);
+
+        availableTools.add(new BuildToolbar.ToolButton(
+            TOOL_NEW_SETTLEMENT,
+            "New Settlement",
+            null
+        ));
+
+        if (isBuildable && nearbySettlement != null) {
+            BuildingType house = BuildingType.HOUSE_SIMPLE;
+            availableTools.add(new BuildToolbar.ToolButton(
+                TOOL_BUILD_HOUSE,
+                house.getDisplayName(),
+                buildingTextures.get(house.getId())
+            ));
+
+            BuildingType farm = BuildingType.FARM_SMALL;
+            availableTools.add(new BuildToolbar.ToolButton(
+                TOOL_BUILD_FARM,
+                farm.getDisplayName(),
+                buildingTextures.get(farm.getId())
+            ));
+
+            BuildingType market = BuildingType.MARKET_SMALL;
+            availableTools.add(new BuildToolbar.ToolButton(
+                TOOL_BUILD_MARKET,
+                market.getDisplayName(),
+                buildingTextures.get(market.getId())
+            ));
+
+            BuildingType warehouse = BuildingType.WAREHOUSE;
+            availableTools.add(new BuildToolbar.ToolButton(
+                TOOL_BUILD_WAREHOUSE,
+                warehouse.getDisplayName(),
+                buildingTextures.get(warehouse.getId())
+            ));
+
+            BuildingType well = BuildingType.WELL_WATER;
+            availableTools.add(new BuildToolbar.ToolButton(
+                TOOL_BUILD_WELL,
+                well.getDisplayName(),
+                buildingTextures.get(well.getId())
+            ));
+        }
+
+        if (toolbar != null) {
+            toolbar.setTools(availableTools);
+            if (selectedToolId >= 0) {
+                toolbar.selectTool(selectedToolId);
+            }
+        }
+    }
+
+    private Settlement getNearbySettlement(int tx, int ty) {
+        for (Settlement s : world.getSettlements()) {
+            double dist = Math.hypot(tx - s.centerX, ty - s.centerY);
+            if (dist <= 5) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    private void executeTool(int toolId, int tx, int ty) {
+        Tile tile = world.getTile(tx, ty);
+
+        switch (toolId) {
+            case TOOL_NEW_SETTLEMENT:
+                placeSettlement(tx, ty);
+                break;
+            case TOOL_BUILD_HOUSE:
+                placeBuilding(tx, ty, BuildingType.HOUSE_SIMPLE.getId());
+                break;
+            case TOOL_BUILD_FARM:
+                placeBuilding(tx, ty, BuildingType.FARM_SMALL.getId());
+                break;
+            case TOOL_BUILD_MARKET:
+                placeBuilding(tx, ty, BuildingType.MARKET_SMALL.getId());
+                break;
+            case TOOL_BUILD_WAREHOUSE:
+                placeBuilding(tx, ty, BuildingType.WAREHOUSE.getId());
+                break;
+            case TOOL_BUILD_WELL:
+                placeBuilding(tx, ty, BuildingType.WELL_WATER.getId());
+                break;
+        }
+    }
+
+    private void placeSettlement(int tx, int ty) {
+        Tile tile = world.getTile(tx, ty);
+        if (!tile.terrain.isBuildable()) return;
+        if (world.getSettlementAt(tx, ty) != null) return;
+        if (!world.hasRevealedNeighbor(tx, ty)) return;
+
+        String name = "Settlement " + (world.getSettlements().size() + 1);
+        Settlement settlement = world.createSettlement(name, tx, ty);
+        if (settlement != null) {
+            updateAvailableTools();
+        }
+    }
+
+    private void placeBuilding(int tx, int ty, int buildingId) {
+        Settlement settlement = getNearbySettlement(tx, ty);
+        if (settlement == null) return;
+
+        Tile tile = world.getTile(tx, ty);
+        if (!tile.terrain.isBuildable()) return;
+        if (tile.hasBuilding()) return;
+
+        tile.buildingId = buildingId;
+        settlement.addBuilding(buildingId);
+
+        BuildingType type = BuildingType.fromId(buildingId);
+        if (type != null) {
+            settlement.addPopulation(type.getPopulationCapacity());
         }
     }
 
@@ -259,10 +348,11 @@ public class BuildMode implements GameMode {
 
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        Vector3 worldPos = camera.unproject(new Vector3(screenX, screenY, 0));
-        hoverTileX = (int) Math.floor(worldPos.x / 64);
-        hoverTileY = (int) Math.floor(worldPos.y / 64);
-        updateValidPlacement();
+        if (toolbar != null) {
+            int screenWidth = Gdx.graphics.getWidth();
+            int screenHeight = Gdx.graphics.getHeight();
+            toolbar.updateHover(screenX, screenY, screenWidth, screenHeight);
+        }
         return false;
     }
 
@@ -272,139 +362,87 @@ public class BuildMode implements GameMode {
         return true;
     }
 
-    private void updateValidPlacement() {
-        if (hoverTileX < 0 || hoverTileY < 0) {
-            validPlacement = false;
-            return;
-        }
-        
-        if (placingSettlement) {
-            Tile tile = world.getTile(hoverTileX, hoverTileY);
-            validPlacement = tile.terrain.isBuildable() && 
-                              world.getSettlementAt(hoverTileX, hoverTileY) == null &&
-                              world.hasRevealedNeighbor(hoverTileX, hoverTileY);
-        } else if (placingBuilding && selectedSettlement != null) {
-            Tile tile = world.getTile(hoverTileX, hoverTileY);
-            int dx = Math.abs(hoverTileX - selectedSettlement.centerX);
-            int dy = Math.abs(hoverTileY - selectedSettlement.centerY);
-            validPlacement = tile.terrain.isBuildable() && 
-                              !tile.hasBuilding() &&
-                              dx <= 3 && dy <= 3;
-        } else {
-            validPlacement = false;
-        }
-    }
-
-    private void placeSettlement(int tx, int ty) {
-        // Check if tile is valid for settlement
-        Tile tile = world.getTile(tx, ty);
-        if (!tile.terrain.isBuildable()) return;
-        if (world.getSettlementAt(tx, ty) != null) return;
-        if (!world.hasRevealedNeighbor(tx, ty)) return;
-        
-        String name = "Settlement " + (world.getSettlements().size() + 1);
-        Settlement settlement = world.createSettlement(name, tx, ty);
-        if (settlement != null) {
-            selectSettlement(settlement);
-            placingSettlement = false;
-        }
-    }
-
-    private void placeBuilding(int tx, int ty) {
-        if (selectedSettlement == null) return;
-        
-        Tile tile = world.getTile(tx, ty);
-        if (!tile.terrain.isBuildable()) return;
-        if (tile.hasBuilding()) return;
-        
-        int dx = Math.abs(tx - selectedSettlement.centerX);
-        int dy = Math.abs(ty - selectedSettlement.centerY);
-        if (dx > 3 || dy > 3) return;
-        
-        tile.buildingId = selectedBuildingType;
-        selectedSettlement.addBuilding(selectedBuildingType);
-        
-        BuildingType type = BuildingType.fromId(selectedBuildingType);
-        if (type != null) {
-            selectedSettlement.addPopulation(type.getPopulationCapacity());
-        }
-    }
-
     public void renderUI() {
-        if (uiBatch == null) return;
-        if (camera == null) return;
-        if (hoverTileX < 0 || hoverTileY < 0) return;
-        if (!world.isRevealed(hoverTileX, hoverTileY)) return;
-        
+        if (uiBatch == null || camera == null) return;
+        if (!world.isRevealed(selectedTileX, selectedTileY)) return;
+
         uiBatch.setProjectionMatrix(camera.combined);
         uiBatch.begin();
-        
-        Texture texture = validPlacement ? validTexture : invalidTexture;
-        if (placingSettlement) {
-            texture = validPlacement ? settlementTexture : invalidTexture;
-        }
-        
-        uiBatch.draw(texture,
-            hoverTileX * 64, hoverTileY * 64,
+
+        Settlement settlement = world.getSettlementAt(selectedTileX, selectedTileY);
+        Texture tex = (settlement != null) ? settlementTexture : selectionTexture;
+
+        uiBatch.draw(tex,
+            selectedTileX * 64, selectedTileY * 64,
             64, 64);
-        
+
         uiBatch.end();
     }
 
-    public void renderPanel(SettlementInfoPanel panel) {
-        if (uiBatch == null) return;
-        if (selectedSettlement == null) return;
-        
-        if (uiBatch.isDrawing()) {
-            uiBatch.end();
-        }
-        
-        int screenWidth = Gdx.graphics.getWidth();
-        int screenHeight = Gdx.graphics.getHeight();
-        uiBatch.setProjectionMatrix(new com.badlogic.gdx.math.Matrix4().setToOrtho2D(0, 0, screenWidth, screenHeight));
-        uiBatch.begin();
-        panel.render(selectedSettlement, uiBatch, screenWidth, screenHeight);
-        uiBatch.end();
-    }
+    public void renderToolbar() {
+        if (uiBatch == null || toolbar == null) return;
 
-    public void renderToolbar(BuildToolbar toolbar) {
-        if (uiBatch == null) return;
-        
         int screenWidth = Gdx.graphics.getWidth();
         int screenHeight = Gdx.graphics.getHeight();
-        
-        uiBatch.setProjectionMatrix(new com.badlogic.gdx.math.Matrix4().setToOrtho2D(0, 0, screenWidth, screenHeight));
+
+        uiBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, screenWidth, screenHeight));
         uiBatch.begin();
         toolbar.render(uiBatch, screenWidth, screenHeight);
         uiBatch.end();
     }
 
-    public boolean isPlacingSettlement() {
-        return placingSettlement;
+    public void renderPanel(SettlementInfoPanel panel) {
+        if (uiBatch == null) return;
+
+        Settlement settlement = world.getSettlementAt(selectedTileX, selectedTileY);
+        if (settlement == null) return;
+
+        if (uiBatch.isDrawing()) {
+            uiBatch.end();
+        }
+
+        int screenWidth = Gdx.graphics.getWidth();
+        int screenHeight = Gdx.graphics.getHeight();
+        uiBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, screenWidth, screenHeight));
+        uiBatch.begin();
+        panel.render(settlement, uiBatch, screenWidth, screenHeight);
+        uiBatch.end();
     }
 
-    public boolean isPlacingBuilding() {
-        return placingBuilding;
-    }
-
-    public int getSelectedBuildingType() {
-        return selectedBuildingType;
-    }
-
-    public Settlement getSelectedSettlement() {
-        return selectedSettlement;
-    }
-    
     public SpriteBatch getUiBatch() {
         return uiBatch;
     }
     
+    public int getSelectedTileX() {
+        return selectedTileX;
+    }
+    
+    public int getSelectedTileY() {
+        return selectedTileY;
+    }
+    
+    public int getSelectedToolId() {
+        return selectedToolId;
+    }
+    
+    public int getAvailableToolCount() {
+        return availableTools.size();
+    }
+    
+    public String getToolName(int index) {
+        if (index >= 0 && index < availableTools.size()) {
+            return availableTools.get(index).label;
+        }
+        return null;
+    }
+
     @Override
     public void dispose() {
         if (uiBatch != null) uiBatch.dispose();
-        if (validTexture != null) validTexture.dispose();
-        if (invalidTexture != null) invalidTexture.dispose();
+        if (selectionTexture != null) selectionTexture.dispose();
         if (settlementTexture != null) settlementTexture.dispose();
+        for (Texture tex : buildingTextures.values()) {
+            tex.dispose();
+        }
     }
 }
-
