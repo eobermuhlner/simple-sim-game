@@ -13,6 +13,7 @@ public class Settlement {
     public int population;
     public final List<Integer> buildingIds = new ArrayList<>();
     public int settlementLevelIndex;
+    public Specialization specialization = Specialization.NONE;
 
     public Settlement(String name, int centerX, int centerY) {
         this.id = nextId++;
@@ -38,7 +39,14 @@ public class Settlement {
     }
 
     private void updateLevel() {
-        settlementLevelIndex = SettlementLevel.fromPopulation(population).ordinal();
+        SettlementLevel newLevel = SettlementLevel.fromPopulation(population);
+        // Village → Town requires explicit specialization choice; cap population at Village max
+        if (newLevel != SettlementLevel.VILLAGE && specialization == Specialization.NONE) {
+            settlementLevelIndex = SettlementLevel.VILLAGE.ordinal();
+            population = Math.min(population, SettlementLevel.VILLAGE.getMaxPopulation());
+            return;
+        }
+        settlementLevelIndex = newLevel.ordinal();
     }
 
     public boolean addBuilding(int buildingId) {
@@ -59,10 +67,58 @@ public class Settlement {
         }
     }
 
-    public boolean needsUpgrade() {
-        return getLevel() != SettlementLevel.METROPOLIS && population >= getLevel().getMaxPopulation();
+    /**
+     * Returns true when the Village has reached max population and the player must
+     * choose a specialization to unlock the Town upgrade.
+     */
+    public boolean needsSpecializationChoice() {
+        return getLevel() == SettlementLevel.VILLAGE
+            && population >= SettlementLevel.VILLAGE.getMaxPopulation()
+            && specialization == Specialization.NONE;
     }
 
+    /**
+     * Returns true when a non-Village settlement can be upgraded to the next level.
+     * Village → Town is handled via {@link #specialize(Specialization)}.
+     */
+    public boolean needsUpgrade() {
+        return getLevel() != SettlementLevel.VILLAGE
+            && getLevel() != SettlementLevel.METROPOLIS
+            && population >= getLevel().getMaxPopulation();
+    }
+
+    /**
+     * Applies a specialization and upgrades the Village to Town.
+     * Only valid when {@link #needsSpecializationChoice()} is true.
+     */
+    public void specialize(Specialization spec) {
+        if (!needsSpecializationChoice()) return;
+        this.specialization = spec;
+        SettlementLevel[] levels = SettlementLevel.values();
+        settlementLevelIndex = Math.min(settlementLevelIndex + 1, levels.length - 1);
+        population = SettlementLevel.TOWN.getMinPopulation();
+    }
+
+    /**
+     * Returns true when the settlement can drop one level and choose a new specialization.
+     */
+    public boolean canRespecialize() {
+        return getLevel() != SettlementLevel.VILLAGE
+            && specialization != Specialization.NONE;
+    }
+
+    /**
+     * Drops the settlement one level and applies the new specialization.
+     * Only valid when {@link #canRespecialize()} is true.
+     */
+    public void respecialize(Specialization newSpec) {
+        if (!canRespecialize()) return;
+        this.specialization = newSpec;
+        settlementLevelIndex = Math.max(0, settlementLevelIndex - 1);
+        population = getLevel().getMinPopulation();
+    }
+
+    /** Upgrades a Town/City to the next level (no specialization required). */
     public void upgrade() {
         if (needsUpgrade()) {
             SettlementLevel[] levels = SettlementLevel.values();

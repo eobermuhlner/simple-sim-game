@@ -116,24 +116,25 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
         assertEquals(10, settlement.population);
         
         settlement.setPopulation(50);
-        assertTrue(settlement.needsUpgrade());
-        
-        settlement.upgrade();
+        assertTrue("Village at max needs spec choice", settlement.needsSpecializationChoice());
+        assertFalse("Village uses specialize(), not upgrade()", settlement.needsUpgrade());
+
+        settlement.specialize(ch.obermuhlner.sim.game.Specialization.TRADE_HUB);
         assertEquals(SettlementLevel.TOWN, settlement.getLevel());
         assertEquals(51, settlement.population);
         assertEquals(15, settlement.getMaxBuildings());
-        
+
         settlement.setPopulation(200);
         assertTrue(settlement.needsUpgrade());
-        
+
         settlement.upgrade();
         assertEquals(SettlementLevel.CITY, settlement.getLevel());
         assertEquals(201, settlement.population);
         assertEquals(30, settlement.getMaxBuildings());
-        
+
         settlement.setPopulation(501);
         assertFalse(settlement.needsUpgrade());
-        
+
         settlement.upgrade();
         assertEquals(SettlementLevel.METROPOLIS, settlement.getLevel());
         assertEquals(501, settlement.population);
@@ -168,7 +169,7 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
         assertEquals(5, settlement.buildingIds.size());
         
         settlement.setPopulation(50);
-        settlement.upgrade();
+        settlement.specialize(ch.obermuhlner.sim.game.Specialization.FARMING_VILLAGE);
         assertEquals(SettlementLevel.TOWN, settlement.getLevel());
         assertEquals(15, settlement.getMaxBuildings());
         
@@ -253,6 +254,8 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
         }
         
         if (first != null) {
+            first.setPopulation(50);
+            first.specialize(ch.obermuhlner.sim.game.Specialization.LOGGING_CAMP);
             first.setPopulation(100);
             assertEquals(SettlementLevel.TOWN, first.getLevel());
             

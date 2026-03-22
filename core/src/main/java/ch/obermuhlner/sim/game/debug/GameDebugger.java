@@ -32,13 +32,19 @@ public class GameDebugger {
             sb.append("No settlements.\n");
         } else {
             for (Settlement s : world.getSettlements()) {
-                sb.append(String.format("[%d] %s (%s)\n", 
+                sb.append(String.format("[%d] %s (%s)\n",
                     s.id, s.name, s.getLevel().getDisplayName()));
                 sb.append(String.format("  Population: %d\n", s.population));
+                sb.append(String.format("  Specialization: %s\n", s.specialization.displayName));
+                if (s.specialization != Specialization.NONE) {
+                    sb.append(String.format("  Production: %s\n", s.specialization.getProductionSummary()));
+                }
                 sb.append(String.format("  Position: (%d, %d)\n", s.centerX, s.centerY));
-                sb.append(String.format("  Buildings: %d/%d\n", 
+                sb.append(String.format("  Buildings: %d/%d\n",
                     s.buildingIds.size(), s.getMaxBuildings()));
-                if (s.needsUpgrade()) {
+                if (s.needsSpecializationChoice()) {
+                    sb.append("  Status: Choose a specialization!\n");
+                } else if (s.needsUpgrade()) {
                     sb.append("  Status: Ready to upgrade!\n");
                 }
             }

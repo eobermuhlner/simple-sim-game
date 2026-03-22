@@ -3,6 +3,7 @@ package ch.obermuhlner.sim;
 import ch.obermuhlner.sim.game.BuildingType;
 import ch.obermuhlner.sim.game.GameController;
 import ch.obermuhlner.sim.game.Settlement;
+import ch.obermuhlner.sim.game.Specialization;
 import ch.obermuhlner.sim.game.Tile;
 import ch.obermuhlner.sim.game.TileObjectRegistry;
 import ch.obermuhlner.sim.game.World;
@@ -16,6 +17,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -32,30 +34,56 @@ public class Main extends ApplicationAdapter implements GameController {
     private static final int CHUNK_SIZE = 16;
     private static final long WORLD_SEED = 42L;
 
+    // Tool ID ranges:
+    //   0       – New Settlement
+    //   1–5     – Buildings
+    //   10–13   – Specialization choice (Village → Town)
+    //   20      – Upgrade (Town → City, City → Metropolis)
+    //   21      – Enter re-specialize mode
+    //   30–33   – Re-specialization choice (drop one level + new spec)
+    private static final int TOOL_NEW_SETTLEMENT = 0;
+    private static final int TOOL_HOUSE   = 1;
+    private static final int TOOL_FARM    = 2;
+    private static final int TOOL_MARKET  = 3;
+    private static final int TOOL_WAREHOUSE = 4;
+    private static final int TOOL_WELL    = 5;
+    private static final int TOOL_SPEC_LOGGING = 10;
+    private static final int TOOL_SPEC_MINING  = 11;
+    private static final int TOOL_SPEC_FARMING = 12;
+    private static final int TOOL_SPEC_TRADE   = 13;
+    private static final int TOOL_UPGRADE      = 20;
+    private static final int TOOL_RESPEC_MODE  = 21;
+    private static final int TOOL_RESPEC_LOGGING = 30;
+    private static final int TOOL_RESPEC_MINING  = 31;
+    private static final int TOOL_RESPEC_FARMING = 32;
+    private static final int TOOL_RESPEC_TRADE   = 33;
+
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private World world;
     private Renderer renderer;
     private InputMultiplexer inputMultiplexer;
     private GameMode currentMode;
-    
+
     private SettlementInfoPanel settlementPanel;
     private BuildToolbar buildToolbar;
-    
+
     private int selectedTileX = -1;
     private int selectedTileY = -1;
     private int selectedToolId = -1;
     private List<BuildToolbar.ToolButton> availableTools = new ArrayList<>();
     private Map<Integer, Texture> buildingTextures = new HashMap<>();
+    private Map<Specialization, Texture> specializationIcons = new HashMap<>();
     private SpriteBatch uiBatch;
     private Texture selectionTexture;
     private Texture settlementTexture;
     private boolean tileSelected = false;
+    private boolean respecMode = false;
 
     @Override
     public void create() {
         TileObjectRegistry.init();
-        
+
         batch = new SpriteBatch();
         uiBatch = new SpriteBatch();
         camera = new OrthographicCamera();
@@ -63,9 +91,9 @@ public class Main extends ApplicationAdapter implements GameController {
         camera.position.set(TILE_SIZE / 2f, TILE_SIZE / 2f, 0);
 
         world = new World(CHUNK_SIZE, WORLD_SEED);
-        
+
         world.createStarterSettlement();
-        
+
         renderer = new Renderer(world, batch, camera);
         renderer.addLayer(new TerrainRenderLayer(world, true));
         renderer.addLayer(new ObjectRenderLayer(world, true));
@@ -77,6 +105,7 @@ public class Main extends ApplicationAdapter implements GameController {
         buildToolbar = new BuildToolbar();
 
         createSelectionTextures();
+        createSpecializationIcons();
         initToolbar();
 
         ExploreMode exploreMode = new ExploreMode();
@@ -86,9 +115,8 @@ public class Main extends ApplicationAdapter implements GameController {
 
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
-    
+
     private void createSelectionTextures() {
-        // Yellow border, transparent fill for selected tile
         Pixmap selectionMap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
         selectionMap.setColor(0, 0, 0, 0);
         selectionMap.fill();
@@ -99,7 +127,6 @@ public class Main extends ApplicationAdapter implements GameController {
         selectionTexture = new Texture(selectionMap);
         selectionMap.dispose();
 
-        // Green border for settlement tile
         Pixmap settlementMap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
         settlementMap.setColor(0, 0, 0, 0);
         settlementMap.fill();
@@ -110,53 +137,82 @@ public class Main extends ApplicationAdapter implements GameController {
         settlementTexture = new Texture(settlementMap);
         settlementMap.dispose();
     }
-    
+
+    private void createSpecializationIcons() {
+        createSpecIcon(Specialization.LOGGING_CAMP,    new Color(0.6f, 0.4f, 0.1f, 1f));
+        createSpecIcon(Specialization.MINING_TOWN,     new Color(0.6f, 0.6f, 0.6f, 1f));
+        createSpecIcon(Specialization.FARMING_VILLAGE, new Color(0.2f, 0.8f, 0.2f, 1f));
+        createSpecIcon(Specialization.TRADE_HUB,       new Color(1.0f, 0.85f, 0.1f, 1f));
+    }
+
+    private void createSpecIcon(Specialization spec, Color color) {
+        int size = 48;
+        Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(color.r * 0.5f, color.g * 0.5f, color.b * 0.5f, 1f));
+        pixmap.fill();
+        pixmap.setColor(color);
+        pixmap.fillCircle(size / 2, size / 2, size / 2 - 4);
+        pixmap.setColor(Color.BLACK);
+        pixmap.drawCircle(size / 2, size / 2, size / 2 - 4);
+        specializationIcons.put(spec, new Texture(pixmap));
+        pixmap.dispose();
+    }
+
     public void selectTile(int tileX, int tileY) {
         selectedTileX = tileX;
         selectedTileY = tileY;
         tileSelected = true;
-        
+        respecMode = false;
+
         if (!world.isRevealed(tileX, tileY)) {
             if (world.hasRevealedNeighbor(tileX, tileY)) {
                 world.reveal(tileX, tileY);
             }
         }
-        
+
         updateAvailableTools();
     }
-    
+
     public void initToolbar() {
         availableTools.clear();
-        availableTools.add(new BuildToolbar.ToolButton(0, "New Settlement", null));
+        availableTools.add(new BuildToolbar.ToolButton(TOOL_NEW_SETTLEMENT, "New Settlement", null));
         buildToolbar.setTools(availableTools);
     }
-    
+
     private void updateAvailableTools() {
         availableTools.clear();
-        
+
         Tile tile = world.getTile(selectedTileX, selectedTileY);
         boolean isBuildable = tile.terrain.isBuildable();
-        Settlement nearbySettlement = getNearbySettlement(selectedTileX, selectedTileY);
+        Settlement onTile = world.getSettlementAt(selectedTileX, selectedTileY);
+        Settlement nearby = getNearbySettlement(selectedTileX, selectedTileY);
 
-        availableTools.add(new BuildToolbar.ToolButton(
-            0, "New Settlement", null
-        ));
+        if (onTile != null && onTile.needsSpecializationChoice()) {
+            // Focused specialization choice — Village → Town upgrade
+            addSpecButtons(TOOL_SPEC_LOGGING, TOOL_SPEC_MINING, TOOL_SPEC_FARMING, TOOL_SPEC_TRADE);
 
-        if (isBuildable && nearbySettlement != null) {
-            BuildingType house = BuildingType.HOUSE_SIMPLE;
-            availableTools.add(new BuildToolbar.ToolButton(1, house.getDisplayName(), getBuildingTexture(house)));
+        } else if (respecMode && onTile != null && onTile.canRespecialize()) {
+            // Re-specialization mode — choose new specialization (costs one level)
+            addSpecButtons(TOOL_RESPEC_LOGGING, TOOL_RESPEC_MINING, TOOL_RESPEC_FARMING, TOOL_RESPEC_TRADE);
 
-            BuildingType farm = BuildingType.FARM_SMALL;
-            availableTools.add(new BuildToolbar.ToolButton(2, farm.getDisplayName(), getBuildingTexture(farm)));
+        } else {
+            availableTools.add(new BuildToolbar.ToolButton(TOOL_NEW_SETTLEMENT, "New Settlement", null));
 
-            BuildingType market = BuildingType.MARKET_SMALL;
-            availableTools.add(new BuildToolbar.ToolButton(3, market.getDisplayName(), getBuildingTexture(market)));
+            if (onTile != null && onTile.needsUpgrade()) {
+                availableTools.add(new BuildToolbar.ToolButton(TOOL_UPGRADE, "Upgrade", null));
+            }
 
-            BuildingType warehouse = BuildingType.WAREHOUSE;
-            availableTools.add(new BuildToolbar.ToolButton(4, warehouse.getDisplayName(), getBuildingTexture(warehouse)));
+            if (onTile != null && onTile.canRespecialize()) {
+                availableTools.add(new BuildToolbar.ToolButton(TOOL_RESPEC_MODE, "Re-spec", null));
+            }
 
-            BuildingType well = BuildingType.WELL_WATER;
-            availableTools.add(new BuildToolbar.ToolButton(5, well.getDisplayName(), getBuildingTexture(well)));
+            if (isBuildable && nearby != null) {
+                addBuildingButton(TOOL_HOUSE,     BuildingType.HOUSE_SIMPLE);
+                addBuildingButton(TOOL_FARM,      BuildingType.FARM_SMALL);
+                addBuildingButton(TOOL_MARKET,    BuildingType.MARKET_SMALL);
+                addBuildingButton(TOOL_WAREHOUSE, BuildingType.WAREHOUSE);
+                addBuildingButton(TOOL_WELL,      BuildingType.WELL_WATER);
+            }
         }
 
         buildToolbar.setTools(availableTools);
@@ -166,7 +222,20 @@ public class Main extends ApplicationAdapter implements GameController {
             buildToolbar.deselectTool();
         }
     }
-    
+
+    private void addSpecButtons(int logId, int minId, int farId, int tradeId) {
+        availableTools.add(new BuildToolbar.ToolButton(logId,   "Logging Camp",   specializationIcons.get(Specialization.LOGGING_CAMP)));
+        availableTools.add(new BuildToolbar.ToolButton(minId,   "Mining Town",    specializationIcons.get(Specialization.MINING_TOWN)));
+        availableTools.add(new BuildToolbar.ToolButton(farId,   "Farm Village",   specializationIcons.get(Specialization.FARMING_VILLAGE)));
+        availableTools.add(new BuildToolbar.ToolButton(tradeId, "Trade Hub",      specializationIcons.get(Specialization.TRADE_HUB)));
+    }
+
+    private void addBuildingButton(int toolId, BuildingType type) {
+        if (availableTools.size() < 6) {
+            availableTools.add(new BuildToolbar.ToolButton(toolId, type.getDisplayName(), getBuildingTexture(type)));
+        }
+    }
+
     private Texture getBuildingTexture(BuildingType type) {
         return buildingTextures.computeIfAbsent(type.getId(),
             id -> new Texture(Gdx.files.internal(type.getTexturePath())));
@@ -181,34 +250,88 @@ public class Main extends ApplicationAdapter implements GameController {
         }
         return null;
     }
-    
-    private void executeTool(int toolId) {
-        Tile tile = world.getTile(selectedTileX, selectedTileY);
 
+    private void executeTool(int toolId) {
         switch (toolId) {
-            case 0:
+            case TOOL_NEW_SETTLEMENT:
                 placeSettlement(selectedTileX, selectedTileY);
                 break;
-            case 1:
+            case TOOL_HOUSE:
                 placeBuilding(selectedTileX, selectedTileY, BuildingType.HOUSE_SIMPLE.getId());
                 break;
-            case 2:
+            case TOOL_FARM:
                 placeBuilding(selectedTileX, selectedTileY, BuildingType.FARM_SMALL.getId());
                 break;
-            case 3:
+            case TOOL_MARKET:
                 placeBuilding(selectedTileX, selectedTileY, BuildingType.MARKET_SMALL.getId());
                 break;
-            case 4:
+            case TOOL_WAREHOUSE:
                 placeBuilding(selectedTileX, selectedTileY, BuildingType.WAREHOUSE.getId());
                 break;
-            case 5:
+            case TOOL_WELL:
                 placeBuilding(selectedTileX, selectedTileY, BuildingType.WELL_WATER.getId());
                 break;
+            // Specialization choice (Village → Town)
+            case TOOL_SPEC_LOGGING:
+                specializeSettlement(selectedTileX, selectedTileY, Specialization.LOGGING_CAMP);
+                break;
+            case TOOL_SPEC_MINING:
+                specializeSettlement(selectedTileX, selectedTileY, Specialization.MINING_TOWN);
+                break;
+            case TOOL_SPEC_FARMING:
+                specializeSettlement(selectedTileX, selectedTileY, Specialization.FARMING_VILLAGE);
+                break;
+            case TOOL_SPEC_TRADE:
+                specializeSettlement(selectedTileX, selectedTileY, Specialization.TRADE_HUB);
+                break;
+            // Upgrade (Town → City, etc.)
+            case TOOL_UPGRADE:
+                upgradeSettlement(selectedTileX, selectedTileY);
+                break;
+            // Enter re-specialize mode
+            case TOOL_RESPEC_MODE:
+                respecMode = true;
+                break;
+            // Re-specialization choice
+            case TOOL_RESPEC_LOGGING:
+                respecializeSettlement(selectedTileX, selectedTileY, Specialization.LOGGING_CAMP);
+                break;
+            case TOOL_RESPEC_MINING:
+                respecializeSettlement(selectedTileX, selectedTileY, Specialization.MINING_TOWN);
+                break;
+            case TOOL_RESPEC_FARMING:
+                respecializeSettlement(selectedTileX, selectedTileY, Specialization.FARMING_VILLAGE);
+                break;
+            case TOOL_RESPEC_TRADE:
+                respecializeSettlement(selectedTileX, selectedTileY, Specialization.TRADE_HUB);
+                break;
         }
-        
+
         updateAvailableTools();
     }
-    
+
+    private void specializeSettlement(int tx, int ty, Specialization spec) {
+        Settlement settlement = world.getSettlementAt(tx, ty);
+        if (settlement != null) {
+            settlement.specialize(spec);
+        }
+    }
+
+    private void upgradeSettlement(int tx, int ty) {
+        Settlement settlement = world.getSettlementAt(tx, ty);
+        if (settlement != null) {
+            settlement.upgrade();
+        }
+    }
+
+    private void respecializeSettlement(int tx, int ty, Specialization newSpec) {
+        Settlement settlement = world.getSettlementAt(tx, ty);
+        if (settlement != null) {
+            settlement.respecialize(newSpec);
+        }
+        respecMode = false;
+    }
+
     private void placeSettlement(int tx, int ty) {
         Tile tile = world.getTile(tx, ty);
         if (!tile.terrain.isBuildable()) return;
@@ -218,7 +341,7 @@ public class Main extends ApplicationAdapter implements GameController {
         String name = "Settlement " + (world.getSettlements().size() + 1);
         world.createSettlement(name, tx, ty);
     }
-    
+
     private void placeBuilding(int tx, int ty, int buildingId) {
         Settlement settlement = getNearbySettlement(tx, ty);
         if (settlement == null) return;
@@ -235,12 +358,11 @@ public class Main extends ApplicationAdapter implements GameController {
             settlement.addPopulation(type.getPopulationCapacity());
         }
     }
-    
+
     public void handleClick(int screenX, int screenY) {
         int screenWidth = Gdx.graphics.getWidth();
         int screenHeight = Gdx.graphics.getHeight();
 
-        // Input Y is 0=top; toolbar uses GL Y (0=bottom) — invert before checking
         int glY = screenHeight - screenY;
 
         int toolId = buildToolbar.getToolIdAt(screenX, glY, screenWidth, screenHeight);
@@ -251,7 +373,6 @@ public class Main extends ApplicationAdapter implements GameController {
             return;
         }
 
-        // If click is in toolbar area (top of screen), don't process as tile click
         float toolbarTop = screenHeight - 20;
         float toolbarBottom = screenHeight - 104 - 20;
         if (glY >= toolbarBottom && glY <= toolbarTop) {
@@ -263,7 +384,7 @@ public class Main extends ApplicationAdapter implements GameController {
         int tileY = (int) Math.floor(worldPos.y / 64);
         selectTile(tileX, tileY);
     }
-    
+
     public int getSelectedTileX() { return selectedTileX; }
     public int getSelectedTileY() { return selectedTileY; }
     public boolean hasTileSelected() { return tileSelected; }
@@ -281,7 +402,7 @@ public class Main extends ApplicationAdapter implements GameController {
         if (Gdx.input.getInputProcessor() == null || Gdx.input.getInputProcessor() == inputMultiplexer) {
             Gdx.input.setInputProcessor(inputMultiplexer);
         }
-        
+
         if (mode instanceof BuildMode) {
             ((BuildMode) mode).init(world, camera);
             ((BuildMode) mode).setToolbar(buildToolbar);
@@ -299,15 +420,14 @@ public class Main extends ApplicationAdapter implements GameController {
         ScreenUtils.clear(0.15f, 0.15f, 0.2f, 1f);
 
         renderer.render();
-        
+
         renderUI();
     }
-    
+
     private void renderUI() {
         int screenWidth = Gdx.graphics.getWidth();
         int screenHeight = Gdx.graphics.getHeight();
 
-        // Draw tile selection border in world space (camera-projected)
         if (tileSelected && world.isRevealed(selectedTileX, selectedTileY)) {
             Settlement settlement = world.getSettlementAt(selectedTileX, selectedTileY);
             Texture tex = (settlement != null) ? settlementTexture : selectionTexture;
@@ -317,7 +437,6 @@ public class Main extends ApplicationAdapter implements GameController {
             batch.end();
         }
 
-        // Draw toolbar and settlement panel in screen space
         uiBatch.setProjectionMatrix(new com.badlogic.gdx.math.Matrix4().setToOrtho2D(0, 0, screenWidth, screenHeight));
         uiBatch.begin();
         if (buildToolbar != null) {
@@ -345,8 +464,11 @@ public class Main extends ApplicationAdapter implements GameController {
         for (Texture tex : buildingTextures.values()) {
             tex.dispose();
         }
+        for (Texture tex : specializationIcons.values()) {
+            tex.dispose();
+        }
     }
-    
+
     @Override
     public World getWorld() {
         return world;

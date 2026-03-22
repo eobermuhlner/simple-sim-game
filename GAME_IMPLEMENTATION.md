@@ -807,11 +807,11 @@ These formulas determine pacing, balance, and player experience. Test and iterat
 - [x] Population system
 - [x] Auto-placed starter settlement
 
-### Phase 3: Settlement Specialization
-- [ ] Specialization choice at Town upgrade
-- [ ] Production modifiers per specialization
-- [ ] Re-specialization mechanic
-- [ ] Visual identity per specialization type
+### Phase 3: Settlement Specialization (Complete)
+- [x] Specialization choice at Town upgrade
+- [x] Production modifiers per specialization
+- [x] Re-specialization mechanic
+- [x] Visual identity per specialization type
 
 ### Phase 4: Road Network
 - [ ] Road tile rendering (multiple types)

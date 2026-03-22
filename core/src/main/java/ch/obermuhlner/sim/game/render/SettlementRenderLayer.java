@@ -3,6 +3,7 @@ package ch.obermuhlner.sim.game.render;
 import ch.obermuhlner.sim.game.Chunk;
 import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.SettlementLevel;
+import ch.obermuhlner.sim.game.Specialization;
 import ch.obermuhlner.sim.game.World;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -18,6 +19,7 @@ public class SettlementRenderLayer implements RenderLayer {
 
     private final World world;
     private final boolean fogOfWar;
+    // Key: level.ordinal() * 10 + specialization.ordinal()
     private final Map<Integer, Texture> markerTextures = new HashMap<>();
 
     public SettlementRenderLayer(World world, boolean fogOfWar) {
@@ -30,26 +32,62 @@ public class SettlementRenderLayer implements RenderLayer {
 
     @Override
     public void loadAssets() {
-        for (SettlementLevel level : SettlementLevel.values()) {
-            Pixmap pixmap = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
-            Color color = getLevelColor(level);
-            pixmap.setColor(color);
-            pixmap.fillCircle(8, 8, 7);
-            pixmap.setColor(Color.BLACK);
-            pixmap.drawCircle(8, 8, 7);
-            Texture texture = new Texture(pixmap);
-            pixmap.dispose();
-            markerTextures.put(level.ordinal(), texture);
+        // Textures are created lazily per (level, specialization) combination
+    }
+
+    private Texture getMarkerTexture(Settlement settlement) {
+        int key = settlement.getLevel().ordinal() * 10 + settlement.specialization.ordinal();
+        Texture existing = markerTextures.get(key);
+        if (existing == null) {
+            existing = createMarkerTexture(settlement.getLevel(), settlement.specialization);
+            markerTextures.put(key, existing);
         }
+        return existing;
+    }
+
+    private Texture createMarkerTexture(SettlementLevel level, Specialization specialization) {
+        Pixmap pixmap = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
+
+        // Fill with level color
+        pixmap.setColor(getLevelColor(level));
+        pixmap.fillCircle(8, 8, 7);
+
+        // Border: specialization color when specialized, black otherwise
+        if (specialization != Specialization.NONE) {
+            pixmap.setColor(getSpecializationColor(specialization));
+        } else {
+            pixmap.setColor(Color.BLACK);
+        }
+        pixmap.drawCircle(8, 8, 7);
+
+        // For specialized settlements, draw a small inner dot to make the identity clearer
+        if (specialization != Specialization.NONE) {
+            pixmap.setColor(getSpecializationColor(specialization));
+            pixmap.fillCircle(8, 8, 3);
+        }
+
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        return texture;
     }
 
     private Color getLevelColor(SettlementLevel level) {
         switch (level) {
-            case VILLAGE: return new Color(0.3f, 0.7f, 0.3f, 1f);
-            case TOWN: return new Color(0.3f, 0.5f, 0.9f, 1f);
-            case CITY: return new Color(0.8f, 0.6f, 0.2f, 1f);
+            case VILLAGE:    return new Color(0.3f, 0.7f, 0.3f, 1f);
+            case TOWN:       return new Color(0.3f, 0.5f, 0.9f, 1f);
+            case CITY:       return new Color(0.8f, 0.6f, 0.2f, 1f);
             case METROPOLIS: return new Color(0.9f, 0.3f, 0.9f, 1f);
-            default: return new Color(0.3f, 0.7f, 0.3f, 1f);
+            default:         return new Color(0.3f, 0.7f, 0.3f, 1f);
+        }
+    }
+
+    private Color getSpecializationColor(Specialization spec) {
+        switch (spec) {
+            case LOGGING_CAMP:    return new Color(0.6f, 0.4f, 0.1f, 1f);
+            case MINING_TOWN:     return new Color(0.7f, 0.7f, 0.7f, 1f);
+            case FARMING_VILLAGE: return new Color(0.2f, 0.9f, 0.2f, 1f);
+            case TRADE_HUB:       return new Color(1.0f, 0.85f, 0.1f, 1f);
+            default:              return Color.BLACK;
         }
     }
 
@@ -69,12 +107,10 @@ public class SettlementRenderLayer implements RenderLayer {
 
             if (fogOfWar && !world.isRevealed(tx, ty)) continue;
 
-            Texture marker = markerTextures.get(settlement.getLevel().ordinal());
-            if (marker != null) {
-                float x = tx * TILE_SIZE + (TILE_SIZE - 16) / 2f;
-                float y = ty * TILE_SIZE + (TILE_SIZE - 16) / 2f;
-                batch.draw(marker, x, y, 16, 16);
-            }
+            Texture marker = getMarkerTexture(settlement);
+            float x = tx * TILE_SIZE + (TILE_SIZE - 16) / 2f;
+            float y = ty * TILE_SIZE + (TILE_SIZE - 16) / 2f;
+            batch.draw(marker, x, y, 16, 16);
         }
     }
 

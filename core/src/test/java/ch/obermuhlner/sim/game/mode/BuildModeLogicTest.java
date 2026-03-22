@@ -39,16 +39,23 @@ public class BuildModeLogicTest {
     public void testSettlementBuildingCapacityByLevel() {
         Settlement village = new Settlement("Village", 0, 0);
         assertEquals(5, village.getMaxBuildings());
-        
+
+        // Town requires specialization to reach
         Settlement town = new Settlement("Town", 0, 0);
+        town.setPopulation(50);
+        town.specialize(Specialization.TRADE_HUB);
         town.setPopulation(100);
         assertEquals(15, town.getMaxBuildings());
-        
+
         Settlement city = new Settlement("City", 0, 0);
+        city.setPopulation(50);
+        city.specialize(Specialization.MINING_TOWN);
         city.setPopulation(300);
         assertEquals(30, city.getMaxBuildings());
-        
+
         Settlement metropolis = new Settlement("Metropolis", 0, 0);
+        metropolis.setPopulation(50);
+        metropolis.specialize(Specialization.LOGGING_CAMP);
         metropolis.setPopulation(600);
         assertEquals(50, metropolis.getMaxBuildings());
     }
