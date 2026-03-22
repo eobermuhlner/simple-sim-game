@@ -391,7 +391,7 @@ public class Main extends ApplicationAdapter implements GameController {
         if (!tile.terrain.isBuildable()) return;
         if (tile.hasBuilding()) return;
 
-        tile.buildingId = buildingId;
+        world.setBuilding(tx, ty, buildingId);
         settlement.addBuilding(buildingId);
 
         BuildingType type = BuildingType.fromId(buildingId);

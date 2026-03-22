@@ -96,4 +96,42 @@ public class Chunk {
             fog[y][x] = ((data[i / 8] >> (i % 8)) & 1) == 1;
         }
     }
+
+    /**
+     * Saves road and building tile data.
+     * Format: 3 bytes per tile (roadType, roadConnection, buildingId), row-major order.
+     */
+    public void saveTileData(FileHandle file) {
+        int size = tiles.length;
+        byte[] data = new byte[size * size * 3];
+        int idx = 0;
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                Tile t = tiles[y][x];
+                data[idx++] = (byte) t.roadType;
+                data[idx++] = (byte) t.roadConnection;
+                data[idx++] = (byte) t.buildingId;
+            }
+        }
+        file.writeBytes(data, false);
+    }
+
+    /**
+     * Loads road and building tile data saved by {@link #saveTileData}.
+     */
+    public void loadTileData(FileHandle file) {
+        if (!file.exists()) return;
+        byte[] data = file.readBytes();
+        int size = tiles.length;
+        if (data.length < size * size * 3) return;
+        int idx = 0;
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                Tile t = tiles[y][x];
+                t.roadType       = data[idx++] & 0xFF;
+                t.roadConnection = data[idx++] & 0xFF;
+                t.buildingId     = data[idx++] & 0xFF;
+            }
+        }
+    }
 }

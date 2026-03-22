@@ -208,8 +208,8 @@ public class World {
         Chunk chunk = new Chunk(cx, cy, chunkSize);
         terrainGenerator.generate(chunk);
         if (!headless) {
-            FileHandle fogFile = getFogFile(cx, cy);
-            chunk.loadFog(fogFile);
+            chunk.loadFog(getFogFile(cx, cy));
+            chunk.loadTileData(getTileDataFile(cx, cy));
         }
         return chunk;
     }
@@ -218,11 +218,16 @@ public class World {
         return com.badlogic.gdx.Gdx.files.local("data/chunks/" + cx + "_" + cy + ".fow");
     }
 
+    private FileHandle getTileDataFile(int cx, int cy) {
+        return com.badlogic.gdx.Gdx.files.local("data/chunks/" + cx + "_" + cy + ".tile");
+    }
+
     public void saveDirtyChunks() {
         if (headless) return;
         for (Chunk chunk : chunks.values()) {
             if (chunk.dirty) {
                 chunk.saveFog(getFogFile(chunk.cx, chunk.cy));
+                chunk.saveTileData(getTileDataFile(chunk.cx, chunk.cy));
                 chunk.dirty = false;
             }
         }
@@ -246,6 +251,7 @@ public class World {
         updateRoadConnections(tx, ty - 1);
         updateRoadConnections(tx + 1, ty);
         updateRoadConnections(tx - 1, ty);
+        markTileDirty(tx, ty);
         routesDirty = true;
         return true;
     }
@@ -261,8 +267,20 @@ public class World {
         updateRoadConnections(tx, ty - 1);
         updateRoadConnections(tx + 1, ty);
         updateRoadConnections(tx - 1, ty);
+        markTileDirty(tx, ty);
         routesDirty = true;
         return true;
+    }
+
+    public void setBuilding(int tx, int ty, int buildingId) {
+        getTile(tx, ty).buildingId = buildingId;
+        markTileDirty(tx, ty);
+    }
+
+    private void markTileDirty(int tx, int ty) {
+        int cx = Math.floorDiv(tx, chunkSize);
+        int cy = Math.floorDiv(ty, chunkSize);
+        getChunk(cx, cy).markDirty();
     }
 
     private void updateRoadConnections(int tx, int ty) {
