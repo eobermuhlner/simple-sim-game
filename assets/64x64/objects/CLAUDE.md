@@ -4,7 +4,10 @@ This directory contains 64x64 pixel art sprites for medieval sim game objects (t
 
 ## Creating New Objects
 
-Use the Pixellab API to generate objects:
+Use the Pixellab API to generate objects.
+
+@https://api.pixellab.ai/mcp/docs
+
 
 ```bash
 curl -X POST "https://api.pixellab.ai/v2/map-objects" \
