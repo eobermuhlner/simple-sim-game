@@ -167,3 +167,4 @@ Thumbs.db
 /opencode.jsonc
 /data/
 /assets/data/chunks/
+/.claude/settings.local.json
