@@ -330,9 +330,8 @@ public class Main extends ApplicationAdapter implements GameController {
             case TOOL_RESPEC_MODE:
                 respecMode = true;
                 break;
-            // Road building
+            // Road building: activating the tool does not place a road immediately
             case TOOL_BUILD_ROAD:
-                world.placeRoad(selectedTileX, selectedTileY, RoadType.DIRT);
                 break;
             // Re-specialization choice
             case TOOL_RESPEC_LOGGING:
@@ -409,9 +408,15 @@ public class Main extends ApplicationAdapter implements GameController {
 
         int toolId = buildToolbar.getToolIdAt(screenX, glY, screenWidth, screenHeight);
         if (toolId >= 0 && tileSelected) {
-            selectedToolId = toolId;
-            buildToolbar.selectTool(toolId);
-            executeTool(toolId);
+            if (toolId == TOOL_BUILD_ROAD && selectedToolId == TOOL_BUILD_ROAD) {
+                // Toggle road tool off
+                selectedToolId = -1;
+                buildToolbar.deselectTool();
+            } else {
+                selectedToolId = toolId;
+                buildToolbar.selectTool(toolId);
+                executeTool(toolId);
+            }
             return;
         }
 
@@ -424,21 +429,21 @@ public class Main extends ApplicationAdapter implements GameController {
         com.badlogic.gdx.math.Vector3 worldPos = camera.unproject(new com.badlogic.gdx.math.Vector3(screenX, screenY, 0));
         int tileX = (int) Math.floor(worldPos.x / 64);
         int tileY = (int) Math.floor(worldPos.y / 64);
+
+        if (selectedToolId == TOOL_BUILD_ROAD) {
+            // Road tool active: place road on clicked tile without changing selection
+            if (world.isRevealed(tileX, tileY)) {
+                world.placeRoad(tileX, tileY, RoadType.DIRT);
+            }
+            return;
+        }
+
         selectTile(tileX, tileY);
     }
 
     @Override
     public boolean handleDrag(int screenX, int screenY) {
-        if (selectedToolId != TOOL_BUILD_ROAD) return false;
-
-        com.badlogic.gdx.math.Vector3 worldPos = camera.unproject(new com.badlogic.gdx.math.Vector3(screenX, screenY, 0));
-        int tileX = (int) Math.floor(worldPos.x / 64);
-        int tileY = (int) Math.floor(worldPos.y / 64);
-
-        if (world.isRevealed(tileX, tileY)) {
-            world.placeRoad(tileX, tileY, RoadType.DIRT);
-        }
-        return true;
+        return false;
     }
 
     public int getSelectedTileX() { return selectedTileX; }
