@@ -1,5 +1,7 @@
 package ch.obermuhlner.sim.game.mode;
 
+import ch.obermuhlner.sim.game.GameController;
+import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.World;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Vector3;
@@ -12,6 +14,7 @@ public class ExploreMode implements GameMode {
 
     private World world;
     private OrthographicCamera camera;
+    private GameController controller;
     private boolean fogOfWar = true;
     private boolean mouseDown = false;
     private float totalDrag = 0;
@@ -29,6 +32,14 @@ public class ExploreMode implements GameMode {
         this.world = world;
         this.camera = camera;
         world.reveal(0, 0);
+    }
+    
+    public void setMain(GameController controller) {
+        this.controller = controller;
+    }
+    
+    public GameController getController() {
+        return controller;
     }
 
     @Override
@@ -82,7 +93,12 @@ public class ExploreMode implements GameMode {
                 Vector3 worldPos = camera.unproject(new Vector3(screenX, screenY, 0));
                 int tileX = (int) Math.floor(worldPos.x / 64);
                 int tileY = (int) Math.floor(worldPos.y / 64);
-                revealTile(tileX, tileY);
+                
+                if (controller != null) {
+                    controller.handleClick(screenX, screenY);
+                } else {
+                    revealTile(tileX, tileY);
+                }
             }
             return true;
         }
@@ -100,7 +116,13 @@ public class ExploreMode implements GameMode {
             float dx = screenX - lastMouseX;
             float dy = screenY - lastMouseY;
             totalDrag += Math.abs(dx) + Math.abs(dy);
-            camera.translate(-dx * camera.zoom, dy * camera.zoom);
+
+            // Let controller consume the drag (e.g. road drag-to-place), otherwise pan
+            boolean consumed = controller != null && controller.handleDrag(screenX, screenY);
+            if (!consumed) {
+                camera.translate(-dx * camera.zoom, dy * camera.zoom);
+            }
+
             lastMouseX = screenX;
             lastMouseY = screenY;
             return true;

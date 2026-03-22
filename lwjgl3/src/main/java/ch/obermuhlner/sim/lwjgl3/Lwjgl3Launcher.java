@@ -1,5 +1,6 @@
 package ch.obermuhlner.sim.lwjgl3;
 
+import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import ch.obermuhlner.sim.Main;
@@ -12,7 +13,20 @@ public class Lwjgl3Launcher {
     }
 
     private static Lwjgl3Application createApplication() {
-        return new Lwjgl3Application(new Main(), getDefaultConfiguration());
+        ApplicationListener app = createApplicationInstance();
+        return new Lwjgl3Application(app, getDefaultConfiguration());
+    }
+
+    private static ApplicationListener createApplicationInstance() {
+        String mainClassName = System.getProperty("mainClass", "ch.obermuhlner.sim.Main");
+        try {
+            Class<?> clazz = Class.forName(mainClassName);
+            return (ApplicationListener) clazz.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            System.err.println("Failed to create application instance: " + mainClassName);
+            System.err.println("Falling back to Main");
+            return new Main();
+        }
     }
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
