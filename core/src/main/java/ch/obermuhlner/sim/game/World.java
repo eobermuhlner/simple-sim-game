@@ -4,6 +4,10 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.LongMap;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -402,6 +406,84 @@ public class World {
 
     private static int decodeY(long encoded) {
         return (int)(encoded % 3000000L) - 1000000;
+    }
+
+    public void saveSettlements(FileHandle file) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(baos);
+            dos.writeInt(settlements.size());
+            for (Settlement s : settlements) {
+                dos.writeInt(s.id);
+                dos.writeUTF(s.name);
+                dos.writeInt(s.centerX);
+                dos.writeInt(s.centerY);
+                dos.writeInt(s.population);
+                dos.writeInt(s.settlementLevelIndex);
+                dos.writeInt(s.specialization.ordinal());
+                dos.writeFloat(s.wood);
+                dos.writeFloat(s.stone);
+                dos.writeFloat(s.food);
+                dos.writeFloat(s.goods);
+                dos.writeFloat(s.gold);
+                dos.writeFloat(s.storageCapacity);
+                dos.writeFloat(s.smoothedWoodProd);
+                dos.writeFloat(s.smoothedStoneProd);
+                dos.writeFloat(s.smoothedFoodProd);
+                dos.writeFloat(s.smoothedGoodsProd);
+                dos.writeFloat(s.woodPriceMult);
+                dos.writeFloat(s.stonePriceMult);
+                dos.writeFloat(s.foodPriceMult);
+                dos.writeFloat(s.goodsPriceMult);
+                dos.writeInt(s.buildingIds.size());
+                for (int bid : s.buildingIds) dos.writeInt(bid);
+            }
+            dos.flush();
+            file.writeBytes(baos.toByteArray(), false);
+        } catch (Exception e) {
+            // ignore
+        }
+    }
+
+    /** Returns true if at least one settlement was loaded. */
+    public boolean loadSettlements(FileHandle file) {
+        if (!file.exists()) return false;
+        try {
+            DataInputStream dis = new DataInputStream(new ByteArrayInputStream(file.readBytes()));
+            int count = dis.readInt();
+            Specialization[] specs = Specialization.values();
+            for (int i = 0; i < count; i++) {
+                int id        = dis.readInt();
+                String name   = dis.readUTF();
+                int cx        = dis.readInt();
+                int cy        = dis.readInt();
+                int pop       = dis.readInt();
+                int levelIdx  = dis.readInt();
+                int specOrd   = dis.readInt();
+                Specialization spec = (specOrd >= 0 && specOrd < specs.length) ? specs[specOrd] : Specialization.NONE;
+                Settlement s = new Settlement(id, name, cx, cy, pop, levelIdx, spec);
+                s.wood            = dis.readFloat();
+                s.stone           = dis.readFloat();
+                s.food            = dis.readFloat();
+                s.goods           = dis.readFloat();
+                s.gold            = dis.readFloat();
+                s.storageCapacity = dis.readFloat();
+                s.smoothedWoodProd  = dis.readFloat();
+                s.smoothedStoneProd = dis.readFloat();
+                s.smoothedFoodProd  = dis.readFloat();
+                s.smoothedGoodsProd = dis.readFloat();
+                s.woodPriceMult   = dis.readFloat();
+                s.stonePriceMult  = dis.readFloat();
+                s.foodPriceMult   = dis.readFloat();
+                s.goodsPriceMult  = dis.readFloat();
+                int bidCount = dis.readInt();
+                for (int j = 0; j < bidCount; j++) s.buildingIds.add(dis.readInt());
+                settlements.add(s);
+            }
+            return count > 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public void forEachVisibleChunk(int startTx, int startTy, int endTx, int endTy, ChunkConsumer consumer) {

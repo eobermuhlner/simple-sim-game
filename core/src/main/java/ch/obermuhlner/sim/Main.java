@@ -107,7 +107,10 @@ public class Main extends ApplicationAdapter implements GameController {
 
         world = new World(CHUNK_SIZE, WORLD_SEED);
 
-        world.createStarterSettlement();
+        boolean settlementsLoaded = world.loadSettlements(Gdx.files.local("data/settlements.dat"));
+        if (!settlementsLoaded) {
+            world.createStarterSettlement();
+        }
 
         simulation = new SimulationSystem(world);
 
@@ -549,6 +552,7 @@ public class Main extends ApplicationAdapter implements GameController {
 
     @Override
     public void dispose() {
+        world.saveSettlements(Gdx.files.local("data/settlements.dat"));
         world.saveDirtyChunks();
         renderer.dispose();
         settlementPanel.dispose();

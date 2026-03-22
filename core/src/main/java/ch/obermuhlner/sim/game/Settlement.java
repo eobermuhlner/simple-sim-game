@@ -45,6 +45,18 @@ public class Settlement {
         this.settlementLevelIndex = SettlementLevel.VILLAGE.ordinal();
     }
 
+    /** Package-private constructor for deserialization — does NOT trigger normal initialization. */
+    Settlement(int id, String name, int centerX, int centerY, int population, int levelIndex, Specialization spec) {
+        this.id = id;
+        if (id >= nextId) nextId = id + 1;
+        this.name = name;
+        this.centerX = centerX;
+        this.centerY = centerY;
+        this.population = population;
+        this.settlementLevelIndex = levelIndex;
+        this.specialization = spec;
+    }
+
     public SettlementLevel getLevel() {
         return SettlementLevel.values()[Math.min(settlementLevelIndex, SettlementLevel.values().length - 1)];
     }
