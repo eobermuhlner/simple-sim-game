@@ -28,6 +28,7 @@ public class TerrainGenerator {
 
     public void generate(Chunk chunk) {
         Random random = new Random(chunk.cx * 31L + chunk.cy * 17L + seed);
+        Random rewardRandom = new Random(chunk.cx * 73L + chunk.cy * 37L + seed + 1L);
         int size = chunk.tiles.length;
         double noiseScale = config.getNoiseScale();
         int noiseOctaves = config.getNoiseOctaves();
@@ -42,6 +43,10 @@ public class TerrainGenerator {
                 TerrainType terrain = getTerrainFromNoise(n);
 
                 int objectId = generateNaturalObjects(random, terrain);
+                int rewardId = generateExplorationReward(rewardRandom, terrain);
+                if (objectId == TileObjectRegistry.NONE) {
+                    objectId = rewardId;
+                }
 
                 Tile tile = new Tile(terrain, objectId);
                 chunk.setTile(lx, ly, tile);
@@ -55,6 +60,17 @@ public class TerrainGenerator {
             Float prob = obj.spawn.get(terrainName);
             if (prob != null && random.nextFloat() < prob) {
                 return obj.id;
+            }
+        }
+        return TileObjectRegistry.NONE;
+    }
+
+    protected int generateExplorationReward(Random random, TerrainType terrain) {
+        String terrainName = terrain.name();
+        for (GameConfig.ExplorationRewardConfig reward : config.getExplorationRewards()) {
+            Float prob = reward.spawn.get(terrainName);
+            if (prob != null && random.nextFloat() < prob) {
+                return reward.id;
             }
         }
         return TileObjectRegistry.NONE;

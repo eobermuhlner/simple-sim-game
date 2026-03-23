@@ -86,6 +86,20 @@ public class GameConfig {
         public Map<String, Float> spawn = new LinkedHashMap<>();
     }
 
+    public static class ExplorationRewardConfig {
+        public String name = "";
+        public int id = 0;
+        public String image = "";
+        public String reward_type = "ONE_TIME"; // ONE_TIME or BONUS
+        public String required_level = "VILLAGE";
+        public Map<String, Float> rewards = new LinkedHashMap<>();          // resource -> one-time amount
+        public Map<String, Float> bonus_production = new LinkedHashMap<>();  // resource -> per-tick bonus
+        public Map<String, Float> spawn = new LinkedHashMap<>();             // terrain -> spawn probability
+
+        public boolean isOneTime() { return "ONE_TIME".equals(reward_type); }
+        public boolean isBonus()   { return "BONUS".equals(reward_type); }
+    }
+
     public static class TerrainConfig {
         public double noise_scale = 0.04;
         public int noise_octaves = 4;
@@ -106,6 +120,7 @@ public class GameConfig {
         public Map<String, Map<String, Object>> buildings = new HashMap<>();
         public Map<String, Map<String, Object>> specializations = new HashMap<>();
         public Map<String, TerrainObjectConfig> terrain_objects = new LinkedHashMap<>();
+        public Map<String, ExplorationRewardConfig> exploration_rewards = new LinkedHashMap<>();
     }
 
     private final Root root;
@@ -136,6 +151,7 @@ public class GameConfig {
             bindBuildings(r, raw);
             bindSpecializations(r, raw);
             bindTerrainObjects(r, raw);
+            bindExplorationRewards(r, raw);
         } catch (Exception e) {
             Gdx.app.log("GameConfig", "Failed to load application.yml: " + e.getMessage());
         }
@@ -271,6 +287,43 @@ public class GameConfig {
     }
 
     @SuppressWarnings("unchecked")
+    private void bindExplorationRewards(Root r, Map<String, Object> raw) {
+        Object erRaw = raw.get("exploration_rewards");
+        if (erRaw == null) return;
+        Map<String, Object> erMap = (Map<String, Object>) erRaw;
+        for (Map.Entry<String, Object> e : erMap.entrySet()) {
+            String name = e.getKey().toUpperCase();
+            if (!(e.getValue() instanceof Map)) continue;
+            Map<String, Object> data = (Map<String, Object>) e.getValue();
+            ExplorationRewardConfig erc = new ExplorationRewardConfig();
+            erc.name = name;
+            if (data.containsKey("id")) erc.id = ((Number) data.get("id")).intValue();
+            if (data.containsKey("image")) erc.image = (String) data.get("image");
+            if (data.containsKey("reward_type")) erc.reward_type = ((String) data.get("reward_type")).toUpperCase();
+            if (data.containsKey("required_level")) erc.required_level = ((String) data.get("required_level")).toUpperCase();
+            Map<String, Object> rewardsRaw = (Map<String, Object>) data.get("rewards");
+            if (rewardsRaw != null) {
+                for (Map.Entry<String, Object> re : rewardsRaw.entrySet()) {
+                    erc.rewards.put(re.getKey().toUpperCase(), ((Number) re.getValue()).floatValue());
+                }
+            }
+            Map<String, Object> bonusRaw = (Map<String, Object>) data.get("bonus_production");
+            if (bonusRaw != null) {
+                for (Map.Entry<String, Object> be : bonusRaw.entrySet()) {
+                    erc.bonus_production.put(be.getKey().toUpperCase(), ((Number) be.getValue()).floatValue());
+                }
+            }
+            Map<String, Object> spawnRaw = (Map<String, Object>) data.get("spawn");
+            if (spawnRaw != null) {
+                for (Map.Entry<String, Object> se : spawnRaw.entrySet()) {
+                    erc.spawn.put(se.getKey().toUpperCase(), ((Number) se.getValue()).floatValue());
+                }
+            }
+            r.exploration_rewards.put(name, erc);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
     private void bindRoads(Root r, Map<String, Object> raw) {
         Object roadsRaw = raw.get("roads");
         if (roadsRaw == null) return;
@@ -399,6 +452,24 @@ public class GameConfig {
 
     public List<TerrainObjectConfig> getTerrainObjects() {
         return new ArrayList<>(root.terrain_objects.values());
+    }
+
+    // ---- Exploration reward accessors ----
+
+    public List<ExplorationRewardConfig> getExplorationRewards() {
+        return new ArrayList<>(root.exploration_rewards.values());
+    }
+
+    private Map<Integer, ExplorationRewardConfig> rewardById = null;
+
+    public ExplorationRewardConfig getExplorationReward(int objectId) {
+        if (rewardById == null) {
+            rewardById = new HashMap<>();
+            for (ExplorationRewardConfig erc : root.exploration_rewards.values()) {
+                rewardById.put(erc.id, erc);
+            }
+        }
+        return rewardById.get(objectId);
     }
 
     // ---- Road accessors ----

@@ -130,6 +130,69 @@ specializations:
   FARMING_VILLAGE: { wood: 0.5, stone: 0.5, food: 2.0, goods: 1.0 }
   TRADE_HUB:       { wood: 1.0, stone: 1.0, food: 1.0, goods: 1.5 }
 
+exploration_rewards:
+  WOOD_CACHE:
+    id: 10
+    image: 64x64/objects/chest-group.png
+    reward_type: ONE_TIME
+    required_level: VILLAGE
+    rewards:
+      WOOD: 20.0
+    spawn:
+      GRASS: 0.010
+      FOREST: 0.015
+  STONE_CACHE:
+    id: 11
+    image: 64x64/objects/chest-group.png
+    reward_type: ONE_TIME
+    required_level: VILLAGE
+    rewards:
+      STONE: 20.0
+    spawn:
+      STONE: 0.020
+      GRASS: 0.005
+  FOOD_CACHE:
+    id: 12
+    image: 64x64/objects/granary.png
+    reward_type: ONE_TIME
+    required_level: VILLAGE
+    rewards:
+      FOOD: 30.0
+    spawn:
+      GRASS: 0.012
+  FERTILE_LAND:
+    id: 13
+    image: 64x64/objects/field-wheat.png
+    reward_type: BONUS
+    required_level: TOWN
+    bonus_production:
+      FOOD: 2.0
+    spawn:
+      GRASS: 0.008
+  RICH_DEPOSITS:
+    id: 14
+    image: 64x64/objects/boulder-large.png
+    reward_type: BONUS
+    required_level: TOWN
+    bonus_production:
+      STONE: 2.0
+    spawn:
+      STONE: 0.012
+      FOREST: 0.004
+  ANCIENT_RUINS:
+    id: 15
+    image: 64x64/objects/monument.png
+    reward_type: ONE_TIME
+    required_level: CITY
+    rewards:
+      WOOD: 50.0
+      STONE: 50.0
+      FOOD: 50.0
+      GOLD: 100.0
+    spawn:
+      GRASS: 0.003
+      SNOW: 0.003
+
 buildings:
   HOUSE_SIMPLE:
     cost: 10

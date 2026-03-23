@@ -3,8 +3,10 @@ package ch.obermuhlner.sim;
 import ch.obermuhlner.sim.game.BuildingType;
 import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.GameController;
+import ch.obermuhlner.sim.game.ResourceType;
 import ch.obermuhlner.sim.game.RoadType;
 import ch.obermuhlner.sim.game.Settlement;
+import ch.obermuhlner.sim.game.SettlementLevel;
 import ch.obermuhlner.sim.game.Specialization;
 import ch.obermuhlner.sim.game.Tile;
 import ch.obermuhlner.sim.game.TileObjectRegistry;
@@ -15,6 +17,7 @@ import ch.obermuhlner.sim.game.mode.ExploreMode;
 import ch.obermuhlner.sim.game.mode.GameMode;
 import ch.obermuhlner.sim.game.render.*;
 import ch.obermuhlner.sim.game.render.CaravanRenderLayer;
+import ch.obermuhlner.sim.game.render.ExplorationRewardRenderLayer;
 import ch.obermuhlner.sim.game.render.RoadRenderLayer;
 import ch.obermuhlner.sim.game.systems.SimulationSystem;
 import ch.obermuhlner.sim.game.ui.BuildToolbar;
@@ -65,8 +68,9 @@ public class Main extends ApplicationAdapter implements GameController {
     private static final int TOOL_RESPEC_MINING  = 31;
     private static final int TOOL_RESPEC_FARMING = 32;
     private static final int TOOL_RESPEC_TRADE   = 33;
-    private static final int TOOL_BUILD_ROAD     = 50;
-    private static final int TOOL_DESTROY        = 51;
+    private static final int TOOL_BUILD_ROAD      = 50;
+    private static final int TOOL_DESTROY         = 51;
+    private static final int TOOL_COLLECT_CACHE   = 60;
 
     private float tickInterval;
 
@@ -96,6 +100,7 @@ public class Main extends ApplicationAdapter implements GameController {
     private boolean respecMode = false;
     private Texture roadIcon;
     private Texture destroyIcon;
+    private Texture collectCacheIcon;
     private GameConfig gameConfig;
 
     @Override
@@ -123,6 +128,7 @@ public class Main extends ApplicationAdapter implements GameController {
         renderer = new Renderer(world, batch, camera);
         renderer.addLayer(new TerrainRenderLayer(world, true, gameConfig));
         renderer.addLayer(new ObjectRenderLayer(world, true, gameConfig));
+        renderer.addLayer(new ExplorationRewardRenderLayer(world, true, gameConfig));
         renderer.addLayer(new RoadRenderLayer(world, true));
         renderer.addLayer(new BuildingRenderLayer(world, true));
         renderer.addLayer(new SettlementRenderLayer(world, true));
@@ -131,6 +137,7 @@ public class Main extends ApplicationAdapter implements GameController {
 
         roadIcon = new Texture(Gdx.files.internal("64x64/single-tiles/road-dirt-ns.png"));
         destroyIcon = createDestroyIcon();
+        collectCacheIcon = createCollectCacheIcon();
 
         settlementPanel = new SettlementInfoPanel();
         buildToolbar = new BuildToolbar();
@@ -200,6 +207,26 @@ public class Main extends ApplicationAdapter implements GameController {
             for (int w = -1; w <= 1; w++) {
                 p.drawPixel(i + w, i);
                 p.drawPixel(size - 1 - i + w, i);
+            }
+        }
+        Texture t = new Texture(p);
+        p.dispose();
+        return t;
+    }
+
+    private Texture createCollectCacheIcon() {
+        int size = 48;
+        Pixmap p = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+        p.setColor(new Color(0.1f, 0.1f, 0.3f, 1f));
+        p.fill();
+        p.setColor(new Color(0.9f, 0.8f, 0.2f, 1f));
+        p.fillCircle(size / 2, size / 2, size / 2 - 3);
+        p.setColor(new Color(0.5f, 0.35f, 0.0f, 1f));
+        int cx = size / 2, cy = size / 2;
+        for (int i = -9; i <= 9; i++) {
+            int w = 9 - Math.abs(i);
+            for (int j = -w; j <= w; j++) {
+                p.drawPixel(cx + j, cy + i);
             }
         }
         Texture t = new Texture(p);
@@ -300,6 +327,12 @@ public class Main extends ApplicationAdapter implements GameController {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_DESTROY, "Destroy", destroyIcon));
             }
 
+            GameConfig.ExplorationRewardConfig collectible = getCollectibleReward(selectedTileX, selectedTileY);
+            if (collectible != null) {
+                availableTools.add(new BuildToolbar.ToolButton(TOOL_COLLECT_CACHE,
+                    "Collect " + formatRewardLabel(collectible), collectCacheIcon));
+            }
+
             if (isBuildable && nearby != null) {
                 addBuildingButton(TOOL_HOUSE,     BuildingType.HOUSE_SIMPLE);
                 addBuildingButton(TOOL_FARM,      BuildingType.FARM_SMALL);
@@ -358,6 +391,58 @@ public class Main extends ApplicationAdapter implements GameController {
         return closest;
     }
 
+    private GameConfig.ExplorationRewardConfig getCollectibleReward(int tx, int ty) {
+        if (!world.isRevealed(tx, ty)) return null;
+        if (world.getSettlements().isEmpty()) return null;
+        Tile tile = world.getTile(tx, ty);
+        GameConfig.ExplorationRewardConfig reward = gameConfig.getExplorationReward(tile.objectId);
+        if (reward == null || !reward.isOneTime()) return null;
+        SettlementLevel maxLevel = getMaxSettlementLevel();
+        try {
+            SettlementLevel required = SettlementLevel.valueOf(reward.required_level);
+            return maxLevel.ordinal() >= required.ordinal() ? reward : null;
+        } catch (IllegalArgumentException e) {
+            return reward;
+        }
+    }
+
+    private SettlementLevel getMaxSettlementLevel() {
+        SettlementLevel max = SettlementLevel.VILLAGE;
+        for (Settlement s : world.getSettlements()) {
+            if (s.getLevel().ordinal() > max.ordinal()) max = s.getLevel();
+        }
+        return max;
+    }
+
+    private String formatRewardLabel(GameConfig.ExplorationRewardConfig reward) {
+        if (reward.rewards.size() == 1) {
+            Map.Entry<String, Float> entry = reward.rewards.entrySet().iterator().next();
+            return "Collect " + (int)(float) entry.getValue() + " " + capitalize(entry.getKey());
+        }
+        return "Collect Cache";
+    }
+
+    private String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
+    }
+
+    private void collectCache(int tx, int ty) {
+        Tile tile = world.getTile(tx, ty);
+        GameConfig.ExplorationRewardConfig reward = gameConfig.getExplorationReward(tile.objectId);
+        if (reward == null || !reward.isOneTime()) return;
+        Settlement nearest = getClosestSettlement(tx, ty);
+        if (nearest == null) return;
+        for (Map.Entry<String, Float> entry : reward.rewards.entrySet()) {
+            try {
+                ResourceType type = ResourceType.valueOf(entry.getKey());
+                nearest.addResource(type, entry.getValue());
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        world.removeObject(tx, ty);
+    }
+
     private void executeTool(int toolId) {
         switch (toolId) {
             case TOOL_NEW_SETTLEMENT:
@@ -410,6 +495,9 @@ public class Main extends ApplicationAdapter implements GameController {
             }
             case TOOL_DESTROY:
                 destroyTile(selectedTileX, selectedTileY);
+                break;
+            case TOOL_COLLECT_CACHE:
+                collectCache(selectedTileX, selectedTileY);
                 break;
             // Re-specialization choice
             case TOOL_RESPEC_LOGGING:
@@ -632,6 +720,7 @@ public class Main extends ApplicationAdapter implements GameController {
         }
         if (roadIcon != null) roadIcon.dispose();
         if (destroyIcon != null) destroyIcon.dispose();
+        if (collectCacheIcon != null) collectCacheIcon.dispose();
         if (hudFont != null) hudFont.dispose();
     }
 

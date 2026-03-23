@@ -15,6 +15,14 @@ public class TileObjectRegistry {
     public static final int BOULDER_SMALL = 4;
     public static final int BOULDER_SNOW = 5;
 
+    // Exploration reward IDs (10+)
+    public static final int WOOD_CACHE    = 10;
+    public static final int STONE_CACHE   = 11;
+    public static final int FOOD_CACHE    = 12;
+    public static final int FERTILE_LAND  = 13;
+    public static final int RICH_DEPOSITS = 14;
+    public static final int ANCIENT_RUINS = 15;
+
     public static void register(int id, TileObject object) {
         OBJECTS.put(id, object);
     }
@@ -44,6 +52,11 @@ public class TileObjectRegistry {
             Set<String> validTerrains = obj.spawn.keySet();
             register(obj.id, new SimpleObject(obj.id, obj.name, TileObjectType.NATURAL,
                 t -> validTerrains.contains(t.name()), obj.walkable));
+        }
+        for (GameConfig.ExplorationRewardConfig reward : config.getExplorationRewards()) {
+            Set<String> validTerrains = reward.spawn.keySet();
+            register(reward.id, new SimpleObject(reward.id, reward.name, TileObjectType.NATURAL,
+                t -> validTerrains.contains(t.name()), true));
         }
     }
 

@@ -61,11 +61,21 @@ public class SimulationSystem {
             for (int dy = -scanRadius; dy <= scanRadius; dy++) {
                 for (int dx = -scanRadius; dx <= scanRadius; dx++) {
                     if (dx * dx + dy * dy > scanRadius * scanRadius) continue;
-                    TerrainType terrain = world.getTerrain(s.centerX + dx, s.centerY + dy);
-                    switch (terrain) {
+                    Tile tile = world.getTile(s.centerX + dx, s.centerY + dy);
+                    switch (tile.terrain) {
                         case FOREST: rawWood  += config.getTerrainProduction("FOREST_WOOD"); break;
                         case STONE:  rawStone += config.getTerrainProduction("STONE_STONE"); break;
                         case GRASS:  rawFood  += config.getTerrainProduction("GRASS_FOOD"); break;
+                    }
+                    // Apply bonus production from BONUS-type exploration rewards
+                    GameConfig.ExplorationRewardConfig reward = config.getExplorationReward(tile.objectId);
+                    if (reward != null && reward.isBonus()) {
+                        SettlementLevel required = SettlementLevel.valueOf(reward.required_level);
+                        if (s.getLevel().ordinal() >= required.ordinal()) {
+                            rawWood  += reward.bonus_production.getOrDefault("WOOD",  0f);
+                            rawStone += reward.bonus_production.getOrDefault("STONE", 0f);
+                            rawFood  += reward.bonus_production.getOrDefault("FOOD",  0f);
+                        }
                     }
                 }
             }

@@ -25,6 +25,24 @@ Terrain objects are natural decorations spawned based on terrain type.
 - boulder-small: Small grey boulder viewed from top-down
 - boulder-large-snow: Large grey boulder with snow on top
 
+# Exploration Rewards
+
+Exploration rewards are special tiles spawned during world generation. They are hidden until the player's settlements reach the required level. One-time rewards are collected via the toolbar and removed from the world; bonus tiles persist and provide ongoing production bonuses.
+
+| Object | Type | Required Level | Reward | Terrain | Image |
+|--------|------|----------------|--------|---------|-------|
+| chest-group | ONE_TIME | Village | 20 Wood or 20 Stone | Grass, Forest, Stone | chest-group.png |
+| granary | ONE_TIME | Village | 30 Food | Grass | granary.png |
+| field-wheat | BONUS | Town | +2 Food/tick | Grass | field-wheat.png |
+| boulder-large | BONUS | Town | +2 Stone/tick | Stone, Forest | boulder-large.png |
+| monument | ONE_TIME | City | 50 Wood + 50 Stone + 50 Food + 100 Gold | Grass, Snow | monument.png |
+
+- chest-group: A group of wooden treasure chests containing stockpiled resources
+- granary: Abandoned granary with stored food reserves
+- field-wheat: Exceptionally fertile wheat field with rich soil
+- boulder-large: Exposed mineral-rich boulder formation with stone deposits
+- monument: Ancient stone monument marking a long-forgotten settlement
+
 # Buildings
 
 Buildings can be placed by players within settlements. Each building adds population capacity.
