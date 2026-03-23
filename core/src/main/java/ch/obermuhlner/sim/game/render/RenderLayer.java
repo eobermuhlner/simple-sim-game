@@ -10,4 +10,7 @@ public interface RenderLayer {
     void render(Chunk chunk, int startTx, int startTy, SpriteBatch batch, OrthographicCamera camera);
     void loadAssets();
     void dispose();
+
+    default void renderFull(SpriteBatch batch, OrthographicCamera camera) {
+    }
 }

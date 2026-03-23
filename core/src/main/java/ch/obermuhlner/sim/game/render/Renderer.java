@@ -49,6 +49,10 @@ public class Renderer {
             }
         });
 
+        for (RenderLayer layer : layers) {
+            layer.renderFull(batch, camera);
+        }
+
         batch.end();
     }
 

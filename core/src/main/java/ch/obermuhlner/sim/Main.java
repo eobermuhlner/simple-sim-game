@@ -142,6 +142,7 @@ public class Main extends ApplicationAdapter implements GameController {
         renderer.addLayer(new RoadRenderLayer(world, true));
         renderer.addLayer(new BuildingRenderLayer(world, true, gameConfig));
         renderer.addLayer(new SettlementRenderLayer(world, true, gameConfig));
+        renderer.addLayer(new SettlementBoundaryLayer(world, true));
         renderer.addLayer(new CaravanRenderLayer(world));
         renderer.addLayer(new FogOfWarRenderLayer(world, gameConfig));
 
