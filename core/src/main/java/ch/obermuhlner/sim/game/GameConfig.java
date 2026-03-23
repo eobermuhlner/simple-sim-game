@@ -83,8 +83,13 @@ public class GameConfig {
         public int id = 0;
         public String image = "";
         public boolean walkable = false;
+        public float destroy_cost = 0f;
         public Map<String, Float> spawn = new LinkedHashMap<>();
         public Map<String, Float> harvest = new LinkedHashMap<>();
+    }
+
+    public static class DestroyConfig {
+        public float building_fraction = 0.5f;
     }
 
     public static class ExplorationRewardConfig {
@@ -117,6 +122,7 @@ public class GameConfig {
         public SettlementConfig settlement = new SettlementConfig();
         public TradeConfig trade = new TradeConfig();
         public PathfindingConfig pathfinding = new PathfindingConfig();
+        public DestroyConfig destroy = new DestroyConfig();
         public TerrainConfig terrain = new TerrainConfig();
         public Map<String, Map<String, Object>> roads = new HashMap<>();
         public Map<String, Map<String, Object>> buildings = new HashMap<>();
@@ -148,6 +154,7 @@ public class GameConfig {
             bindSettlement(r, raw);
             bindTrade(r, raw);
             bindPathfinding(r, raw);
+            bindDestroy(r, raw);
             bindTerrain(r, raw);
             bindRoads(r, raw);
             bindBuildings(r, raw);
@@ -236,6 +243,13 @@ public class GameConfig {
     }
 
     @SuppressWarnings("unchecked")
+    private void bindDestroy(Root r, Map<String, Object> raw) {
+        Map<String, Object> m = (Map<String, Object>) raw.get("destroy");
+        if (m == null) return;
+        if (m.containsKey("building_fraction")) r.destroy.building_fraction = ((Number) m.get("building_fraction")).floatValue();
+    }
+
+    @SuppressWarnings("unchecked")
     private void bindTerrain(Root r, Map<String, Object> raw) {
         Map<String, Object> m = (Map<String, Object>) raw.get("terrain");
         if (m == null) return;
@@ -278,6 +292,7 @@ public class GameConfig {
             if (data.containsKey("id")) toc.id = ((Number) data.get("id")).intValue();
             if (data.containsKey("image")) toc.image = (String) data.get("image");
             if (data.containsKey("walkable")) toc.walkable = (Boolean) data.get("walkable");
+            if (data.containsKey("destroy_cost")) toc.destroy_cost = ((Number) data.get("destroy_cost")).floatValue();
             Map<String, Object> spawnRaw = (Map<String, Object>) data.get("spawn");
             if (spawnRaw != null) {
                 for (Map.Entry<String, Object> se : spawnRaw.entrySet()) {
@@ -470,6 +485,17 @@ public class GameConfig {
         return java.util.Collections.emptyMap();
     }
 
+    public float getTerrainObjectDestroyCost(int objectId) {
+        for (TerrainObjectConfig toc : root.terrain_objects.values()) {
+            if (toc.id == objectId) return toc.destroy_cost;
+        }
+        return 0f;
+    }
+
+    public float getDestroyBuildingFraction() {
+        return root.destroy.building_fraction;
+    }
+
     // ---- Exploration reward accessors ----
 
     public List<ExplorationRewardConfig> getExplorationRewards() {
@@ -520,6 +546,14 @@ public class GameConfig {
             return ((Number) data.get("upkeep_per_tick")).floatValue();
         }
         return type.getUpkeepPerTick();
+    }
+
+    public float getRoadDestroyCost(RoadType type) {
+        Map<String, Object> data = root.roads.get(type.name());
+        if (data != null && data.containsKey("destroy_cost")) {
+            return ((Number) data.get("destroy_cost")).floatValue();
+        }
+        return 0f;
     }
 
     // ---- Building accessors ----

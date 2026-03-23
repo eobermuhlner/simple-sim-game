@@ -259,6 +259,23 @@ public class Main extends ApplicationAdapter implements GameController {
         updateAvailableTools();
     }
 
+    private float getDestroyCost(int tx, int ty) {
+        if (!world.isRevealed(tx, ty)) return 0f;
+        Tile tile = world.getTile(tx, ty);
+        if (tile.hasBuilding()) {
+            BuildingType type = BuildingType.fromId(tile.buildingId);
+            if (type == null) return 0f;
+            return gameConfig.getBuildingCost(type) * gameConfig.getDestroyBuildingFraction();
+        } else if (tile.hasObject()) {
+            return gameConfig.getTerrainObjectDestroyCost(tile.objectId);
+        } else if (tile.roadType != 0) {
+            RoadType type = RoadType.fromId(tile.roadType);
+            if (type == null) return 0f;
+            return gameConfig.getRoadDestroyCost(type);
+        }
+        return 0f;
+    }
+
     private void giveHarvestYield(int tx, int ty, int objectId) {
         Map<String, Float> harvest = gameConfig.getTerrainObjectHarvest(objectId);
         if (harvest.isEmpty()) return;
@@ -507,9 +524,14 @@ public class Main extends ApplicationAdapter implements GameController {
                 }
                 break;
             }
-            case TOOL_DESTROY:
+            case TOOL_DESTROY: {
+                float destroyCost = getDestroyCost(selectedTileX, selectedTileY);
+                Settlement payer = getClosestSettlement(selectedTileX, selectedTileY);
+                if (destroyCost > 0 && (payer == null || payer.gold < destroyCost)) break;
+                if (destroyCost > 0 && payer != null) payer.gold -= destroyCost;
                 destroyTile(selectedTileX, selectedTileY);
                 break;
+            }
             case TOOL_COLLECT_CACHE:
                 collectCache(selectedTileX, selectedTileY);
                 break;
