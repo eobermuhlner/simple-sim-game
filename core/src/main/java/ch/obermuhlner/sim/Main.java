@@ -468,7 +468,7 @@ public class Main extends ApplicationAdapter implements GameController {
                 if (isToolAvailable("buildings", "WELL_WATER"))    addBuildingButton(TOOL_WELL,      BuildingType.WELL_WATER);
             }
 
-            // Harbor: available on coastal tiles near a settlement (requires HARBOR_CONSTRUCTION tech)
+            // Harbor: available on coastal tiles near a settlement
             if (isBuildable && nearby != null && !tile.hasBuilding()
                     && world.isCoastal(selectedTileX, selectedTileY)
                     && isToolAvailable("buildings", "HARBOR")) {
@@ -557,11 +557,9 @@ public class Main extends ApplicationAdapter implements GameController {
     }
 
     private void addBuildingButton(int toolId, BuildingType type) {
-        if (availableTools.size() < 6) {
-            BuildToolbar.ToolButton btn = new BuildToolbar.ToolButton(toolId, type.getDisplayName(), getBuildingTexture(type));
-            btn.costLabel = formatCost(gameConfig.getBuildingCost(type));
-            availableTools.add(btn);
-        }
+        BuildToolbar.ToolButton btn = new BuildToolbar.ToolButton(toolId, type.getDisplayName(), getBuildingTexture(type));
+        btn.costLabel = formatCost(gameConfig.getBuildingCost(type));
+        availableTools.add(btn);
     }
 
     private Texture getBuildingTexture(BuildingType type) {
@@ -827,6 +825,10 @@ public class Main extends ApplicationAdapter implements GameController {
         int glY = screenHeight - screenY;
 
         int toolId = buildToolbar.getToolIdAt(screenX, glY, screenWidth, screenHeight);
+        if (toolId == BuildToolbar.SCROLL_LEFT || toolId == BuildToolbar.SCROLL_RIGHT) {
+            buildToolbar.scroll(toolId == BuildToolbar.SCROLL_LEFT ? -1 : 1);
+            return;
+        }
         if (toolId >= 0 && tileSelected) {
             selectedToolId = toolId;
             buildToolbar.selectTool(toolId);

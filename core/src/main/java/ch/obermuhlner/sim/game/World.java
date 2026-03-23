@@ -198,6 +198,18 @@ public class World {
         return false;
     }
 
+    /** Returns true if any orthogonal neighbor is revealed and is not a water tile. */
+    public boolean hasRevealedLandNeighbor(int tx, int ty) {
+        int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        for (int[] dir : dirs) {
+            int nx = tx + dir[0], ny = ty + dir[1];
+            if (isRevealed(nx, ny) && !getTerrain(nx, ny).isWater()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public int[] getRevealedNeighbors(int tx, int ty) {
         IntArray neighbors = new IntArray();
         int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};

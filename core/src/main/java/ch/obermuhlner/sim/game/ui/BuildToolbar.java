@@ -14,32 +14,42 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class BuildToolbar {
-    private static final int BUTTON_WIDTH = 80;
+    public static final int SCROLL_LEFT  = -2;
+    public static final int SCROLL_RIGHT = -3;
+
+    private static final int BUTTON_WIDTH  = 80;
     private static final int BUTTON_HEIGHT = 80;
     private static final int BUTTON_PADDING = 8;
     private static final int MAX_COLUMNS = 6;
     private static final int ICON_SIZE = 48;
     private static final int FONT_SIZE = 10;
+    private static final int SCROLL_BUTTON_WIDTH = 32;
 
     private static final int TOOLBAR_HEIGHT = BUTTON_HEIGHT + BUTTON_PADDING * 3;
 
-    private List<ToolButton> tools = new ArrayList<>();
+    private List<ToolButton> allTools = new ArrayList<>();
+    private List<ToolButton> tools    = new ArrayList<>();
     private Map<Integer, ToolButton> toolById = new HashMap<>();
+    private int scrollOffset = 0;
+
     private Texture backgroundTexture;
+    private Texture scrollNormalTexture;
+    private Texture scrollHoverTexture;
     private BitmapFont font;
     private int selectedToolId = -1;
     private boolean visible = true;
     private int hoveredButtonIndex = -1;
+    private int hoveredScroll = 0; // -1 = left arrow, 0 = none, 1 = right arrow
 
     public BuildToolbar() {
         createBackground();
+        createScrollTextures();
         createFonts();
     }
 
     private void createBackground() {
-        int width = BUTTON_WIDTH * MAX_COLUMNS + BUTTON_PADDING * (MAX_COLUMNS + 1);
+        int width  = BUTTON_WIDTH * MAX_COLUMNS + BUTTON_PADDING * (MAX_COLUMNS + 1);
         int height = TOOLBAR_HEIGHT;
-
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
         pixmap.setColor(new Color(0.15f, 0.15f, 0.2f, 0.95f));
         pixmap.fill();
@@ -47,6 +57,22 @@ public class BuildToolbar {
         pixmap.drawRectangle(0, 0, width, height);
         backgroundTexture = new Texture(pixmap);
         pixmap.dispose();
+    }
+
+    private void createScrollTextures() {
+        scrollNormalTexture = makeScrollTexture(new Color(0.2f, 0.2f, 0.3f, 0.9f), new Color(0.4f, 0.4f, 0.5f, 1f));
+        scrollHoverTexture  = makeScrollTexture(new Color(0.3f, 0.3f, 0.4f, 0.9f), new Color(0.5f, 0.5f, 0.6f, 1f));
+    }
+
+    private Texture makeScrollTexture(Color fill, Color border) {
+        Pixmap pixmap = new Pixmap(SCROLL_BUTTON_WIDTH, TOOLBAR_HEIGHT, Pixmap.Format.RGBA8888);
+        pixmap.setColor(fill);
+        pixmap.fill();
+        pixmap.setColor(border);
+        pixmap.drawRectangle(0, 0, SCROLL_BUTTON_WIDTH, TOOLBAR_HEIGHT);
+        Texture t = new Texture(pixmap);
+        pixmap.dispose();
+        return t;
     }
 
     private void createFonts() {
@@ -61,11 +87,25 @@ public class BuildToolbar {
     }
 
     public void setTools(List<ToolButton> newTools) {
+        allTools.clear();
+        allTools.addAll(newTools);
+        scrollOffset = 0;
+        rebuildVisible();
+    }
+
+    public void scroll(int delta) {
+        int maxOffset = Math.max(0, allTools.size() - MAX_COLUMNS);
+        scrollOffset = Math.max(0, Math.min(scrollOffset + delta, maxOffset));
+        rebuildVisible();
+    }
+
+    private void rebuildVisible() {
         tools.clear();
         toolById.clear();
-        for (int i = 0; i < newTools.size() && i < MAX_COLUMNS; i++) {
-            ToolButton tool = newTools.get(i);
-            tool.column = i;
+        int end = Math.min(scrollOffset + MAX_COLUMNS, allTools.size());
+        for (int i = scrollOffset; i < end; i++) {
+            ToolButton tool = allTools.get(i);
+            tool.column = i - scrollOffset;
             tools.add(tool);
             toolById.put(tool.id, tool);
         }
@@ -74,77 +114,76 @@ public class BuildToolbar {
         }
     }
 
+    private boolean hasScrollLeft()  { return scrollOffset > 0; }
+    private boolean hasScrollRight() { return scrollOffset + MAX_COLUMNS < allTools.size(); }
+
     public void selectTool(int id) {
         if (toolById.containsKey(id)) {
             selectedToolId = id;
         }
     }
 
-    public int getSelectedToolId() {
-        return selectedToolId;
-    }
+    public int getSelectedToolId() { return selectedToolId; }
 
-    public void deselectTool() {
-        selectedToolId = -1;
-    }
+    public void deselectTool() { selectedToolId = -1; }
 
-    public boolean isVisible() {
-        return visible;
-    }
+    public boolean isVisible() { return visible; }
 
-    public void setVisible(boolean visible) {
-        this.visible = visible;
-    }
+    public void setVisible(boolean visible) { this.visible = visible; }
 
     public int getWidth() {
         return BUTTON_WIDTH * MAX_COLUMNS + BUTTON_PADDING * (MAX_COLUMNS + 1);
     }
 
-    public int getHeight() {
-        return TOOLBAR_HEIGHT;
-    }
+    public int getHeight() { return TOOLBAR_HEIGHT; }
 
     public void updateHover(int screenX, int screenY, int screenWidth, int screenHeight) {
-        if (!visible || tools.isEmpty()) {
-            hoveredButtonIndex = -1;
-            return;
-        }
+        hoveredButtonIndex = -1;
+        hoveredScroll = 0;
+        if (!visible || allTools.isEmpty()) return;
 
         int toolbarWidth = getWidth();
         float panelX = (screenWidth - toolbarWidth) / 2f;
         float panelY = screenHeight - TOOLBAR_HEIGHT - 20;
 
-        if (screenX < panelX || screenX > panelX + toolbarWidth) {
-            hoveredButtonIndex = -1;
+        if (screenY < panelY || screenY > panelY + TOOLBAR_HEIGHT) return;
+
+        if (hasScrollLeft() && screenX >= panelX - SCROLL_BUTTON_WIDTH && screenX < panelX) {
+            hoveredScroll = -1;
             return;
         }
-        if (screenY < panelY || screenY > panelY + TOOLBAR_HEIGHT) {
-            hoveredButtonIndex = -1;
+        if (hasScrollRight() && screenX >= panelX + toolbarWidth && screenX < panelX + toolbarWidth + SCROLL_BUTTON_WIDTH) {
+            hoveredScroll = 1;
             return;
         }
+
+        if (screenX < panelX || screenX > panelX + toolbarWidth) return;
 
         int col = (int) ((screenX - panelX - BUTTON_PADDING) / (BUTTON_WIDTH + BUTTON_PADDING));
         if (col >= 0 && col < tools.size()) {
             hoveredButtonIndex = col;
-        } else {
-            hoveredButtonIndex = -1;
         }
     }
 
     public int getToolIdAt(int screenX, int screenY, int screenWidth, int screenHeight) {
-        if (!visible || tools.isEmpty()) {
-            return -1;
-        }
+        if (!visible || allTools.isEmpty()) return -1;
 
         int toolbarWidth = getWidth();
         float panelX = (screenWidth - toolbarWidth) / 2f;
         float panelY = screenHeight - TOOLBAR_HEIGHT - 20;
 
-        if (screenX < panelX || screenX > panelX + toolbarWidth) return -1;
         if (screenY < panelY || screenY > panelY + TOOLBAR_HEIGHT) return -1;
 
-        int col = (int) ((screenX - panelX - BUTTON_PADDING) / (BUTTON_WIDTH + BUTTON_PADDING));
+        if (hasScrollLeft() && screenX >= panelX - SCROLL_BUTTON_WIDTH && screenX < panelX) {
+            return SCROLL_LEFT;
+        }
+        if (hasScrollRight() && screenX >= panelX + toolbarWidth && screenX < panelX + toolbarWidth + SCROLL_BUTTON_WIDTH) {
+            return SCROLL_RIGHT;
+        }
 
+        if (screenX < panelX || screenX > panelX + toolbarWidth) return -1;
+
+        int col = (int) ((screenX - panelX - BUTTON_PADDING) / (BUTTON_WIDTH + BUTTON_PADDING));
         if (col >= 0 && col < tools.size()) {
             return tools.get(col).id;
         }
@@ -152,13 +191,24 @@ public class BuildToolbar {
     }
 
     public void render(SpriteBatch batch, int screenWidth, int screenHeight) {
-        if (!visible || tools.isEmpty()) return;
+        if (!visible || allTools.isEmpty()) return;
 
         int toolbarWidth = getWidth();
         float panelX = (screenWidth - toolbarWidth) / 2f;
         float panelY = screenHeight - TOOLBAR_HEIGHT - 20;
 
         batch.draw(backgroundTexture, panelX, panelY, toolbarWidth, TOOLBAR_HEIGHT);
+
+        if (hasScrollLeft()) {
+            Texture t = hoveredScroll == -1 ? scrollHoverTexture : scrollNormalTexture;
+            batch.draw(t, panelX - SCROLL_BUTTON_WIDTH, panelY, SCROLL_BUTTON_WIDTH, TOOLBAR_HEIGHT);
+            font.draw(batch, "<", panelX - SCROLL_BUTTON_WIDTH + 10, panelY + TOOLBAR_HEIGHT / 2f + 6);
+        }
+        if (hasScrollRight()) {
+            Texture t = hoveredScroll == 1 ? scrollHoverTexture : scrollNormalTexture;
+            batch.draw(t, panelX + toolbarWidth, panelY, SCROLL_BUTTON_WIDTH, TOOLBAR_HEIGHT);
+            font.draw(batch, ">", panelX + toolbarWidth + 10, panelY + TOOLBAR_HEIGHT / 2f + 6);
+        }
 
         for (int i = 0; i < tools.size(); i++) {
             ToolButton tool = tools.get(i);
@@ -184,8 +234,8 @@ public class BuildToolbar {
             }
 
             if (tool.costLabel != null && !tool.costLabel.isEmpty()) {
-                font.draw(batch, tool.label,      bx + 4, by + 24);
-                font.draw(batch, tool.costLabel,  bx + 4, by + 12);
+                font.draw(batch, tool.label,     bx + 4, by + 24);
+                font.draw(batch, tool.costLabel, bx + 4, by + 12);
             } else {
                 font.draw(batch, tool.label, bx + 4, by + 12);
             }
@@ -193,12 +243,14 @@ public class BuildToolbar {
     }
 
     public void dispose() {
-        if (backgroundTexture != null) backgroundTexture.dispose();
-        if (font != null) font.dispose();
-        for (ToolButton tool : tools) {
-            if (tool.normalTexture != null) tool.normalTexture.dispose();
+        if (backgroundTexture != null)    backgroundTexture.dispose();
+        if (scrollNormalTexture != null)  scrollNormalTexture.dispose();
+        if (scrollHoverTexture != null)   scrollHoverTexture.dispose();
+        if (font != null)                 font.dispose();
+        for (ToolButton tool : allTools) {
+            if (tool.normalTexture != null)   tool.normalTexture.dispose();
             if (tool.selectedTexture != null) tool.selectedTexture.dispose();
-            if (tool.hoverTexture != null) tool.hoverTexture.dispose();
+            if (tool.hoverTexture != null)    tool.hoverTexture.dispose();
         }
     }
 

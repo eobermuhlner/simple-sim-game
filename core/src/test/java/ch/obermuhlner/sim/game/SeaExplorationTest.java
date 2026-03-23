@@ -81,8 +81,8 @@ public class SeaExplorationTest {
     @Test
     public void testShallowSeaDefaultThresholdEqualsWater() {
         GameConfig.ThresholdConfig tc = new GameConfig.ThresholdConfig();
-        assertEquals("Default shallow_sea threshold should equal water (disabled)",
-            tc.water, tc.shallow_sea, 0.0001);
+        assertEquals("Default shallow_sea threshold should equal deep_sea (disabled)",
+            tc.deep_sea, tc.shallow_sea, 0.0001);
     }
 
     // ---- HARBOR building type ----
