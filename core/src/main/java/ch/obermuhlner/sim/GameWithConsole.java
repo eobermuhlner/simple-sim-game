@@ -69,7 +69,7 @@ public class GameWithConsole extends ApplicationAdapter implements GameControlle
         renderer.addLayer(new ObjectRenderLayer(world, true, gameConfig));
         renderer.addLayer(new BuildingRenderLayer(world, true));
         renderer.addLayer(new SettlementRenderLayer(world, true));
-        renderer.addLayer(new FogOfWarRenderLayer(world));
+        renderer.addLayer(new FogOfWarRenderLayer(world, gameConfig));
 
         settlementPanel = new SettlementInfoPanel();
         buildToolbar = new BuildToolbar();

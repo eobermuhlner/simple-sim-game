@@ -143,7 +143,7 @@ public class Main extends ApplicationAdapter implements GameController {
         renderer.addLayer(new BuildingRenderLayer(world, true));
         renderer.addLayer(new SettlementRenderLayer(world, true));
         renderer.addLayer(new CaravanRenderLayer(world));
-        renderer.addLayer(new FogOfWarRenderLayer(world));
+        renderer.addLayer(new FogOfWarRenderLayer(world, gameConfig));
 
         world.techTree.load(Gdx.files.local("data/techtree.dat"));
 
@@ -354,7 +354,7 @@ public class Main extends ApplicationAdapter implements GameController {
             if (terrain.isWater()) {
                 // Sea tiles: reveal if adjacent to a revealed tile and there's a nearby harbor
                 if (world.hasRevealedNeighbor(tileX, tileY) && hasNearbyHarbor(tileX, tileY)) {
-                    boolean deepSeaAllowed = terrain == TerrainType.WATER
+                    boolean deepSeaAllowed = terrain == TerrainType.DEEP_SEA
                         && world.techTree.isAllowed("sea_exploration", "DEEP_SEA", gameConfig);
                     if (terrain == TerrainType.SHALLOW_SEA || deepSeaAllowed) {
                         world.reveal(tileX, tileY);

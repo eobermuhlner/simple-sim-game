@@ -62,7 +62,7 @@ terrain:
     forest: 0.60
     stone: 0.65
   types:
-    WATER:       { tile_index: 1 }
+    DEEP_SEA:    { tile_index: 0 }
     SHALLOW_SEA: { tile_index: 1 }
     GRASS:       { tile_index: 2 }
     FOREST:      { tile_index: 3 }

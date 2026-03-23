@@ -72,7 +72,7 @@ public class TileTest {
         grass.buildingId = 1;
         assertFalse(grass.isBuildable());
         
-        Tile water = new Tile(TerrainType.WATER, TileObjectRegistry.NONE);
+        Tile water = new Tile(TerrainType.DEEP_SEA, TileObjectRegistry.NONE);
         assertFalse(water.isBuildable());
         
         Tile stone = new Tile(TerrainType.STONE, TileObjectRegistry.NONE);
@@ -93,7 +93,7 @@ public class TileTest {
         grass.objectId = TileObjectRegistry.BOULDER_SMALL;
         assertTrue(grass.isWalkable());
         
-        Tile water = new Tile(TerrainType.WATER, TileObjectRegistry.NONE);
+        Tile water = new Tile(TerrainType.DEEP_SEA, TileObjectRegistry.NONE);
         assertFalse(water.isWalkable());
     }
 

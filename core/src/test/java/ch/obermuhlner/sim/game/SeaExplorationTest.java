@@ -62,8 +62,8 @@ public class SeaExplorationTest {
     }
 
     @Test
-    public void testWaterIsWater() {
-        assertTrue("WATER.isWater() must return true", TerrainType.WATER.isWater());
+    public void testDeepSeaIsWater() {
+        assertTrue("DEEP_SEA.isWater() must return true", TerrainType.DEEP_SEA.isWater());
     }
 
     @Test
@@ -128,7 +128,7 @@ public class SeaExplorationTest {
     @Test
     public void testIsCoastalGrassAdjacentToWater() {
         makeGrass(5, 5);
-        setTerrain(5, 6, TerrainType.WATER);  // north neighbor is water
+        setTerrain(5, 6, TerrainType.DEEP_SEA);  // north neighbor is water
 
         assertTrue("Grass tile next to WATER should be coastal", world.isCoastal(5, 5));
     }
@@ -201,7 +201,7 @@ public class SeaExplorationTest {
 
     @Test
     public void testRevealSeaAreaDoesNotRevealDeepWaterWhenDisabled() {
-        setTerrain(5, 5, TerrainType.WATER);
+        setTerrain(5, 5, TerrainType.DEEP_SEA);
 
         world.revealSeaArea(4, 5, 2, false);  // includeDeepSea=false
 
@@ -211,7 +211,7 @@ public class SeaExplorationTest {
 
     @Test
     public void testRevealSeaAreaRevealsDeepWaterWhenEnabled() {
-        setTerrain(5, 5, TerrainType.WATER);
+        setTerrain(5, 5, TerrainType.DEEP_SEA);
 
         world.revealSeaArea(4, 5, 2, true);  // includeDeepSea=true
 

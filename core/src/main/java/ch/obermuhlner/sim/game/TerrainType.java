@@ -3,15 +3,15 @@ package ch.obermuhlner.sim.game;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public enum TerrainType {
-    WATER(1, false, false),
-    SHALLOW_SEA(1, false, false),   // coastal water; renders as WATER tile with a tint
+    DEEP_SEA(0, false, false),
+    SHALLOW_SEA(1, false, false),
     GRASS(2, true, true),
     FOREST(3, true, true),
     STONE(4, true, false),
     SNOW(5, true, false);
 
     public boolean isWater() {
-        return this == WATER || this == SHALLOW_SEA;
+        return this == DEEP_SEA || this == SHALLOW_SEA;
     }
 
     private final int tileIndex;
@@ -38,7 +38,7 @@ public enum TerrainType {
 
     public static TerrainType fromTileIndex(int index) {
         for (TerrainType type : values()) {
-            if (type != SHALLOW_SEA && type.tileIndex == index) {
+            if (type.tileIndex == index) {
                 return type;
             }
         }

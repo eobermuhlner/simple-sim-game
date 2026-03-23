@@ -220,7 +220,7 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
         
         for (int y = -20; y <= 20; y++) {
             for (int x = -20; x <= 20; x++) {
-                if (world.getTerrain(x, y) == TerrainType.WATER) {
+                if (world.getTerrain(x, y) == TerrainType.DEEP_SEA) {
                     waterX = x;
                     waterY = y;
                     world.reveal(x, y);

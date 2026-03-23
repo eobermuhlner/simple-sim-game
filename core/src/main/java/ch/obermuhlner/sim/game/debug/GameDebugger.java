@@ -165,7 +165,7 @@ public class GameDebugger {
                         row.append('R');
                     } else {
                         switch (tile.terrain) {
-                            case WATER:       row.append('~'); break;
+                            case DEEP_SEA:    row.append('~'); break;
                             case SHALLOW_SEA: row.append('s'); break;
                             case GRASS:       row.append('.'); break;
                             case FOREST:      row.append('T'); break;

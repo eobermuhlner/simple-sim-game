@@ -551,7 +551,7 @@ public class World {
                 if (dx * dx + dy * dy > radius * radius) continue;
                 int tx = centerX + dx, ty = centerY + dy;
                 TerrainType terrain = getTerrain(tx, ty);
-                if (terrain == TerrainType.SHALLOW_SEA || (includeDeepSea && terrain == TerrainType.WATER)) {
+                if (terrain == TerrainType.SHALLOW_SEA || (includeDeepSea && terrain == TerrainType.DEEP_SEA)) {
                     reveal(tx, ty);
                 }
             }
@@ -584,7 +584,7 @@ public class World {
                     if (Math.abs(dx) != radius && Math.abs(dy) != radius) continue;
                     int tx = cx + dx, ty = cy + dy;
                     TerrainType t = getTerrain(tx, ty);
-                    if (t == TerrainType.SHALLOW_SEA || t == TerrainType.WATER) {
+                    if (t == TerrainType.SHALLOW_SEA || t == TerrainType.DEEP_SEA) {
                         return new int[]{tx, ty};
                     }
                 }
@@ -613,7 +613,7 @@ public class World {
                 long nKey = encodePos(nx, ny);
                 if (parent.containsKey(nKey)) continue;
                 TerrainType t = getTerrain(nx, ny);
-                if (t == TerrainType.WATER || t == TerrainType.SHALLOW_SEA) {
+                if (t == TerrainType.DEEP_SEA || t == TerrainType.SHALLOW_SEA) {
                     parent.put(nKey, encodePos(cur[0], cur[1]));
                     queue.add(new int[]{nx, ny});
                 }

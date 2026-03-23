@@ -17,7 +17,7 @@ public class BuildModeLogicTest {
         Tile grassTile = new Tile(TerrainType.GRASS, TileObjectRegistry.NONE);
         assertTrue("GRASS is buildable", grassTile.isBuildable());
         
-        Tile waterTile = new Tile(TerrainType.WATER, TileObjectRegistry.NONE);
+        Tile waterTile = new Tile(TerrainType.DEEP_SEA, TileObjectRegistry.NONE);
         assertFalse("WATER is not buildable", waterTile.isBuildable());
         
         Tile forestTile = new Tile(TerrainType.FOREST, TileObjectRegistry.NONE);
