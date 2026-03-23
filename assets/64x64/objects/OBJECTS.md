@@ -207,13 +207,17 @@ Buildings can be placed by players within settlements. Each building adds popula
 
 ## Public Spaces & Decoration
 
-| Building | Pop Capacity | Texture |
-|----------|--------------|---------|
-| plaza | 5 | plaza.png |
+| Building      | Pop Capacity | Texture           |
+|---------------|--------------|-------------------|
+| village-plaza | 5 | village-plaza.png |
+| town-plaza    | 8 | town-plaza.png    |
+| city-plaza    | 12 | city-plaza.png    |
 | garden-formal | 5 | garden-formal.png |
-| monument | 10 | monument.png |
+| monument      | 10 | monument.png      |
 
-- plaza: Town square with cobblestones
+- village-plaza: Small village town square with cobblestones and simple well
+- town-plaza: Medieval town square
+- city-plaza: Large medieval city square
 - garden-formal: Formal garden with trimmed hedges
 - monument: Victory monument or statue
 
@@ -245,7 +249,7 @@ Harbors and ships enable coastal exploration and trade.
 ## Harbor Buildings
 
 - harbor-small: Small wooden harbor with dock
-- harbor-large: Large stone harbor with multiple berths
+- harbor-large: Large stone harbor with docks
 
 ## Ships
 
