@@ -1,6 +1,7 @@
 package ch.obermuhlner.sim.game.render;
 
 import ch.obermuhlner.sim.game.Chunk;
+import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.SettlementLevel;
 import ch.obermuhlner.sim.game.World;
@@ -16,12 +17,14 @@ public class SettlementBoundaryLayer implements RenderLayer {
     private static final float BORDER_THICKNESS = 3f;
 
     private final World world;
+    private final GameConfig config;
     private final boolean fogOfWar;
     private Texture lineTexture;
     private Settlement selectedSettlement;
 
-    public SettlementBoundaryLayer(World world, boolean fogOfWar) {
+    public SettlementBoundaryLayer(World world, GameConfig config, boolean fogOfWar) {
         this.world = world;
+        this.config = config;
         this.fogOfWar = fogOfWar;
     }
 
@@ -54,7 +57,7 @@ public class SettlementBoundaryLayer implements RenderLayer {
 
     private void renderSettlementBoundary(Settlement settlement, SpriteBatch batch, OrthographicCamera camera) {
         SettlementLevel level = settlement.getLevel();
-        int radius = level.getRadius();
+        int radius = config.getSettlementRadius(level);
         int cx = settlement.centerX;
         int cy = settlement.centerY;
         int radiusSq = radius * radius;

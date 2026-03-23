@@ -37,6 +37,11 @@ settlement:
     TOWN: 15
     CITY: 30
     METROPOLIS: 50
+  radius:
+    VILLAGE: 5
+    TOWN: 15
+    CITY: 30
+    METROPOLIS: 50
 
 trade:
   max_caravans_per_route: 3

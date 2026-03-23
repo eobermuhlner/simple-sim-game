@@ -54,6 +54,9 @@ public class GameConfig {
         public Map<String, Integer> max_buildings = new HashMap<String, Integer>() {{
             put("VILLAGE", 5); put("TOWN", 15); put("CITY", 30); put("METROPOLIS", 50);
         }};
+        public Map<String, Integer> radius = new HashMap<String, Integer>() {{
+            put("VILLAGE", 5); put("TOWN", 15); put("CITY", 30); put("METROPOLIS", 50);
+        }};
     }
 
     public static class TradeConfig {
@@ -260,6 +263,12 @@ public class GameConfig {
         if (mb != null) {
             for (Map.Entry<String, Object> e : mb.entrySet()) {
                 s.max_buildings.put(e.getKey().toUpperCase(), ((Number) e.getValue()).intValue());
+            }
+        }
+        Map<String, Object> mr = (Map<String, Object>) m.get("radius");
+        if (mr != null) {
+            for (Map.Entry<String, Object> e : mr.entrySet()) {
+                s.radius.put(e.getKey().toUpperCase(), ((Number) e.getValue()).intValue());
             }
         }
     }
@@ -575,6 +584,10 @@ public class GameConfig {
 
     public int getMaxBuildings(SettlementLevel level) {
         return root.settlement.max_buildings.getOrDefault(level.name(), 5);
+    }
+
+    public int getSettlementRadius(SettlementLevel level) {
+        return root.settlement.radius.getOrDefault(level.name(), 5);
     }
 
     // ---- Trade accessors ----
