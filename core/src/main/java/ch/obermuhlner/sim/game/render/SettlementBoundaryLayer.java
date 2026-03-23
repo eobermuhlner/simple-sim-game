@@ -52,34 +52,53 @@ public class SettlementBoundaryLayer implements RenderLayer {
         int radius = level.getRadius();
         int cx = settlement.centerX;
         int cy = settlement.centerY;
+        int radiusSq = radius * radius;
 
         batch.setColor(BORDER_COLOR);
 
-        for (int angle = 0; angle < 360; angle += 4) {
-            double rad = Math.toRadians(angle);
-            int tx = cx + (int)Math.round(radius * Math.cos(rad));
-            int ty = cy + (int)Math.round(radius * Math.sin(rad));
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                int tx = cx + dx;
+                int ty = cy + dy;
+                int distSq = dx * dx + dy * dy;
 
-            if (fogOfWar && !world.isRevealed(tx, ty)) continue;
+                if (distSq > radiusSq) continue;
 
-            float screenX = tx * TILE_SIZE;
-            float screenY = ty * TILE_SIZE;
+                boolean isOutside = distSq > (radius - 1) * (radius - 1);
+                if (!isOutside) continue;
 
-            double dx = Math.cos(rad);
-            double dy = Math.sin(rad);
+                if (fogOfWar && !world.isRevealed(tx, ty)) continue;
 
-            if (dx > 0.5) {
-                batch.draw(lineTexture, screenX + TILE_SIZE - BORDER_THICKNESS/2, screenY, BORDER_THICKNESS, TILE_SIZE);
-            } else if (dx < -0.5) {
-                batch.draw(lineTexture, screenX - BORDER_THICKNESS/2, screenY, BORDER_THICKNESS, TILE_SIZE);
-            } else if (dy > 0.5) {
-                batch.draw(lineTexture, screenX, screenY + TILE_SIZE - BORDER_THICKNESS/2, TILE_SIZE, BORDER_THICKNESS);
-            } else if (dy < -0.5) {
-                batch.draw(lineTexture, screenX, screenY - BORDER_THICKNESS/2, TILE_SIZE, BORDER_THICKNESS);
+                float screenX = tx * TILE_SIZE;
+                float screenY = ty * TILE_SIZE;
+
+                boolean nInside = isInside(tx, ty + 1, cx, cy, radiusSq);
+                boolean sInside = isInside(tx, ty - 1, cx, cy, radiusSq);
+                boolean eInside = isInside(tx + 1, ty, cx, cy, radiusSq);
+                boolean wInside = isInside(tx - 1, ty, cx, cy, radiusSq);
+
+                if (!nInside) {
+                    batch.draw(lineTexture, screenX, screenY + TILE_SIZE - BORDER_THICKNESS/2, TILE_SIZE, BORDER_THICKNESS);
+                }
+                if (!sInside) {
+                    batch.draw(lineTexture, screenX, screenY - BORDER_THICKNESS/2, TILE_SIZE, BORDER_THICKNESS);
+                }
+                if (!eInside) {
+                    batch.draw(lineTexture, screenX + TILE_SIZE - BORDER_THICKNESS/2, screenY, BORDER_THICKNESS, TILE_SIZE);
+                }
+                if (!wInside) {
+                    batch.draw(lineTexture, screenX - BORDER_THICKNESS/2, screenY, BORDER_THICKNESS, TILE_SIZE);
+                }
             }
         }
 
         batch.setColor(Color.WHITE);
+    }
+
+    private boolean isInside(int tx, int ty, int cx, int cy, int radiusSq) {
+        int dx = tx - cx;
+        int dy = ty - cy;
+        return dx * dx + dy * dy <= radiusSq;
     }
 
     @Override
