@@ -83,9 +83,11 @@ public class BuildMode implements GameMode {
     }
 
     private void loadBuildingTextures() {
+        GameConfig config = controller.getGameConfig();
         for (BuildingType type : BuildingType.values()) {
             try {
-                Texture tex = new Texture(type.getTexturePath());
+                String texturePath = config.getBuildingTexturePath(type);
+                Texture tex = new Texture(texturePath);
                 buildingTextures.put(type.getId(), tex);
             } catch (Exception e) {
             }

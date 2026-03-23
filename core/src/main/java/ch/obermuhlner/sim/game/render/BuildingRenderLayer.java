@@ -2,6 +2,7 @@ package ch.obermuhlner.sim.game.render;
 
 import ch.obermuhlner.sim.game.BuildingType;
 import ch.obermuhlner.sim.game.Chunk;
+import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.Tile;
 import ch.obermuhlner.sim.game.World;
 import com.badlogic.gdx.graphics.Texture;
@@ -16,11 +17,13 @@ public class BuildingRenderLayer implements RenderLayer {
 
     private final World world;
     private final boolean fogOfWar;
+    private final GameConfig config;
     private final Map<Integer, Texture> textures = new HashMap<>();
 
-    public BuildingRenderLayer(World world, boolean fogOfWar) {
+    public BuildingRenderLayer(World world, boolean fogOfWar, GameConfig config) {
         this.world = world;
         this.fogOfWar = fogOfWar;
+        this.config = config;
     }
 
     @Override
@@ -30,7 +33,8 @@ public class BuildingRenderLayer implements RenderLayer {
     public void loadAssets() {
         for (BuildingType type : BuildingType.values()) {
             try {
-                Texture texture = new Texture(type.getTexturePath());
+                String texturePath = config.getBuildingTexturePath(type);
+                Texture texture = new Texture(texturePath);
                 textures.put(type.getId(), texture);
             } catch (Exception e) {
                 // Texture not found, skip

@@ -89,6 +89,19 @@ public class GameConfig {
         public Map<String, Float> harvest = new LinkedHashMap<>();
     }
 
+    public static class BuildingConfig {
+        public String name = "";
+        public int id = 0;
+        public String image = "";
+        public float cost = 0f;
+        public int population_capacity = 0;
+    }
+
+    public static class SettlementImageConfig {
+        public String name = "";
+        public String image = "";
+    }
+
     public static class DestroyConfig {
         public float building_fraction = 0.5f;
     }
@@ -146,6 +159,8 @@ public class GameConfig {
         public TerrainConfig terrain = new TerrainConfig();
         public Map<String, Map<String, Object>> roads = new HashMap<>();
         public Map<String, Map<String, Object>> buildings = new HashMap<>();
+        public Map<String, BuildingConfig> buildings_config = new LinkedHashMap<>();
+        public Map<String, SettlementImageConfig> settlement_images = new LinkedHashMap<>();
         public Map<String, Map<String, Object>> specializations = new HashMap<>();
         public Map<String, TerrainObjectConfig> terrain_objects = new LinkedHashMap<>();
         public Map<String, ExplorationRewardConfig> exploration_rewards = new LinkedHashMap<>();
@@ -158,7 +173,7 @@ public class GameConfig {
         this.root = loadRoot();
     }
 
-    /** Constructor for tests and headless contexts — bypasses Gdx.files. */
+    /** Constructor for tests and headless contexts — bypasses YAML loading. */
     public GameConfig(Root root) {
         this.root = root;
     }
@@ -181,6 +196,8 @@ public class GameConfig {
             bindBuildings(r, raw);
             bindSpecializations(r, raw);
             bindTerrainObjects(r, raw);
+            bindBuildingsConfig(r, raw);
+            bindSettlementImages(r, raw);
             bindExplorationRewards(r, raw);
             bindTechTree(r, raw);
         } catch (Exception e) {
@@ -406,6 +423,41 @@ public class GameConfig {
                 bData.put("cost", val);
                 r.buildings.put(key, bData);
             }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void bindBuildingsConfig(Root r, Map<String, Object> raw) {
+        Object bcRaw = raw.get("buildings_config");
+        if (bcRaw == null) return;
+        Map<String, Object> bcMap = (Map<String, Object>) bcRaw;
+        for (Map.Entry<String, Object> e : bcMap.entrySet()) {
+            String name = e.getKey().toUpperCase();
+            if (!(e.getValue() instanceof Map)) continue;
+            Map<String, Object> data = (Map<String, Object>) e.getValue();
+            BuildingConfig bc = new BuildingConfig();
+            bc.name = name;
+            if (data.containsKey("id")) bc.id = ((Number) data.get("id")).intValue();
+            if (data.containsKey("image")) bc.image = (String) data.get("image");
+            if (data.containsKey("cost")) bc.cost = ((Number) data.get("cost")).floatValue();
+            if (data.containsKey("population_capacity")) bc.population_capacity = ((Number) data.get("population_capacity")).intValue();
+            r.buildings_config.put(name, bc);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void bindSettlementImages(Root r, Map<String, Object> raw) {
+        Object siRaw = raw.get("settlement_images");
+        if (siRaw == null) return;
+        Map<String, Object> siMap = (Map<String, Object>) siRaw;
+        for (Map.Entry<String, Object> e : siMap.entrySet()) {
+            String name = e.getKey().toUpperCase();
+            if (!(e.getValue() instanceof Map)) continue;
+            Map<String, Object> data = (Map<String, Object>) e.getValue();
+            SettlementImageConfig sic = new SettlementImageConfig();
+            sic.name = name;
+            if (data.containsKey("image")) sic.image = (String) data.get("image");
+            r.settlement_images.put(name, sic);
         }
     }
 
@@ -658,6 +710,22 @@ public class GameConfig {
             return ((Number) data.get("population_capacity")).intValue();
         }
         return type.getPopulationCapacity();
+    }
+
+    public String getBuildingTexturePath(BuildingType type) {
+        BuildingConfig bc = root.buildings_config.get(type.name());
+        if (bc != null && bc.image != null && !bc.image.isEmpty()) {
+            return bc.image;
+        }
+        return type.getTexturePath();
+    }
+
+    public String getSettlementImage(String settlementLevel) {
+        SettlementImageConfig sic = root.settlement_images.get(settlementLevel.toUpperCase());
+        if (sic != null && sic.image != null && !sic.image.isEmpty()) {
+            return sic.image;
+        }
+        return null;
     }
 
     // ---- Specialization accessors ----

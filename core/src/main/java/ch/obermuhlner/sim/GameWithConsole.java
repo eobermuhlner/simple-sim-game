@@ -37,6 +37,7 @@ public class GameWithConsole extends ApplicationAdapter implements GameControlle
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private World world;
+    private GameConfig gameConfig;
     private Renderer renderer;
     private InputMultiplexer inputMultiplexer;
     private GameMode currentMode;
@@ -52,7 +53,7 @@ public class GameWithConsole extends ApplicationAdapter implements GameControlle
 
     @Override
     public void create() {
-        GameConfig gameConfig = new GameConfig();
+        gameConfig = new GameConfig();
         TileObjectRegistry.init(gameConfig);
 
         batch = new SpriteBatch();
@@ -67,8 +68,8 @@ public class GameWithConsole extends ApplicationAdapter implements GameControlle
         renderer = new Renderer(world, batch, camera);
         renderer.addLayer(new TerrainRenderLayer(world, true, gameConfig));
         renderer.addLayer(new ObjectRenderLayer(world, true, gameConfig));
-        renderer.addLayer(new BuildingRenderLayer(world, true));
-        renderer.addLayer(new SettlementRenderLayer(world, true));
+        renderer.addLayer(new BuildingRenderLayer(world, true, gameConfig));
+        renderer.addLayer(new SettlementRenderLayer(world, true, gameConfig));
         renderer.addLayer(new FogOfWarRenderLayer(world, gameConfig));
 
         settlementPanel = new SettlementInfoPanel();
@@ -459,6 +460,11 @@ public class GameWithConsole extends ApplicationAdapter implements GameControlle
     @Override
     public World getWorld() {
         return world;
+    }
+
+    @Override
+    public GameConfig getGameConfig() {
+        return gameConfig;
     }
     
     @Override

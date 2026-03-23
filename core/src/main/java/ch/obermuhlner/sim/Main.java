@@ -140,8 +140,8 @@ public class Main extends ApplicationAdapter implements GameController {
         renderer.addLayer(new ObjectRenderLayer(world, true, gameConfig));
         renderer.addLayer(new ExplorationRewardRenderLayer(world, true, gameConfig));
         renderer.addLayer(new RoadRenderLayer(world, true));
-        renderer.addLayer(new BuildingRenderLayer(world, true));
-        renderer.addLayer(new SettlementRenderLayer(world, true));
+        renderer.addLayer(new BuildingRenderLayer(world, true, gameConfig));
+        renderer.addLayer(new SettlementRenderLayer(world, true, gameConfig));
         renderer.addLayer(new CaravanRenderLayer(world));
         renderer.addLayer(new FogOfWarRenderLayer(world, gameConfig));
 
@@ -991,5 +991,10 @@ public class Main extends ApplicationAdapter implements GameController {
     @Override
     public World getWorld() {
         return world;
+    }
+
+    @Override
+    public GameConfig getGameConfig() {
+        return gameConfig;
     }
 }

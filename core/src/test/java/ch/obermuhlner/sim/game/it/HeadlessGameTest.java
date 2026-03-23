@@ -17,6 +17,7 @@ import org.junit.Before;
 
 public abstract class HeadlessGameTest implements GameController {
     protected World world;
+    protected GameConfig gameConfig;
     protected OrthographicCamera camera;
     protected GameMode currentMode;
     protected HeadlessApplication application;
@@ -29,9 +30,10 @@ public abstract class HeadlessGameTest implements GameController {
         application = new HeadlessApplication(new TestApplicationListener(), config);
         Gdx.app = application;
         
-        TileObjectRegistry.init();
+        gameConfig = new GameConfig(new GameConfig.Root());
+        TileObjectRegistry.init(gameConfig);
         
-        world = new World(16, new GameConfig(new GameConfig.Root()), true);
+        world = new World(16, gameConfig);
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
         camera.position.set(32, 32, 0);
@@ -63,6 +65,11 @@ public abstract class HeadlessGameTest implements GameController {
     @Override
     public World getWorld() {
         return world;
+    }
+
+    @Override
+    public GameConfig getGameConfig() {
+        return gameConfig;
     }
 
     @Override

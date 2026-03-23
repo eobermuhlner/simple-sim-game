@@ -391,6 +391,130 @@ buildings:
     cost: 80
     population_capacity: 5
 
+buildings_config:
+  HOUSE_SIMPLE:
+    image: 64x64/objects/house-simple.png
+  HOUSE_LARGE:
+    image: 64x64/objects/house-large.png
+  HOUSE_STONE:
+    image: 64x64/objects/house-stone.png
+  HOUSE_THATCHED:
+    image: 64x64/objects/house-thatched.png
+  FARM_SMALL:
+    image: 64x64/objects/farm-small.png
+  FARM_LARGE:
+    image: 64x64/objects/farm-large.png
+  WELL_EMPTY:
+    image: 64x64/objects/well-empty.png
+  WELL_WATER:
+    image: 64x64/objects/well-water.png
+  WELL_DECORATED:
+    image: 64x64/objects/well-decorated.png
+  MARKET_SMALL:
+    image: 64x64/objects/market-small.png
+  MARKET_LARGE:
+    image: 64x64/objects/market-large.png
+  BAKERY:
+    image: 64x64/objects/bakery.png
+  BLACKSMITH:
+    image: 64x64/objects/blacksmith.png
+  INN_SMALL:
+    image: 64x64/objects/inn-small.png
+  INN_LARGE:
+    image: 64x64/objects/inn-large.png
+  WAREHOUSE:
+    image: 64x64/objects/warehouse-small.png
+  GRANARY:
+    image: 64x64/objects/granary.png
+  CHURCH_SMALL:
+    image: 64x64/objects/church-small.png
+  CHURCH_LARGE:
+    image: 64x64/objects/church-large.png
+  TEMPLE_SMALL:
+    image: 64x64/objects/temple-small.png
+  TEMPLE_LARGE:
+    image: 64x64/objects/temple-large.png
+  CASTLE_SMALL:
+    image: 64x64/objects/castle-small.png
+  CASTLE_LARGE:
+    image: 64x64/objects/castle-large.png
+  PALACE:
+    image: 64x64/objects/palace.png
+  TOWER_SMALL:
+    image: 64x64/objects/tower-small.png
+  TOWER_LARGE:
+    image: 64x64/objects/tower-large.png
+  WALL_STONE:
+    image: 64x64/objects/wall-stone.png
+  WALL_WOOD:
+    image: 64x64/objects/wall-wood.png
+  GATE_STONE:
+    image: 64x64/objects/gate-stone.png
+  GATE_WOOD:
+    image: 64x64/objects/gate-wood.png
+  MILL_WIND:
+    image: 64x64/objects/mill-wind.png
+  MILL_WATER:
+    image: 64x64/objects/mill-water.png
+  TAVERN:
+    image: 64x64/objects/tavern.png
+  SQUARE:
+    image: 64x64/objects/plaza.png
+  MONUMENT:
+    image: 64x64/objects/monument.png
+  SHRINE:
+    image: 64x64/objects/shrine.png
+  BARRACKS:
+    image: 64x64/objects/barracks.png
+  TRAINING_YARD:
+    image: 64x64/objects/training-yard.png
+  ARCHERY_RANGE:
+    image: 64x64/objects/archery-range.png
+  FORGE_SMALL:
+    image: 64x64/objects/forge-small.png
+  FORGE_LARGE:
+    image: 64x64/objects/forge-large.png
+  BUTCHER:
+    image: 64x64/objects/butcher.png
+  TANNER:
+    image: 64x64/objects/tanner.png
+  WEAVER:
+    image: 64x64/objects/weaver.png
+  COOPER:
+    image: 64x64/objects/cooper.png
+  FOUNTAIN:
+    image: 64x64/objects/fountain-small.png
+  GARDEN:
+    image: 64x64/objects/garden-formal.png
+  ORCHARD:
+    image: 64x64/objects/orchard.png
+  VINEYARD:
+    image: 64x64/objects/vineyard.png
+  FIELD_WHEAT:
+    image: 64x64/objects/field-wheat.png
+  FIELD_VEGETABLE:
+    image: 64x64/objects/field-vegetable.png
+  PEN_SHEEP:
+    image: 64x64/objects/pen-sheep.png
+  PEN_CATTLE:
+    image: 64x64/objects/pen-cattle.png
+  PIG_STY:
+    image: 64x64/objects/pig-sty.png
+  CHICKEN_COOP:
+    image: 64x64/objects/chicken-coop.png
+  HARBOR:
+    image: 64x64/objects/harbor-small.png
+
+settlement_images:
+  VILLAGE:
+    image: 64x64/objects/village-plaza.png
+  TOWN:
+    image: 64x64/objects/town-plaza.png
+  CITY:
+    image: 64x64/objects/city-plaza.png
+  METROPOLIS:
+    image: 64x64/objects/metropolis-plaza.png
+
 tech_tree:
   research_gold_per_tick: 2.0
   initially_available:

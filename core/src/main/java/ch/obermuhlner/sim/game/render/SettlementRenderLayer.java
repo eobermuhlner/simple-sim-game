@@ -1,6 +1,7 @@
 package ch.obermuhlner.sim.game.render;
 
 import ch.obermuhlner.sim.game.Chunk;
+import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.SettlementLevel;
 import ch.obermuhlner.sim.game.Specialization;
@@ -19,12 +20,13 @@ public class SettlementRenderLayer implements RenderLayer {
 
     private final World world;
     private final boolean fogOfWar;
-    // Key: level.ordinal() * 10 + specialization.ordinal()
+    private final GameConfig config;
     private final Map<Integer, Texture> markerTextures = new HashMap<>();
 
-    public SettlementRenderLayer(World world, boolean fogOfWar) {
+    public SettlementRenderLayer(World world, boolean fogOfWar, GameConfig config) {
         this.world = world;
         this.fogOfWar = fogOfWar;
+        this.config = config;
     }
 
     @Override
@@ -32,7 +34,6 @@ public class SettlementRenderLayer implements RenderLayer {
 
     @Override
     public void loadAssets() {
-        // Textures are created lazily per (level, specialization) combination
     }
 
     private Texture getMarkerTexture(Settlement settlement) {
@@ -46,13 +47,22 @@ public class SettlementRenderLayer implements RenderLayer {
     }
 
     private Texture createMarkerTexture(SettlementLevel level, Specialization specialization) {
+        String imagePath = config.getSettlementImage(level.name());
+        if (imagePath != null && !imagePath.isEmpty()) {
+            try {
+                return new Texture(imagePath);
+            } catch (Exception e) {
+            }
+        }
+        return createDefaultMarker(level, specialization);
+    }
+
+    private Texture createDefaultMarker(SettlementLevel level, Specialization specialization) {
         Pixmap pixmap = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
 
-        // Fill with level color
         pixmap.setColor(getLevelColor(level));
         pixmap.fillCircle(8, 8, 7);
 
-        // Border: specialization color when specialized, black otherwise
         if (specialization != Specialization.NONE) {
             pixmap.setColor(getSpecializationColor(specialization));
         } else {
@@ -60,7 +70,6 @@ public class SettlementRenderLayer implements RenderLayer {
         }
         pixmap.drawCircle(8, 8, 7);
 
-        // For specialized settlements, draw a small inner dot to make the identity clearer
         if (specialization != Specialization.NONE) {
             pixmap.setColor(getSpecializationColor(specialization));
             pixmap.fillCircle(8, 8, 3);
@@ -108,9 +117,9 @@ public class SettlementRenderLayer implements RenderLayer {
             if (fogOfWar && !world.isRevealed(tx, ty)) continue;
 
             Texture marker = getMarkerTexture(settlement);
-            float x = tx * TILE_SIZE + (TILE_SIZE - 16) / 2f;
-            float y = ty * TILE_SIZE + (TILE_SIZE - 16) / 2f;
-            batch.draw(marker, x, y, 16, 16);
+            float x = tx * TILE_SIZE;
+            float y = ty * TILE_SIZE;
+            batch.draw(marker, x, y, TILE_SIZE, TILE_SIZE);
         }
     }
 
