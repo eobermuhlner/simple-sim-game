@@ -2,8 +2,10 @@ package ch.obermuhlner.sim.game.ui;
 
 import ch.obermuhlner.sim.game.BuildingType;
 import ch.obermuhlner.sim.game.ResourceType;
+import ch.obermuhlner.sim.game.RoadType;
 import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.Specialization;
+import ch.obermuhlner.sim.game.Tile;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -177,6 +179,66 @@ public class SettlementInfoPanel {
             case FARMING_VILLAGE: return new Color(0.3f, 0.9f, 0.3f, 1f);
             case TRADE_HUB:       return new Color(1.0f, 0.85f, 0.2f, 1f);
             default:              return new Color(0.6f, 0.6f, 0.6f, 1f);
+        }
+    }
+
+    public void render(Tile tile, int tileX, int tileY, SpriteBatch batch, int screenWidth, int screenHeight) {
+        float panelX = screenWidth - PANEL_WIDTH - 20;
+        float panelY = screenHeight - PANEL_HEIGHT - 20;
+
+        batch.draw(backgroundTexture, panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT);
+
+        float textX = panelX + PADDING;
+        float textY = panelY + PANEL_HEIGHT - PADDING - 5;
+
+        titleFont.draw(batch, "Tile Info", textX, textY);
+        textY -= LINE_HEIGHT + 8;
+
+        font.setColor(new Color(0.5f, 0.7f, 1f, 1f));
+        font.draw(batch, "Position: (" + tileX + ", " + tileY + ")", textX, textY);
+        font.setColor(Color.WHITE);
+        textY -= LINE_HEIGHT;
+
+        font.draw(batch, "Terrain: " + tile.terrain.name(), textX, textY);
+        textY -= LINE_HEIGHT;
+
+        String traversable = tile.terrain.isTraversable() ? "Yes" : "No";
+        font.draw(batch, "Traversable: " + traversable, textX, textY);
+        textY -= LINE_HEIGHT;
+
+        String buildable = tile.terrain.isBuildable() ? "Yes" : "No";
+        font.draw(batch, "Buildable: " + buildable, textX, textY);
+        textY -= LINE_HEIGHT + 3;
+
+        if (tile.hasObject()) {
+            font.setColor(new Color(0.6f, 0.8f, 0.6f, 1f));
+            font.draw(batch, "Object: " + tile.getObject().getName(), textX, textY);
+            font.setColor(Color.WHITE);
+            textY -= LINE_HEIGHT;
+        }
+
+        if (tile.hasBuilding()) {
+            BuildingType building = BuildingType.fromId(tile.buildingId);
+            String buildingName = building != null ? building.getDisplayName() : "Building #" + tile.buildingId;
+            font.setColor(new Color(0.9f, 0.7f, 0.5f, 1f));
+            font.draw(batch, "Building: " + buildingName, textX, textY);
+            font.setColor(Color.WHITE);
+            textY -= LINE_HEIGHT;
+        }
+
+        if (tile.hasRoad()) {
+            RoadType roadType = RoadType.fromId(tile.roadType);
+            String roadName = roadType != null ? roadType.getDisplayName() : "Road #" + tile.roadType;
+            font.setColor(new Color(0.8f, 0.8f, 0.6f, 1f));
+            font.draw(batch, "Road: " + roadName, textX, textY);
+            font.setColor(Color.WHITE);
+            textY -= LINE_HEIGHT;
+        }
+
+        if (!tile.hasObject() && !tile.hasBuilding() && !tile.hasRoad()) {
+            font.setColor(new Color(0.5f, 0.5f, 0.5f, 1f));
+            font.draw(batch, "(Empty tile)", textX, textY);
+            font.setColor(Color.WHITE);
         }
     }
 

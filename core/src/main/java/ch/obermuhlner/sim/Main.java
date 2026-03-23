@@ -405,11 +405,13 @@ public class Main extends ApplicationAdapter implements GameController {
 
         boundaryLayer.setSelectedSettlement(nearby);
 
-        if (onTile != null && onTile.needsSpecializationChoice()) {
+        boolean isCenterTile = (onTile != null && onTile.centerX == selectedTileX && onTile.centerY == selectedTileY);
+
+        if (isCenterTile && onTile.needsSpecializationChoice()) {
             // Focused specialization choice — Village → Town upgrade
             addSpecButtons(TOOL_SPEC_LOGGING, TOOL_SPEC_MINING, TOOL_SPEC_FARMING, TOOL_SPEC_TRADE);
 
-        } else if (respecMode && onTile != null && onTile.canRespecialize()) {
+        } else if (respecMode && isCenterTile && onTile.canRespecialize()) {
             // Re-specialization mode — choose new specialization (costs one level)
             addSpecButtons(TOOL_RESPEC_LOGGING, TOOL_RESPEC_MINING, TOOL_RESPEC_FARMING, TOOL_RESPEC_TRADE);
 
@@ -423,11 +425,11 @@ public class Main extends ApplicationAdapter implements GameController {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_NEW_SETTLEMENT, "New Settlement", null));
             }
 
-            if (onTile != null && onTile.needsUpgrade()) {
+            if (isCenterTile && onTile.needsUpgrade()) {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_UPGRADE, "Upgrade", null));
             }
 
-            if (onTile != null && onTile.canRespecialize()) {
+            if (isCenterTile && onTile.canRespecialize()) {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_RESPEC_MODE, "Re-spec", null));
             }
 
@@ -928,8 +930,11 @@ public class Main extends ApplicationAdapter implements GameController {
         }
         if (tileSelected && world.isRevealed(selectedTileX, selectedTileY)) {
             Settlement settlement = world.getSettlementAt(selectedTileX, selectedTileY);
-            if (settlement != null) {
+            if (settlement != null && settlement.centerX == selectedTileX && settlement.centerY == selectedTileY) {
                 settlementPanel.render(settlement, uiBatch, screenWidth, screenHeight);
+            } else {
+                Tile tile = world.getTile(selectedTileX, selectedTileY);
+                settlementPanel.render(tile, selectedTileX, selectedTileY, uiBatch, screenWidth, screenHeight);
             }
         }
         renderResourceHud(uiBatch, screenWidth, screenHeight);
