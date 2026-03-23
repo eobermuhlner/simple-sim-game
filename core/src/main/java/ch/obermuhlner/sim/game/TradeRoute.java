@@ -15,6 +15,7 @@ public class TradeRoute {
     public List<int[]> path;  // tile coords [{x,y},...] from A.center to B.center
     public int pathLength;
     public int activeCaravans = 0;
+    public boolean isSea = false;  // true for sea trade routes (bypasses roads)
 
     public TradeRoute(int idA, int idB, List<int[]> path) {
         this.id = nextId++;

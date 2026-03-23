@@ -69,6 +69,7 @@ public class GameConfig {
 
     public static class ThresholdConfig {
         public double water = 0.45;
+        public double shallow_sea = 0.45; // same as water → no shallow sea unless configured in YAML
         public double grass = 0.55;
         public double forest = 0.60;
         public double stone = 0.65;
@@ -280,10 +281,11 @@ public class GameConfig {
         if (m.containsKey("tileset")) t.tileset = (String) m.get("tileset");
         Map<String, Object> thresh = (Map<String, Object>) m.get("thresholds");
         if (thresh != null) {
-            if (thresh.containsKey("water"))  t.thresholds.water  = ((Number) thresh.get("water")).doubleValue();
-            if (thresh.containsKey("grass"))  t.thresholds.grass  = ((Number) thresh.get("grass")).doubleValue();
-            if (thresh.containsKey("forest")) t.thresholds.forest = ((Number) thresh.get("forest")).doubleValue();
-            if (thresh.containsKey("stone"))  t.thresholds.stone  = ((Number) thresh.get("stone")).doubleValue();
+            if (thresh.containsKey("water"))       t.thresholds.water       = ((Number) thresh.get("water")).doubleValue();
+            if (thresh.containsKey("shallow_sea")) t.thresholds.shallow_sea = ((Number) thresh.get("shallow_sea")).doubleValue();
+            if (thresh.containsKey("grass"))       t.thresholds.grass       = ((Number) thresh.get("grass")).doubleValue();
+            if (thresh.containsKey("forest"))      t.thresholds.forest      = ((Number) thresh.get("forest")).doubleValue();
+            if (thresh.containsKey("stone"))       t.thresholds.stone       = ((Number) thresh.get("stone")).doubleValue();
         }
         Map<String, Object> typesRaw = (Map<String, Object>) m.get("types");
         if (typesRaw != null) {
@@ -535,11 +537,12 @@ public class GameConfig {
 
     public double getTerrainThreshold(String terrainName) {
         switch (terrainName.toLowerCase()) {
-            case "water":  return root.terrain.thresholds.water;
-            case "grass":  return root.terrain.thresholds.grass;
-            case "forest": return root.terrain.thresholds.forest;
-            case "stone":  return root.terrain.thresholds.stone;
-            default:       return 1.0;
+            case "water":       return root.terrain.thresholds.water;
+            case "shallow_sea": return root.terrain.thresholds.shallow_sea;
+            case "grass":       return root.terrain.thresholds.grass;
+            case "forest":      return root.terrain.thresholds.forest;
+            case "stone":       return root.terrain.thresholds.stone;
+            default:            return 1.0;
         }
     }
 

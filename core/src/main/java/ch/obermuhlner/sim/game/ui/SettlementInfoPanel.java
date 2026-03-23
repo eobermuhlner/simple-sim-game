@@ -1,5 +1,6 @@
 package ch.obermuhlner.sim.game.ui;
 
+import ch.obermuhlner.sim.game.BuildingType;
 import ch.obermuhlner.sim.game.ResourceType;
 import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.Specialization;
@@ -13,7 +14,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 
 public class SettlementInfoPanel {
     private static final int PANEL_WIDTH = 260;
-    private static final int PANEL_HEIGHT = 330;
+    private static final int PANEL_HEIGHT = 348;
     private static final int PADDING = 15;
     private static final int LINE_HEIGHT = 18;
 
@@ -102,6 +103,15 @@ public class SettlementInfoPanel {
         }
 
         font.draw(batch, "Buildings: " + settlement.buildingIds.size() + "/" + settlement.getMaxBuildings(), textX, textY);
+        textY -= LINE_HEIGHT;
+
+        // Harbor indicator
+        boolean hasHarbor = settlement.buildingIds.contains(BuildingType.HARBOR.getId());
+        if (hasHarbor) {
+            font.setColor(new Color(0.4f, 0.7f, 1f, 1f));
+            font.draw(batch, "[Harbor] Sea trade enabled", textX, textY);
+            font.setColor(Color.WHITE);
+        }
         textY -= LINE_HEIGHT;
 
         font.draw(batch, "Position: (" + settlement.centerX + ", " + settlement.centerY + ")", textX, textY);

@@ -5,6 +5,7 @@ import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.TerrainType;
 import ch.obermuhlner.sim.game.Tile;
 import ch.obermuhlner.sim.game.World;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -49,12 +50,17 @@ public class TerrainRenderLayer implements RenderLayer {
                 int srcX = tileIndex % 4 * TILE_SIZE;
                 int srcY = tileIndex / 4 * TILE_SIZE;
 
+                boolean isShallowSea = tile.terrain == TerrainType.SHALLOW_SEA;
+                if (isShallowSea) batch.setColor(0.55f, 0.78f, 0.95f, 1f);
+
                 batch.draw(tileset,
                     tx * TILE_SIZE, ty * TILE_SIZE,
                     TILE_SIZE, TILE_SIZE,
                     srcX, srcY,
                     TILE_SIZE, TILE_SIZE,
                     false, false);
+
+                if (isShallowSea) batch.setColor(Color.WHITE);
             }
         }
     }

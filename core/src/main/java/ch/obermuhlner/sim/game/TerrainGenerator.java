@@ -77,10 +77,11 @@ public class TerrainGenerator {
     }
 
     protected TerrainType getTerrainFromNoise(double n) {
-        if (n < config.getTerrainThreshold("water"))  return TerrainType.WATER;
-        if (n < config.getTerrainThreshold("grass"))  return TerrainType.GRASS;
-        if (n < config.getTerrainThreshold("forest")) return TerrainType.FOREST;
-        if (n < config.getTerrainThreshold("stone"))  return TerrainType.STONE;
+        if (n < config.getTerrainThreshold("water"))       return TerrainType.WATER;
+        if (n < config.getTerrainThreshold("shallow_sea")) return TerrainType.SHALLOW_SEA;
+        if (n < config.getTerrainThreshold("grass"))       return TerrainType.GRASS;
+        if (n < config.getTerrainThreshold("forest"))      return TerrainType.FOREST;
+        if (n < config.getTerrainThreshold("stone"))       return TerrainType.STONE;
         return TerrainType.SNOW;
     }
 

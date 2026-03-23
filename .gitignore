@@ -163,9 +163,8 @@ Thumbs.db
 ## You should delete or comment out the next line if you have configuration in a different resource-config.json .
 **/resource-config.json
 
-
 /opencode.jsonc
 /data/
-/assets/data/chunks/
+/assets/data/
+
 /.claude/settings.local.json
-/assets/data/settlements.dat

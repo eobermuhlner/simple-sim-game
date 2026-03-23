@@ -315,12 +315,9 @@ public class World {
     public List<TradeRoute> getTradeRoutes() { return tradeRoutes; }
     public List<Caravan> getCaravans() { return caravans; }
 
+    /** Returns the first (land or sea) trade route between two settlements. */
     public TradeRoute getTradeRoute(int idA, int idB) {
-        int lo = Math.min(idA, idB), hi = Math.max(idA, idB);
-        for (TradeRoute r : tradeRoutes) {
-            if (r.idA == lo && r.idB == hi) return r;
-        }
-        return null;
+        return getLandTradeRoute(idA, idB);
     }
 
     public void addTradeRoute(TradeRoute route) {
@@ -527,5 +524,119 @@ public class World {
     @FunctionalInterface
     public interface ChunkConsumer {
         void accept(Chunk chunk);
+    }
+
+    // ---- Sea exploration helpers ----
+
+    /** Returns true if this land tile is adjacent (4-dir) to WATER or SHALLOW_SEA. */
+    public boolean isCoastal(int tx, int ty) {
+        TerrainType t = getTerrain(tx, ty);
+        if (!t.isBuildable()) return false;
+        int[][] dirs = {{-1,0},{1,0},{0,-1},{0,1}};
+        for (int[] dir : dirs) {
+            if (getTerrain(tx + dir[0], ty + dir[1]).isWater()) return true;
+        }
+        return false;
+    }
+
+    /** Returns true if this settlement has a HARBOR building. */
+    public boolean settlementHasHarbor(Settlement s) {
+        return s.buildingIds.contains(BuildingType.HARBOR.getId());
+    }
+
+    /** Reveals sea tiles (SHALLOW_SEA and optionally WATER) in a radius around the center. */
+    public void revealSeaArea(int centerX, int centerY, int radius, boolean includeDeepSea) {
+        for (int dy = -radius; dy <= radius; dy++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                if (dx * dx + dy * dy > radius * radius) continue;
+                int tx = centerX + dx, ty = centerY + dy;
+                TerrainType terrain = getTerrain(tx, ty);
+                if (terrain == TerrainType.SHALLOW_SEA || (includeDeepSea && terrain == TerrainType.WATER)) {
+                    reveal(tx, ty);
+                }
+            }
+        }
+    }
+
+    /**
+     * Finds a sea path between two settlements via SHALLOW_SEA / WATER tiles.
+     * Returns null if no water connection exists between their coastal edges.
+     */
+    public List<int[]> findSeaPath(Settlement a, Settlement b) {
+        int[] entryA = findCoastalWaterEntry(a.centerX, a.centerY);
+        int[] entryB = findCoastalWaterEntry(b.centerX, b.centerY);
+        if (entryA == null || entryB == null) return null;
+
+        List<int[]> seaLeg = bfsSeaPath(entryA[0], entryA[1], entryB[0], entryB[1]);
+        if (seaLeg == null) return null;
+
+        List<int[]> full = new ArrayList<>();
+        full.add(new int[]{a.centerX, a.centerY});
+        full.addAll(seaLeg);
+        full.add(new int[]{b.centerX, b.centerY});
+        return full;
+    }
+
+    private int[] findCoastalWaterEntry(int cx, int cy) {
+        for (int radius = 1; radius <= 6; radius++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                for (int dx = -radius; dx <= radius; dx++) {
+                    if (Math.abs(dx) != radius && Math.abs(dy) != radius) continue;
+                    int tx = cx + dx, ty = cy + dy;
+                    TerrainType t = getTerrain(tx, ty);
+                    if (t == TerrainType.SHALLOW_SEA || t == TerrainType.WATER) {
+                        return new int[]{tx, ty};
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private List<int[]> bfsSeaPath(int x1, int y1, int x2, int y2) {
+        int maxManhattan = config.getMaxManhattan();
+        Map<Long, Long> parent = new HashMap<>();
+        java.util.Queue<int[]> queue = new java.util.LinkedList<>();
+        long startKey = encodePos(x1, y1);
+        parent.put(startKey, -1L);
+        queue.add(new int[]{x1, y1});
+
+        int[][] dirs = {{0,1},{0,-1},{1,0},{-1,0}};
+        while (!queue.isEmpty()) {
+            int[] cur = queue.poll();
+            if (cur[0] == x2 && cur[1] == y2) {
+                return reconstructPath(parent, encodePos(x2, y2));
+            }
+            for (int[] dir : dirs) {
+                int nx = cur[0] + dir[0], ny = cur[1] + dir[1];
+                if (Math.abs(nx - x1) + Math.abs(ny - y1) > maxManhattan) continue;
+                long nKey = encodePos(nx, ny);
+                if (parent.containsKey(nKey)) continue;
+                TerrainType t = getTerrain(nx, ny);
+                if (t == TerrainType.WATER || t == TerrainType.SHALLOW_SEA) {
+                    parent.put(nKey, encodePos(cur[0], cur[1]));
+                    queue.add(new int[]{nx, ny});
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Retrieves the sea trade route between two settlements (if any). */
+    public TradeRoute getSeaTradeRoute(int idA, int idB) {
+        int lo = Math.min(idA, idB), hi = Math.max(idA, idB);
+        for (TradeRoute r : tradeRoutes) {
+            if (r.idA == lo && r.idB == hi && r.isSea) return r;
+        }
+        return null;
+    }
+
+    /** Retrieves the land trade route between two settlements (if any). */
+    public TradeRoute getLandTradeRoute(int idA, int idB) {
+        int lo = Math.min(idA, idB), hi = Math.max(idA, idB);
+        for (TradeRoute r : tradeRoutes) {
+            if (r.idA == lo && r.idB == hi && !r.isSea) return r;
+        }
+        return null;
     }
 }

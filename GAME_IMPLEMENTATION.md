@@ -846,11 +846,12 @@ These formulas determine pacing, balance, and player experience. Test and iterat
 - [x] Specialization tech branches
 - [x] Discovery-based UI with hints
 
-### Phase 8: Sea Exploration
-- [ ] Harbor building
-- [ ] Small ship and exploration
-- [ ] Large ship and deep sea
-- [ ] Sea trade routes
+### Phase 8: Sea Exploration (Complete)
+- [x] Harbor building (placed on coastal land tiles; requires HARBOR_CONSTRUCTION tech)
+- [x] SHALLOW_SEA terrain (coastal band between water and land, rendered with light-blue tint)
+- [x] Sea exploration (harbor auto-reveals shallow sea on build; click to explore further)
+- [x] Large ship / deep sea (LARGE_SHIPS tech allows: sea_exploration: [DEEP_SEA])
+- [x] Sea trade routes (BFS sea pathfinding; forms when both settlements have harbors and no land road exists)
 
 ### Phase 9: Polish
 - [ ] Visual feedback (congestion, struggling settlements)

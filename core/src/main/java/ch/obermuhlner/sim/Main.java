@@ -1,6 +1,7 @@
 package ch.obermuhlner.sim;
 
 import ch.obermuhlner.sim.game.BuildingType;
+import ch.obermuhlner.sim.game.TerrainType;
 import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.GameController;
 import ch.obermuhlner.sim.game.ResourceType;
@@ -76,6 +77,7 @@ public class Main extends ApplicationAdapter implements GameController {
     private static final int TOOL_COLLECT_CACHE   = 60;
     private static final int TOOL_RESEARCH_MODE   = 70;
     private static final int TOOL_RESEARCH_BASE   = 71; // 71..86 — up to 16 research options
+    private static final int TOOL_BUILD_HARBOR    = 90;
 
     private float tickInterval;
 
@@ -348,12 +350,35 @@ public class Main extends ApplicationAdapter implements GameController {
         researchMode = false;
 
         if (!world.isRevealed(tileX, tileY)) {
-            if (world.hasRevealedNeighbor(tileX, tileY)) {
-                world.reveal(tileX, tileY);
+            TerrainType terrain = world.getTerrain(tileX, tileY);
+            if (terrain.isWater()) {
+                // Sea tiles: reveal if adjacent to a revealed tile and there's a nearby harbor
+                if (world.hasRevealedNeighbor(tileX, tileY) && hasNearbyHarbor(tileX, tileY)) {
+                    boolean deepSeaAllowed = terrain == TerrainType.WATER
+                        && world.techTree.isAllowed("sea_exploration", "DEEP_SEA", gameConfig);
+                    if (terrain == TerrainType.SHALLOW_SEA || deepSeaAllowed) {
+                        world.reveal(tileX, tileY);
+                    }
+                }
+            } else {
+                if (world.hasRevealedNeighbor(tileX, tileY)) {
+                    world.reveal(tileX, tileY);
+                }
             }
         }
 
         updateAvailableTools();
+    }
+
+    /** Returns true if any settlement with a harbor is within range to explore this sea tile. */
+    private boolean hasNearbyHarbor(int tx, int ty) {
+        for (Settlement s : world.getSettlements()) {
+            if (world.settlementHasHarbor(s)) {
+                double dist = Math.hypot(tx - s.centerX, ty - s.centerY);
+                if (dist <= 10) return true;
+            }
+        }
+        return false;
     }
 
     public void initToolbar() {
@@ -435,6 +460,13 @@ public class Main extends ApplicationAdapter implements GameController {
                 addBuildingButton(TOOL_MARKET,    BuildingType.MARKET_SMALL);
                 addBuildingButton(TOOL_WAREHOUSE, BuildingType.WAREHOUSE);
                 addBuildingButton(TOOL_WELL,      BuildingType.WELL_WATER);
+            }
+
+            // Harbor: available on coastal tiles near a settlement (requires HARBOR_CONSTRUCTION tech)
+            if (isBuildable && nearby != null && !tile.hasBuilding()
+                    && world.isCoastal(selectedTileX, selectedTileY)
+                    && isToolAvailable("buildings", "HARBOR")) {
+                addBuildingButton(TOOL_BUILD_HARBOR, BuildingType.HARBOR);
             }
         }
 
@@ -678,6 +710,9 @@ public class Main extends ApplicationAdapter implements GameController {
             case TOOL_COLLECT_CACHE:
                 collectCache(selectedTileX, selectedTileY);
                 break;
+            case TOOL_BUILD_HARBOR:
+                placeHarbor(selectedTileX, selectedTileY);
+                break;
             case TOOL_RESEARCH_MODE:
                 researchMode = true;
                 break;
@@ -760,6 +795,28 @@ public class Main extends ApplicationAdapter implements GameController {
         if (type != null) {
             settlement.addPopulation(gameConfig.getBuildingPopulationCapacity(type));
         }
+    }
+
+    private void placeHarbor(int tx, int ty) {
+        if (!world.isCoastal(tx, ty)) return;
+        Settlement settlement = getNearbySettlement(tx, ty);
+        if (settlement == null) return;
+        Tile tile = world.getTile(tx, ty);
+        if (!tile.isBuildable() || tile.hasBuilding()) return;
+
+        BuildingType type = BuildingType.HARBOR;
+        float cost = gameConfig.getBuildingCost(type);
+        if (settlement.gold < cost) return;
+
+        settlement.gold -= cost;
+        world.setBuilding(tx, ty, type.getId());
+        settlement.addBuilding(type.getId());
+        settlement.addPopulation(gameConfig.getBuildingPopulationCapacity(type));
+
+        // Reveal surrounding shallow sea tiles
+        boolean deepSeaAllowed = world.techTree.isAllowed("sea_exploration", "DEEP_SEA", gameConfig);
+        world.revealSeaArea(tx, ty, 3, deepSeaAllowed);
+        world.routesDirty = true;
     }
 
     public void handleClick(int screenX, int screenY) {

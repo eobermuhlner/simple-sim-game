@@ -165,12 +165,13 @@ public class GameDebugger {
                         row.append('R');
                     } else {
                         switch (tile.terrain) {
-                            case WATER: row.append('~'); break;
-                            case GRASS: row.append('.'); break;
-                            case FOREST: row.append('T'); break;
-                            case STONE: row.append('O'); break;
-                            case SNOW: row.append('*'); break;
-                            default: row.append('?'); break;
+                            case WATER:       row.append('~'); break;
+                            case SHALLOW_SEA: row.append('s'); break;
+                            case GRASS:       row.append('.'); break;
+                            case FOREST:      row.append('T'); break;
+                            case STONE:       row.append('O'); break;
+                            case SNOW:        row.append('*'); break;
+                            default:          row.append('?'); break;
                         }
                     }
                 }

@@ -57,15 +57,17 @@ terrain:
   tileset: 64x64/map.png
   thresholds:
     water: 0.45
+    shallow_sea: 0.47
     grass: 0.55
     forest: 0.60
     stone: 0.65
   types:
-    WATER:  { tile_index: 1 }
-    GRASS:  { tile_index: 2 }
-    FOREST: { tile_index: 3 }
-    STONE:  { tile_index: 4 }
-    SNOW:   { tile_index: 5 }
+    WATER:       { tile_index: 1 }
+    SHALLOW_SEA: { tile_index: 1 }
+    GRASS:       { tile_index: 2 }
+    FOREST:      { tile_index: 3 }
+    STONE:       { tile_index: 4 }
+    SNOW:        { tile_index: 5 }
 
 terrain_objects:
   TREE_LARGE:
@@ -385,6 +387,9 @@ buildings:
   CHICKEN_COOP:
     cost: 8
     population_capacity: 2
+  HARBOR:
+    cost: 80
+    population_capacity: 5
 
 tech_tree:
   research_gold_per_tick: 2.0
@@ -509,3 +514,19 @@ tech_tree:
       required_level: CITY
       allow:
         roads: [ROMAN]
+    HARBOR_CONSTRUCTION:
+      name: Harbor Construction
+      branch: GENERAL
+      cost: 150.0
+      required_tech: ""
+      required_level: TOWN
+      allow:
+        buildings: [HARBOR]
+    LARGE_SHIPS:
+      name: Large Ships
+      branch: TRADE_HUB
+      cost: 300.0
+      required_tech: CARAVAN_IMPROVEMENTS
+      required_level: CITY
+      allow:
+        sea_exploration: [DEEP_SEA]

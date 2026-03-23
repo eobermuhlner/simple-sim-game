@@ -57,7 +57,8 @@ public enum BuildingType {
     PEN_SHEEP(52, "Sheep Pen", "64x64/objects/pen-sheep.png", 3),
     PEN_CATTLE(53, "Cattle Pen", "64x64/objects/pen-cattle.png", 4),
     PIG_STY(54, "Pig Sty", "64x64/objects/pig-sty.png", 3),
-    CHICKEN_COOP(55, "Chicken Coop", "64x64/objects/chicken-coop.png", 2);
+    CHICKEN_COOP(55, "Chicken Coop", "64x64/objects/chicken-coop.png", 2),
+    HARBOR(56, "Harbor", "64x64/objects/mill-water.png", 5);
 
     private final int id;
     private final String displayName;

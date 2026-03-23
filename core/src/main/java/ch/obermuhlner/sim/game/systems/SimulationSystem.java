@@ -166,32 +166,55 @@ public class SimulationSystem {
     // ---- Trade Route Discovery ----
 
     private void rebuildTradeRoutes(List<Settlement> settlements) {
-        List<TradeRoute> existing = new ArrayList<>(world.getTradeRoutes());
-
         for (int i = 0; i < settlements.size(); i++) {
             for (int j = i + 1; j < settlements.size(); j++) {
                 Settlement a = settlements.get(i);
                 Settlement b = settlements.get(j);
 
-                TradeRoute route = world.getTradeRoute(a.id, b.id);
-                List<int[]> path = world.findRoadPath(a.centerX, a.centerY, b.centerX, b.centerY);
+                // ---- Land route ----
+                TradeRoute landRoute = world.getLandTradeRoute(a.id, b.id);
+                List<int[]> roadPath = world.findRoadPath(a.centerX, a.centerY, b.centerX, b.centerY);
 
-                if (path != null && path.size() >= 2) {
-                    if (route == null) {
-                        world.addTradeRoute(new TradeRoute(a.id, b.id, path));
+                if (roadPath != null && roadPath.size() >= 2) {
+                    if (landRoute == null) {
+                        world.addTradeRoute(new TradeRoute(a.id, b.id, roadPath));
                     } else {
-                        route.path = path;
-                        route.pathLength = path.size();
+                        landRoute.path = roadPath;
+                        landRoute.pathLength = roadPath.size();
                     }
+                    // Land route supersedes any sea route
+                    TradeRoute seaRoute = world.getSeaTradeRoute(a.id, b.id);
+                    if (seaRoute != null) world.removeTradeRoute(seaRoute.id);
                 } else {
-                    if (route != null) {
-                        world.removeTradeRoute(route.id);
+                    if (landRoute != null) world.removeTradeRoute(landRoute.id);
+
+                    // ---- Sea route (fallback when no land road exists) ----
+                    boolean aHasHarbor = world.settlementHasHarbor(a)
+                        && world.techTree.isAllowed("buildings", "HARBOR", config);
+                    boolean bHasHarbor = world.settlementHasHarbor(b)
+                        && world.techTree.isAllowed("buildings", "HARBOR", config);
+
+                    TradeRoute seaRoute = world.getSeaTradeRoute(a.id, b.id);
+                    if (aHasHarbor && bHasHarbor) {
+                        List<int[]> seaPath = world.findSeaPath(a, b);
+                        if (seaPath != null && seaPath.size() >= 2) {
+                            if (seaRoute == null) {
+                                TradeRoute newSea = new TradeRoute(a.id, b.id, seaPath);
+                                newSea.isSea = true;
+                                world.addTradeRoute(newSea);
+                            } else {
+                                seaRoute.path = seaPath;
+                                seaRoute.pathLength = seaPath.size();
+                            }
+                        } else if (seaRoute != null) {
+                            world.removeTradeRoute(seaRoute.id);
+                        }
+                    } else if (seaRoute != null) {
+                        world.removeTradeRoute(seaRoute.id);
                     }
                 }
             }
         }
-
-        existing.clear();
     }
 
     // ---- Caravan Spawning ----
