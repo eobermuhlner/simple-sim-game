@@ -389,7 +389,6 @@ public class Main extends ApplicationAdapter implements GameController {
 
     public void initToolbar() {
         availableTools.clear();
-        availableTools.add(new BuildToolbar.ToolButton(TOOL_NEW_SETTLEMENT, "New Settlement", null));
         buildToolbar.setTools(availableTools);
     }
 
@@ -414,7 +413,10 @@ public class Main extends ApplicationAdapter implements GameController {
             addResearchButtons();
 
         } else {
-            availableTools.add(new BuildToolbar.ToolButton(TOOL_NEW_SETTLEMENT, "New Settlement", null));
+            // New Settlement — only available when outside any settlement
+            if (onTile == null && nearby == null) {
+                availableTools.add(new BuildToolbar.ToolButton(TOOL_NEW_SETTLEMENT, "New Settlement", null));
+            }
 
             if (onTile != null && onTile.needsUpgrade()) {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_UPGRADE, "Upgrade", null));
@@ -424,8 +426,8 @@ public class Main extends ApplicationAdapter implements GameController {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_RESPEC_MODE, "Re-spec", null));
             }
 
-            // Research button — show if any settlement exists
-            if (!world.getSettlements().isEmpty()) {
+            // Research button — show if a settlement is selected
+            if (nearby != null) {
                 BuildToolbar.ToolButton researchBtn = new BuildToolbar.ToolButton(TOOL_RESEARCH_MODE, "Research", researchIcon);
                 if (world.techTree.hasActiveResearch()) {
                     GameConfig.TechConfig active = gameConfig.getTech(world.techTree.getActiveResearchId());
