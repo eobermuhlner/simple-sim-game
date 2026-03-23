@@ -50,37 +50,12 @@ public class TerrainGenerator {
     }
 
     protected int generateNaturalObjects(Random random, TerrainType terrain) {
-        switch (terrain) {
-            case GRASS:
-                if (random.nextFloat() < config.getSpawnProbability("grass_tree")) {
-                    return random.nextFloat() < config.getSpawnProbability("grass_tree_small_ratio")
-                        ? TileObjectRegistry.TREE_SMALL
-                        : TileObjectRegistry.TREE_LARGE;
-                } else if (random.nextFloat() < config.getSpawnProbability("grass_boulder_large")) {
-                    return TileObjectRegistry.BOULDER_LARGE;
-                } else if (random.nextFloat() < config.getSpawnProbability("grass_boulder_small")) {
-                    return TileObjectRegistry.BOULDER_SMALL;
-                }
-                break;
-            case FOREST:
-                if (random.nextFloat() < config.getSpawnProbability("forest_boulder_large")) {
-                    return TileObjectRegistry.BOULDER_LARGE;
-                }
-                break;
-            case STONE:
-                if (random.nextFloat() < config.getSpawnProbability("stone_boulder_small")) {
-                    return TileObjectRegistry.BOULDER_SMALL;
-                } else if (random.nextFloat() < config.getSpawnProbability("stone_boulder_large")) {
-                    return TileObjectRegistry.BOULDER_LARGE;
-                }
-                break;
-            case SNOW:
-                if (random.nextFloat() < config.getSpawnProbability("snow_boulder")) {
-                    return TileObjectRegistry.BOULDER_SNOW;
-                }
-                break;
-            default:
-                break;
+        String terrainName = terrain.name();
+        for (GameConfig.TerrainObjectConfig obj : config.getTerrainObjects()) {
+            Float prob = obj.spawn.get(terrainName);
+            if (prob != null && random.nextFloat() < prob) {
+                return obj.id;
+            }
         }
         return TileObjectRegistry.NONE;
     }

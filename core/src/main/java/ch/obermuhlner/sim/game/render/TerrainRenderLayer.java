@@ -1,6 +1,7 @@
 package ch.obermuhlner.sim.game.render;
 
 import ch.obermuhlner.sim.game.Chunk;
+import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.TerrainType;
 import ch.obermuhlner.sim.game.Tile;
 import ch.obermuhlner.sim.game.World;
@@ -13,11 +14,13 @@ public class TerrainRenderLayer implements RenderLayer {
 
     private final World world;
     private final boolean fogOfWar;
+    private final GameConfig config;
     private Texture tileset;
 
-    public TerrainRenderLayer(World world, boolean fogOfWar) {
+    public TerrainRenderLayer(World world, boolean fogOfWar, GameConfig config) {
         this.world = world;
         this.fogOfWar = fogOfWar;
+        this.config = config;
     }
 
     @Override
@@ -25,7 +28,7 @@ public class TerrainRenderLayer implements RenderLayer {
 
     @Override
     public void loadAssets() {
-        tileset = new Texture("64x64/map.png");
+        tileset = new Texture(config.getTerrainTileset());
     }
 
     @Override
@@ -42,7 +45,7 @@ public class TerrainRenderLayer implements RenderLayer {
                 int tx = offsetCx + lx;
                 int ty = offsetCy + ly;
 
-                int tileIndex = tile.terrain.getTileIndex();
+                int tileIndex = config.getTerrainTileIndex(tile.terrain);
                 int srcX = tileIndex % 4 * TILE_SIZE;
                 int srcY = tileIndex / 4 * TILE_SIZE;
 

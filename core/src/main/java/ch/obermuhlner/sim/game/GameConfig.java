@@ -4,7 +4,10 @@ import com.badlogic.gdx.Gdx;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -71,21 +74,25 @@ public class GameConfig {
         public double stone = 0.65;
     }
 
+    public static class TerrainTypeConfig {
+        public int tile_index = -1;
+    }
+
+    public static class TerrainObjectConfig {
+        public String name = "";
+        public int id = 0;
+        public String image = "";
+        public boolean walkable = false;
+        public Map<String, Float> spawn = new LinkedHashMap<>();
+    }
+
     public static class TerrainConfig {
         public double noise_scale = 0.04;
         public int noise_octaves = 4;
         public double persistence = 0.5;
+        public String tileset = "64x64/map.png";
         public ThresholdConfig thresholds = new ThresholdConfig();
-        public Map<String, Float> spawn_probabilities = new HashMap<String, Float>() {{
-            put("grass_tree", 0.5f);
-            put("grass_tree_small_ratio", 0.2f);
-            put("grass_boulder_large", 0.1f);
-            put("grass_boulder_small", 0.1f);
-            put("forest_boulder_large", 0.2f);
-            put("stone_boulder_small", 0.4f);
-            put("stone_boulder_large", 0.2f);
-            put("snow_boulder", 0.2f);
-        }};
+        public Map<String, TerrainTypeConfig> types = new LinkedHashMap<>();
     }
 
     public static class Root {
@@ -98,6 +105,7 @@ public class GameConfig {
         public Map<String, Map<String, Object>> roads = new HashMap<>();
         public Map<String, Map<String, Object>> buildings = new HashMap<>();
         public Map<String, Map<String, Object>> specializations = new HashMap<>();
+        public Map<String, TerrainObjectConfig> terrain_objects = new LinkedHashMap<>();
     }
 
     private final Root root;
@@ -127,6 +135,7 @@ public class GameConfig {
             bindRoads(r, raw);
             bindBuildings(r, raw);
             bindSpecializations(r, raw);
+            bindTerrainObjects(r, raw);
         } catch (Exception e) {
             Gdx.app.log("GameConfig", "Failed to load application.yml: " + e.getMessage());
         }
@@ -216,6 +225,7 @@ public class GameConfig {
         if (m.containsKey("noise_scale")) t.noise_scale = ((Number) m.get("noise_scale")).doubleValue();
         if (m.containsKey("noise_octaves")) t.noise_octaves = ((Number) m.get("noise_octaves")).intValue();
         if (m.containsKey("persistence")) t.persistence = ((Number) m.get("persistence")).doubleValue();
+        if (m.containsKey("tileset")) t.tileset = (String) m.get("tileset");
         Map<String, Object> thresh = (Map<String, Object>) m.get("thresholds");
         if (thresh != null) {
             if (thresh.containsKey("water"))  t.thresholds.water  = ((Number) thresh.get("water")).doubleValue();
@@ -223,11 +233,40 @@ public class GameConfig {
             if (thresh.containsKey("forest")) t.thresholds.forest = ((Number) thresh.get("forest")).doubleValue();
             if (thresh.containsKey("stone"))  t.thresholds.stone  = ((Number) thresh.get("stone")).doubleValue();
         }
-        Map<String, Object> sp = (Map<String, Object>) m.get("spawn_probabilities");
-        if (sp != null) {
-            for (Map.Entry<String, Object> e : sp.entrySet()) {
-                t.spawn_probabilities.put(e.getKey(), ((Number) e.getValue()).floatValue());
+        Map<String, Object> typesRaw = (Map<String, Object>) m.get("types");
+        if (typesRaw != null) {
+            for (Map.Entry<String, Object> e : typesRaw.entrySet()) {
+                TerrainTypeConfig tc = new TerrainTypeConfig();
+                if (e.getValue() instanceof Map) {
+                    Map<String, Object> tData = (Map<String, Object>) e.getValue();
+                    if (tData.containsKey("tile_index")) tc.tile_index = ((Number) tData.get("tile_index")).intValue();
+                }
+                t.types.put(e.getKey().toUpperCase(), tc);
             }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void bindTerrainObjects(Root r, Map<String, Object> raw) {
+        Object toRaw = raw.get("terrain_objects");
+        if (toRaw == null) return;
+        Map<String, Object> toMap = (Map<String, Object>) toRaw;
+        for (Map.Entry<String, Object> e : toMap.entrySet()) {
+            String name = e.getKey().toUpperCase();
+            if (!(e.getValue() instanceof Map)) continue;
+            Map<String, Object> data = (Map<String, Object>) e.getValue();
+            TerrainObjectConfig toc = new TerrainObjectConfig();
+            toc.name = name;
+            if (data.containsKey("id")) toc.id = ((Number) data.get("id")).intValue();
+            if (data.containsKey("image")) toc.image = (String) data.get("image");
+            if (data.containsKey("walkable")) toc.walkable = (Boolean) data.get("walkable");
+            Map<String, Object> spawnRaw = (Map<String, Object>) data.get("spawn");
+            if (spawnRaw != null) {
+                for (Map.Entry<String, Object> se : spawnRaw.entrySet()) {
+                    toc.spawn.put(se.getKey().toUpperCase(), ((Number) se.getValue()).floatValue());
+                }
+            }
+            r.terrain_objects.put(name, toc);
         }
     }
 
@@ -340,6 +379,13 @@ public class GameConfig {
     public double getNoiseScale() { return root.terrain.noise_scale; }
     public int getNoiseOctaves() { return root.terrain.noise_octaves; }
     public double getPersistence() { return root.terrain.persistence; }
+    public String getTerrainTileset() { return root.terrain.tileset; }
+
+    public int getTerrainTileIndex(TerrainType type) {
+        TerrainTypeConfig tc = root.terrain.types.get(type.name());
+        if (tc != null && tc.tile_index > 0) return tc.tile_index;
+        return type.getTileIndex();
+    }
 
     public double getTerrainThreshold(String terrainName) {
         switch (terrainName.toLowerCase()) {
@@ -351,8 +397,8 @@ public class GameConfig {
         }
     }
 
-    public float getSpawnProbability(String key) {
-        return root.terrain.spawn_probabilities.getOrDefault(key, 0f);
+    public List<TerrainObjectConfig> getTerrainObjects() {
+        return new ArrayList<>(root.terrain_objects.values());
     }
 
     // ---- Road accessors ----

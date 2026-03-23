@@ -100,10 +100,10 @@ public class Main extends ApplicationAdapter implements GameController {
 
     @Override
     public void create() {
-        TileObjectRegistry.init();
-
         gameConfig = new GameConfig();
         tickInterval = gameConfig.getTickInterval();
+
+        TileObjectRegistry.init(gameConfig);
 
         batch = new SpriteBatch();
         uiBatch = new SpriteBatch();
@@ -121,8 +121,8 @@ public class Main extends ApplicationAdapter implements GameController {
         simulation = new SimulationSystem(world, gameConfig);
 
         renderer = new Renderer(world, batch, camera);
-        renderer.addLayer(new TerrainRenderLayer(world, true));
-        renderer.addLayer(new ObjectRenderLayer(world, true));
+        renderer.addLayer(new TerrainRenderLayer(world, true, gameConfig));
+        renderer.addLayer(new ObjectRenderLayer(world, true, gameConfig));
         renderer.addLayer(new RoadRenderLayer(world, true));
         renderer.addLayer(new BuildingRenderLayer(world, true));
         renderer.addLayer(new SettlementRenderLayer(world, true));

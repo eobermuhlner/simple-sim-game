@@ -1,8 +1,8 @@
 package ch.obermuhlner.sim.game.render;
 
 import ch.obermuhlner.sim.game.Chunk;
+import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.Tile;
-import ch.obermuhlner.sim.game.TileObjectRegistry;
 import ch.obermuhlner.sim.game.World;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -16,11 +16,13 @@ public class ObjectRenderLayer implements RenderLayer {
 
     private final World world;
     private final boolean fogOfWar;
+    private final GameConfig config;
     private final Map<Integer, Texture> textures = new HashMap<>();
 
-    public ObjectRenderLayer(World world, boolean fogOfWar) {
+    public ObjectRenderLayer(World world, boolean fogOfWar, GameConfig config) {
         this.world = world;
         this.fogOfWar = fogOfWar;
+        this.config = config;
     }
 
     @Override
@@ -28,11 +30,11 @@ public class ObjectRenderLayer implements RenderLayer {
 
     @Override
     public void loadAssets() {
-        textures.put(TileObjectRegistry.TREE_LARGE, new Texture("64x64/objects/tree-large.png"));
-        textures.put(TileObjectRegistry.TREE_SMALL, new Texture("64x64/objects/tree-small.png"));
-        textures.put(TileObjectRegistry.BOULDER_LARGE, new Texture("64x64/objects/boulder-large.png"));
-        textures.put(TileObjectRegistry.BOULDER_SMALL, new Texture("64x64/objects/boulder-small.png"));
-        textures.put(TileObjectRegistry.BOULDER_SNOW, new Texture("64x64/objects/boulder-large-snow.png"));
+        for (GameConfig.TerrainObjectConfig obj : config.getTerrainObjects()) {
+            if (obj.image != null && !obj.image.isEmpty()) {
+                textures.put(obj.id, new Texture(obj.image));
+            }
+        }
     }
 
     @Override

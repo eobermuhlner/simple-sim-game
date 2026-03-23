@@ -2,6 +2,7 @@ package ch.obermuhlner.sim.game;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 
 public class TileObjectRegistry {
@@ -24,9 +25,9 @@ public class TileObjectRegistry {
 
     public static void init() {
         register(NONE, new SimpleObject(NONE, "None", TileObjectType.NATURAL, t -> false, true));
-        register(TREE_LARGE, new SimpleObject(TREE_LARGE, "Large Tree", TileObjectType.NATURAL, 
+        register(TREE_LARGE, new SimpleObject(TREE_LARGE, "Large Tree", TileObjectType.NATURAL,
             t -> t == TerrainType.GRASS || t == TerrainType.FOREST, false));
-        register(TREE_SMALL, new SimpleObject(TREE_SMALL, "Small Tree", TileObjectType.NATURAL, 
+        register(TREE_SMALL, new SimpleObject(TREE_SMALL, "Small Tree", TileObjectType.NATURAL,
             t -> t == TerrainType.GRASS, false));
         register(BOULDER_LARGE, new SimpleObject(BOULDER_LARGE, "Large Boulder", TileObjectType.NATURAL,
             t -> t == TerrainType.GRASS || t == TerrainType.FOREST, false));
@@ -34,6 +35,16 @@ public class TileObjectRegistry {
             t -> t == TerrainType.GRASS || t == TerrainType.STONE, true));
         register(BOULDER_SNOW, new SimpleObject(BOULDER_SNOW, "Snow Boulder", TileObjectType.NATURAL,
             t -> t == TerrainType.SNOW, true));
+    }
+
+    public static void init(GameConfig config) {
+        OBJECTS.clear();
+        register(NONE, new SimpleObject(NONE, "None", TileObjectType.NATURAL, t -> false, true));
+        for (GameConfig.TerrainObjectConfig obj : config.getTerrainObjects()) {
+            Set<String> validTerrains = obj.spawn.keySet();
+            register(obj.id, new SimpleObject(obj.id, obj.name, TileObjectType.NATURAL,
+                t -> validTerrains.contains(t.name()), obj.walkable));
+        }
     }
 
     private static class SimpleObject implements TileObject {

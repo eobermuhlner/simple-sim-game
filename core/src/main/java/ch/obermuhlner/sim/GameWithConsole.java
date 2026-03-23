@@ -52,20 +52,21 @@ public class GameWithConsole extends ApplicationAdapter implements GameControlle
 
     @Override
     public void create() {
-        TileObjectRegistry.init();
-        
+        GameConfig gameConfig = new GameConfig();
+        TileObjectRegistry.init(gameConfig);
+
         batch = new SpriteBatch();
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.position.set(TILE_SIZE / 2f, TILE_SIZE / 2f, 0);
 
-        world = new World(CHUNK_SIZE, new GameConfig());
+        world = new World(CHUNK_SIZE, gameConfig);
         world.createStarterSettlement();
         debugger = new GameDebugger(world);
-        
+
         renderer = new Renderer(world, batch, camera);
-        renderer.addLayer(new TerrainRenderLayer(world, true));
-        renderer.addLayer(new ObjectRenderLayer(world, true));
+        renderer.addLayer(new TerrainRenderLayer(world, true, gameConfig));
+        renderer.addLayer(new ObjectRenderLayer(world, true, gameConfig));
         renderer.addLayer(new BuildingRenderLayer(world, true));
         renderer.addLayer(new SettlementRenderLayer(world, true));
         renderer.addLayer(new FogOfWarRenderLayer(world));
