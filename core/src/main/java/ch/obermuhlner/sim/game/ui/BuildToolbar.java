@@ -183,7 +183,12 @@ public class BuildToolbar {
                 batch.draw(tool.iconTexture, iconX, iconY, ICON_SIZE, ICON_SIZE);
             }
 
-            font.draw(batch, tool.label, bx + 4, by + 12);
+            if (tool.costLabel != null && !tool.costLabel.isEmpty()) {
+                font.draw(batch, tool.label,      bx + 4, by + 24);
+                font.draw(batch, tool.costLabel,  bx + 4, by + 12);
+            } else {
+                font.draw(batch, tool.label, bx + 4, by + 12);
+            }
         }
     }
 
@@ -200,6 +205,7 @@ public class BuildToolbar {
     public static class ToolButton {
         public int id;
         public String label;
+        public String costLabel = "";
         public Texture iconTexture;
         public Texture normalTexture;
         public Texture selectedTexture;

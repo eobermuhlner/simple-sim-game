@@ -259,6 +259,12 @@ public class Main extends ApplicationAdapter implements GameController {
         updateAvailableTools();
     }
 
+    private String formatCost(float cost) {
+        if (cost <= 0) return "";
+        if (cost == (int) cost) return (int) cost + "g";
+        return String.format("%.1fg", cost);
+    }
+
     private float getDestroyCost(int tx, int ty) {
         if (!world.isRevealed(tx, ty)) return 0f;
         Tile tile = world.getTile(tx, ty);
@@ -351,11 +357,15 @@ public class Main extends ApplicationAdapter implements GameController {
             }
 
             if (tile.terrain.isTraversable() && !tile.hasObject()) {
-                availableTools.add(new BuildToolbar.ToolButton(TOOL_BUILD_ROAD, "Build Road", roadIcon));
+                BuildToolbar.ToolButton roadBtn = new BuildToolbar.ToolButton(TOOL_BUILD_ROAD, "Build Road", roadIcon);
+                roadBtn.costLabel = formatCost(gameConfig.getRoadCost(RoadType.DIRT));
+                availableTools.add(roadBtn);
             }
 
             if (tile.hasObject() || tile.hasBuilding() || tile.roadType != 0) {
-                availableTools.add(new BuildToolbar.ToolButton(TOOL_DESTROY, "Destroy", destroyIcon));
+                BuildToolbar.ToolButton destroyBtn = new BuildToolbar.ToolButton(TOOL_DESTROY, "Destroy", destroyIcon);
+                destroyBtn.costLabel = formatCost(getDestroyCost(selectedTileX, selectedTileY));
+                availableTools.add(destroyBtn);
             }
 
             GameConfig.ExplorationRewardConfig collectible = getCollectibleReward(selectedTileX, selectedTileY);
@@ -390,7 +400,9 @@ public class Main extends ApplicationAdapter implements GameController {
 
     private void addBuildingButton(int toolId, BuildingType type) {
         if (availableTools.size() < 6) {
-            availableTools.add(new BuildToolbar.ToolButton(toolId, type.getDisplayName(), getBuildingTexture(type)));
+            BuildToolbar.ToolButton btn = new BuildToolbar.ToolButton(toolId, type.getDisplayName(), getBuildingTexture(type));
+            btn.costLabel = formatCost(gameConfig.getBuildingCost(type));
+            availableTools.add(btn);
         }
     }
 
