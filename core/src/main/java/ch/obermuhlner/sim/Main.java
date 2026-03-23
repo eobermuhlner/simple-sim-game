@@ -352,17 +352,17 @@ public class Main extends ApplicationAdapter implements GameController {
         if (!world.isRevealed(tileX, tileY)) {
             TerrainType terrain = world.getTerrain(tileX, tileY);
             if (terrain.isWater()) {
-                // Water tile adjacent to a revealed land tile can always be revealed (coastal discovery),
-                // regardless of whether it is shallow or deep sea.
-                // Exploring further into the sea (only water neighbors) requires a nearby harbor,
-                // and deep sea additionally requires the sea_exploration tech.
                 boolean adjacentToLand = world.hasRevealedLandNeighbor(tileX, tileY);
+                boolean adjacentToShallowSea = world.hasRevealedShallowSeaNeighbor(tileX, tileY);
+                boolean hasNearby = world.hasRevealedNeighbor(tileX, tileY);
+                boolean hasHarbor = hasNearbyHarbor(tileX, tileY);
+
                 if (adjacentToLand) {
                     world.reveal(tileX, tileY);
-                } else if (world.hasRevealedNeighbor(tileX, tileY) && hasNearbyHarbor(tileX, tileY)) {
+                } else if (hasNearby && hasHarbor) {
                     boolean deepSeaAllowed = terrain == TerrainType.DEEP_SEA
-                        && world.techTree.isAllowed("sea_exploration", "DEEP_SEA", gameConfig);
-                    if (terrain == TerrainType.SHALLOW_SEA || deepSeaAllowed) {
+                        && (adjacentToShallowSea || world.techTree.isAllowed("sea_exploration", "DEEP_SEA", gameConfig));
+                    if (terrain == TerrainType.SHALLOW_SEA || (terrain == TerrainType.DEEP_SEA && deepSeaAllowed)) {
                         world.reveal(tileX, tileY);
                     }
                 }

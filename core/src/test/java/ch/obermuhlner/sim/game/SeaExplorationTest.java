@@ -182,6 +182,34 @@ public class SeaExplorationTest {
         assertFalse("Land tile is not coastal water", world.isCoastalWater(5, 5));
     }
 
+    // ---- World.hasRevealedShallowSeaNeighbor() ----
+
+    @Test
+    public void testHasRevealedShallowSeaNeighborTrueWhenRevealed() {
+        makeGrass(5, 5);
+        setTerrain(6, 5, TerrainType.SHALLOW_SEA);
+        world.reveal(6, 5);
+
+        assertTrue("Should detect revealed shallow sea neighbor", world.hasRevealedShallowSeaNeighbor(7, 5));
+    }
+
+    @Test
+    public void testHasRevealedShallowSeaNeighborFalseWhenNotRevealed() {
+        makeGrass(5, 5);
+        setTerrain(6, 5, TerrainType.SHALLOW_SEA);
+
+        assertFalse("Unrevealed shallow sea should not count", world.hasRevealedShallowSeaNeighbor(7, 5));
+    }
+
+    @Test
+    public void testHasRevealedShallowSeaNeighborFalseForDeepSea() {
+        makeGrass(5, 5);
+        setTerrain(6, 5, TerrainType.DEEP_SEA);
+        world.reveal(6, 5);
+
+        assertFalse("Deep sea neighbor should not count as shallow sea", world.hasRevealedShallowSeaNeighbor(7, 5));
+    }
+
     // ---- World.settlementHasHarbor() ----
 
     @Test

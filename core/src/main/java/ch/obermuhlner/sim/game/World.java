@@ -210,6 +210,18 @@ public class World {
         return false;
     }
 
+    /** Returns true if any orthogonal neighbor is revealed SHALLOW_SEA. */
+    public boolean hasRevealedShallowSeaNeighbor(int tx, int ty) {
+        int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        for (int[] dir : dirs) {
+            int nx = tx + dir[0], ny = ty + dir[1];
+            if (isRevealed(nx, ny) && getTerrain(nx, ny) == TerrainType.SHALLOW_SEA) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public int[] getRevealedNeighbors(int tx, int ty) {
         IntArray neighbors = new IntArray();
         int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
