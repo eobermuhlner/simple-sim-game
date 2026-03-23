@@ -834,16 +834,17 @@ These formulas determine pacing, balance, and player experience. Test and iterat
 - [ ] Export backlog pressure system — deferred to Phase 9
 
 ### Phase 6: Exploration Rewards
-- [ ] Resource cache spawning
-- [ ] Terrain-based bonus tiles
-- [ ] Tech-gated reward visibility
-- [ ] Reward collection UI
+- [x] Resource cache spawning
+- [x] Terrain-based bonus tiles
+- [ ] Tech-gated reward visibility (collect action is level-gated; rewards are always visible once revealed — rendering not gated)
+- [x] Reward collection UI
+- [ ] Trade Crossroads reward (caravan speed bonus — described in §4.1 but not yet implemented)
 
-### Phase 7: Tech Tree
-- [ ] Research queue system
-- [ ] General tech branch
-- [ ] Specialization tech branches
-- [ ] Discovery-based UI with hints
+### Phase 7: Tech Tree (Complete)
+- [x] Research queue system
+- [x] General tech branch
+- [x] Specialization tech branches
+- [x] Discovery-based UI with hints
 
 ### Phase 8: Sea Exploration
 - [ ] Harbor building

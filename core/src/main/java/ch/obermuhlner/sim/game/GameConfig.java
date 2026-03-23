@@ -99,6 +99,7 @@ public class GameConfig {
         public boolean walkable = false;
         public String reward_type = "ONE_TIME"; // ONE_TIME or BONUS
         public String required_level = "VILLAGE";
+        public String required_unlock = ""; // if non-empty, isAllowed("rewards", required_unlock) must be true
         public Map<String, Float> rewards = new LinkedHashMap<>();          // resource -> one-time amount
         public Map<String, Float> bonus_production = new LinkedHashMap<>();  // resource -> per-tick bonus
         public Map<String, Float> spawn = new LinkedHashMap<>();             // terrain -> spawn probability
@@ -116,6 +117,23 @@ public class GameConfig {
         public Map<String, TerrainTypeConfig> types = new LinkedHashMap<>();
     }
 
+    public static class TechConfig {
+        public String id = "";
+        public String name = "";
+        public String branch = "GENERAL"; // GENERAL, LOGGING_CAMP, MINING_TOWN, FARMING_VILLAGE, TRADE_HUB
+        public float cost = 100f;
+        public String required_tech = "";
+        public String required_level = "VILLAGE";
+        public Map<String, Float> effects = new LinkedHashMap<>();
+        public Map<String, List<String>> allow = new LinkedHashMap<>();
+        public Map<String, List<String>> deny  = new LinkedHashMap<>();
+    }
+
+    public static class TechTreeConfig {
+        public float research_gold_per_tick = 2.0f;
+        public Map<String, TechConfig> techs = new LinkedHashMap<>();
+    }
+
     public static class Root {
         public WorldConfig world = new WorldConfig();
         public SimulationConfig simulation = new SimulationConfig();
@@ -129,6 +147,7 @@ public class GameConfig {
         public Map<String, Map<String, Object>> specializations = new HashMap<>();
         public Map<String, TerrainObjectConfig> terrain_objects = new LinkedHashMap<>();
         public Map<String, ExplorationRewardConfig> exploration_rewards = new LinkedHashMap<>();
+        public TechTreeConfig tech_tree = new TechTreeConfig();
     }
 
     private final Root root;
@@ -161,6 +180,7 @@ public class GameConfig {
             bindSpecializations(r, raw);
             bindTerrainObjects(r, raw);
             bindExplorationRewards(r, raw);
+            bindTechTree(r, raw);
         } catch (Exception e) {
             Gdx.app.log("GameConfig", "Failed to load application.yml: " + e.getMessage());
         }
@@ -325,6 +345,7 @@ public class GameConfig {
             if (data.containsKey("walkable")) erc.walkable = (Boolean) data.get("walkable");
             if (data.containsKey("reward_type")) erc.reward_type = ((String) data.get("reward_type")).toUpperCase();
             if (data.containsKey("required_level")) erc.required_level = ((String) data.get("required_level")).toUpperCase();
+            if (data.containsKey("required_unlock")) erc.required_unlock = ((String) data.get("required_unlock")).toUpperCase();
             Map<String, Object> rewardsRaw = (Map<String, Object>) data.get("rewards");
             if (rewardsRaw != null) {
                 for (Map.Entry<String, Object> re : rewardsRaw.entrySet()) {
@@ -396,6 +417,54 @@ public class GameConfig {
             if (val instanceof Map) {
                 r.specializations.put(key, (Map<String, Object>) val);
             }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void bindTechTree(Root r, Map<String, Object> raw) {
+        Object ttRaw = raw.get("tech_tree");
+        if (ttRaw == null) return;
+        if (!(ttRaw instanceof Map)) return;
+        Map<String, Object> ttMap = (Map<String, Object>) ttRaw;
+        if (ttMap.containsKey("research_gold_per_tick")) {
+            r.tech_tree.research_gold_per_tick = ((Number) ttMap.get("research_gold_per_tick")).floatValue();
+        }
+        Object techsRaw = ttMap.get("techs");
+        if (!(techsRaw instanceof Map)) return;
+        Map<String, Object> techsMap = (Map<String, Object>) techsRaw;
+        for (Map.Entry<String, Object> e : techsMap.entrySet()) {
+            String techId = e.getKey().toUpperCase();
+            if (!(e.getValue() instanceof Map)) continue;
+            Map<String, Object> data = (Map<String, Object>) e.getValue();
+            TechConfig tc = new TechConfig();
+            tc.id = techId;
+            if (data.containsKey("name")) tc.name = (String) data.get("name");
+            if (data.containsKey("branch")) tc.branch = ((String) data.get("branch")).toUpperCase();
+            if (data.containsKey("cost")) tc.cost = ((Number) data.get("cost")).floatValue();
+            if (data.containsKey("required_tech")) tc.required_tech = ((String) data.get("required_tech")).toUpperCase();
+            if (data.containsKey("required_level")) tc.required_level = ((String) data.get("required_level")).toUpperCase();
+            Map<String, Object> effectsRaw = (Map<String, Object>) data.get("effects");
+            if (effectsRaw != null) {
+                for (Map.Entry<String, Object> ef : effectsRaw.entrySet()) {
+                    tc.effects.put(ef.getKey(), ((Number) ef.getValue()).floatValue());
+                }
+            }
+            for (String key : new String[]{"allow", "deny"}) {
+                Object raw2 = data.get(key);
+                if (!(raw2 instanceof Map)) continue;
+                Map<String, Object> catMap = (Map<String, Object>) raw2;
+                Map<String, List<String>> target = "allow".equals(key) ? tc.allow : tc.deny;
+                for (Map.Entry<String, Object> ue : catMap.entrySet()) {
+                    String cat = ue.getKey().toLowerCase();
+                    List<String> names = new ArrayList<>();
+                    if (ue.getValue() instanceof List) {
+                        for (Object t : (List<Object>) ue.getValue())
+                            if (t instanceof String) names.add(((String) t).toUpperCase());
+                    }
+                    target.put(cat, names);
+                }
+            }
+            r.tech_tree.techs.put(techId, tc);
         }
     }
 
@@ -606,5 +675,17 @@ public class GameConfig {
             return ((Number) data.get("goods")).floatValue();
         }
         return spec.goodsMultiplier;
+    }
+
+    // ---- Tech tree accessors ----
+
+    public float getResearchGoldPerTick() { return root.tech_tree.research_gold_per_tick; }
+
+    public TechConfig getTech(String id) {
+        return root.tech_tree.techs.get(id.toUpperCase());
+    }
+
+    public List<TechConfig> getAllTechs() {
+        return new ArrayList<>(root.tech_tree.techs.values());
     }
 }

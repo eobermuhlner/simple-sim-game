@@ -68,9 +68,14 @@ public class Main extends ApplicationAdapter implements GameController {
     private static final int TOOL_RESPEC_MINING  = 31;
     private static final int TOOL_RESPEC_FARMING = 32;
     private static final int TOOL_RESPEC_TRADE   = 33;
-    private static final int TOOL_BUILD_ROAD      = 50;
-    private static final int TOOL_DESTROY         = 51;
+    private static final int TOOL_BUILD_ROAD             = 50;
+    private static final int TOOL_DESTROY                = 51;
+    private static final int TOOL_BUILD_ROAD_STONE       = 52;
+    private static final int TOOL_BUILD_ROAD_COBBLESTONE = 53;
+    private static final int TOOL_BUILD_ROAD_ROMAN       = 54;
     private static final int TOOL_COLLECT_CACHE   = 60;
+    private static final int TOOL_RESEARCH_MODE   = 70;
+    private static final int TOOL_RESEARCH_BASE   = 71; // 71..86 — up to 16 research options
 
     private float tickInterval;
 
@@ -98,9 +103,12 @@ public class Main extends ApplicationAdapter implements GameController {
     private Texture settlementTexture;
     private boolean tileSelected = false;
     private boolean respecMode = false;
+    private boolean researchMode = false;
+    private List<GameConfig.TechConfig> currentResearchOptions = new ArrayList<>();
     private Texture roadIcon;
     private Texture destroyIcon;
     private Texture collectCacheIcon;
+    private Texture researchIcon;
     private GameConfig gameConfig;
 
     @Override
@@ -135,9 +143,12 @@ public class Main extends ApplicationAdapter implements GameController {
         renderer.addLayer(new CaravanRenderLayer(world));
         renderer.addLayer(new FogOfWarRenderLayer(world));
 
+        world.techTree.load(Gdx.files.local("data/techtree.dat"));
+
         roadIcon = new Texture(Gdx.files.internal("64x64/single-tiles/road-dirt-ns.png"));
         destroyIcon = createDestroyIcon();
         collectCacheIcon = createCollectCacheIcon();
+        researchIcon = createResearchIcon();
 
         settlementPanel = new SettlementInfoPanel();
         buildToolbar = new BuildToolbar();
@@ -234,6 +245,27 @@ public class Main extends ApplicationAdapter implements GameController {
         return t;
     }
 
+    private Texture createResearchIcon() {
+        int size = 48;
+        Pixmap p = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+        p.setColor(new Color(0.05f, 0.05f, 0.25f, 1f));
+        p.fill();
+        p.setColor(new Color(0.4f, 0.7f, 1.0f, 1f));
+        // Draw a simple flask/beaker shape
+        int cx = size / 2;
+        // Top rim
+        p.fillRectangle(cx - 7, size - 8, 14, 4);
+        // Neck
+        p.fillRectangle(cx - 4, size - 24, 8, 16);
+        // Bulb (lower circle)
+        p.fillCircle(cx, 16, 12);
+        p.setColor(new Color(0.2f, 0.4f, 0.8f, 1f));
+        p.drawCircle(cx, 16, 12);
+        Texture t = new Texture(p);
+        p.dispose();
+        return t;
+    }
+
     private void destroyTile(int tx, int ty) {
         if (!world.isRevealed(tx, ty)) return;
         Tile tile = world.getTile(tx, ty);
@@ -313,6 +345,7 @@ public class Main extends ApplicationAdapter implements GameController {
         selectedTileY = tileY;
         tileSelected = true;
         respecMode = false;
+        researchMode = false;
 
         if (!world.isRevealed(tileX, tileY)) {
             if (world.hasRevealedNeighbor(tileX, tileY)) {
@@ -345,6 +378,10 @@ public class Main extends ApplicationAdapter implements GameController {
             // Re-specialization mode — choose new specialization (costs one level)
             addSpecButtons(TOOL_RESPEC_LOGGING, TOOL_RESPEC_MINING, TOOL_RESPEC_FARMING, TOOL_RESPEC_TRADE);
 
+        } else if (researchMode) {
+            // Research mode — show available and locked (with hints) techs
+            addResearchButtons();
+
         } else {
             availableTools.add(new BuildToolbar.ToolButton(TOOL_NEW_SETTLEMENT, "New Settlement", null));
 
@@ -356,10 +393,28 @@ public class Main extends ApplicationAdapter implements GameController {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_RESPEC_MODE, "Re-spec", null));
             }
 
+            // Research button — show if any settlement exists
+            if (!world.getSettlements().isEmpty()) {
+                BuildToolbar.ToolButton researchBtn = new BuildToolbar.ToolButton(TOOL_RESEARCH_MODE, "Research", researchIcon);
+                if (world.techTree.hasActiveResearch()) {
+                    GameConfig.TechConfig active = gameConfig.getTech(world.techTree.getActiveResearchId());
+                    if (active != null) {
+                        int pct = (int)(world.techTree.getResearchProgress() / active.cost * 100);
+                        researchBtn.costLabel = pct + "%";
+                    }
+                }
+                availableTools.add(researchBtn);
+            }
+
             if (tile.terrain.isTraversable() && !tile.hasObject()) {
-                BuildToolbar.ToolButton roadBtn = new BuildToolbar.ToolButton(TOOL_BUILD_ROAD, "Build Road", roadIcon);
-                roadBtn.costLabel = formatCost(gameConfig.getRoadCost(RoadType.DIRT));
-                availableTools.add(roadBtn);
+                if (isToolVisible("roads", "DIRT"))
+                    addRoadButton(TOOL_BUILD_ROAD, "Dirt Road", RoadType.DIRT, roadIcon);
+                if (isToolAvailable("roads", "STONE"))
+                    addRoadButton(TOOL_BUILD_ROAD_STONE, "Stone Road", RoadType.STONE, roadIcon);
+                if (isToolAvailable("roads", "COBBLESTONE"))
+                    addRoadButton(TOOL_BUILD_ROAD_COBBLESTONE, "Cobblestone", RoadType.COBBLESTONE, roadIcon);
+                if (isToolAvailable("roads", "ROMAN"))
+                    addRoadButton(TOOL_BUILD_ROAD_ROMAN, "Roman Road", RoadType.ROMAN, roadIcon);
             }
 
             if (tile.hasObject() || tile.hasBuilding() || tile.roadType != 0) {
@@ -391,11 +446,81 @@ public class Main extends ApplicationAdapter implements GameController {
         }
     }
 
+    private void addResearchButtons() {
+        currentResearchOptions.clear();
+        SettlementLevel maxLevel = getMaxSettlementLevel();
+        List<Settlement> settlements = world.getSettlements();
+
+        // Collect available (researchable) techs first
+        List<GameConfig.TechConfig> available = new ArrayList<>();
+        List<GameConfig.TechConfig> locked = new ArrayList<>();
+        for (GameConfig.TechConfig tech : gameConfig.getAllTechs()) {
+            if (world.techTree.isResearched(tech.id)) continue;
+            if (world.techTree.canResearch(tech, settlements, maxLevel)) {
+                available.add(tech);
+            } else {
+                locked.add(tech);
+            }
+        }
+
+        int slot = 0;
+        // Show available techs first (up to 4 slots)
+        for (GameConfig.TechConfig tech : available) {
+            if (slot >= 4) break;
+            BuildToolbar.ToolButton btn = new BuildToolbar.ToolButton(TOOL_RESEARCH_BASE + slot, tech.name, researchIcon);
+            btn.costLabel = formatCost(tech.cost);
+            if (tech.id.equals(world.techTree.getActiveResearchId())) {
+                int pct = (int)(world.techTree.getResearchProgress() / tech.cost * 100);
+                btn.costLabel = pct + "%";
+            }
+            availableTools.add(btn);
+            currentResearchOptions.add(tech);
+            slot++;
+        }
+        // Then show locked techs with hints (remaining slots up to 6 total)
+        for (GameConfig.TechConfig tech : locked) {
+            if (slot >= 6) break;
+            String hint = world.techTree.getLockHint(tech, settlements, maxLevel);
+            BuildToolbar.ToolButton btn = new BuildToolbar.ToolButton(TOOL_RESEARCH_BASE + slot, tech.name, null);
+            btn.costLabel = hint != null ? hint : "Locked";
+            availableTools.add(btn);
+            currentResearchOptions.add(null); // null means locked — not actionable
+            slot++;
+        }
+    }
+
     private void addSpecButtons(int logId, int minId, int farId, int tradeId) {
         availableTools.add(new BuildToolbar.ToolButton(logId,   "Logging Camp",   specializationIcons.get(Specialization.LOGGING_CAMP)));
         availableTools.add(new BuildToolbar.ToolButton(minId,   "Mining Town",    specializationIcons.get(Specialization.MINING_TOWN)));
         availableTools.add(new BuildToolbar.ToolButton(farId,   "Farm Village",   specializationIcons.get(Specialization.FARMING_VILLAGE)));
         availableTools.add(new BuildToolbar.ToolButton(tradeId, "Trade Hub",      specializationIcons.get(Specialization.TRADE_HUB)));
+    }
+
+    private void placeRoadWithCost(int tx, int ty, RoadType type) {
+        float cost = gameConfig.getRoadCost(type);
+        Settlement payer = getClosestSettlement(tx, ty);
+        if (cost > 0 && (payer == null || payer.gold < cost)) return;
+        if (world.placeRoad(tx, ty, type) && cost > 0 && payer != null) {
+            payer.gold -= cost;
+        }
+    }
+
+    /** Adds a road button unconditionally (caller checks visibility). */
+    private void addRoadButton(int toolId, String label, RoadType type, Texture icon) {
+        BuildToolbar.ToolButton btn = new BuildToolbar.ToolButton(toolId, label, icon);
+        btn.costLabel = formatCost(gameConfig.getRoadCost(type));
+        availableTools.add(btn);
+    }
+
+    /** True if the item is allowed by a researched tech and not denied. For tech-gated items. */
+    private boolean isToolAvailable(String category, String name) {
+        return world.techTree.isAllowed(category, name, gameConfig)
+            && !world.techTree.isDenied(category, name, gameConfig);
+    }
+
+    /** True if the item is NOT denied. For always-on items (no allow required). */
+    private boolean isToolVisible(String category, String name) {
+        return !world.techTree.isDenied(category, name, gameConfig);
     }
 
     private void addBuildingButton(int toolId, BuildingType type) {
@@ -441,6 +566,9 @@ public class Main extends ApplicationAdapter implements GameController {
         GameConfig.ExplorationRewardConfig reward = gameConfig.getExplorationReward(tile.objectId);
         if (reward == null || !reward.isOneTime()) return null;
         SettlementLevel maxLevel = getMaxSettlementLevel();
+        if (!reward.required_unlock.isEmpty()
+                && !world.techTree.isAllowed("rewards", reward.required_unlock, gameConfig))
+            return null;
         try {
             SettlementLevel required = SettlementLevel.valueOf(reward.required_level);
             return maxLevel.ordinal() >= required.ordinal() ? reward : null;
@@ -527,15 +655,18 @@ public class Main extends ApplicationAdapter implements GameController {
             case TOOL_RESPEC_MODE:
                 respecMode = true;
                 break;
-            case TOOL_BUILD_ROAD: {
-                float roadCost = gameConfig.getRoadCost(RoadType.DIRT);
-                Settlement payer = getClosestSettlement(selectedTileX, selectedTileY);
-                if (payer != null && payer.gold < roadCost) break;
-                if (world.placeRoad(selectedTileX, selectedTileY, RoadType.DIRT) && payer != null) {
-                    payer.gold -= roadCost;
-                }
+            case TOOL_BUILD_ROAD:
+                placeRoadWithCost(selectedTileX, selectedTileY, RoadType.DIRT);
                 break;
-            }
+            case TOOL_BUILD_ROAD_STONE:
+                placeRoadWithCost(selectedTileX, selectedTileY, RoadType.STONE);
+                break;
+            case TOOL_BUILD_ROAD_COBBLESTONE:
+                placeRoadWithCost(selectedTileX, selectedTileY, RoadType.COBBLESTONE);
+                break;
+            case TOOL_BUILD_ROAD_ROMAN:
+                placeRoadWithCost(selectedTileX, selectedTileY, RoadType.ROMAN);
+                break;
             case TOOL_DESTROY: {
                 float destroyCost = getDestroyCost(selectedTileX, selectedTileY);
                 Settlement payer = getClosestSettlement(selectedTileX, selectedTileY);
@@ -546,6 +677,9 @@ public class Main extends ApplicationAdapter implements GameController {
             }
             case TOOL_COLLECT_CACHE:
                 collectCache(selectedTileX, selectedTileY);
+                break;
+            case TOOL_RESEARCH_MODE:
+                researchMode = true;
                 break;
             // Re-specialization choice
             case TOOL_RESPEC_LOGGING:
@@ -559,6 +693,18 @@ public class Main extends ApplicationAdapter implements GameController {
                 break;
             case TOOL_RESPEC_TRADE:
                 respecializeSettlement(selectedTileX, selectedTileY, Specialization.TRADE_HUB);
+                break;
+            default:
+                if (toolId >= TOOL_RESEARCH_BASE && toolId < TOOL_RESEARCH_BASE + 16) {
+                    int idx = toolId - TOOL_RESEARCH_BASE;
+                    if (idx < currentResearchOptions.size()) {
+                        GameConfig.TechConfig tech = currentResearchOptions.get(idx);
+                        if (tech != null) {
+                            world.techTree.startResearch(tech.id);
+                        }
+                    }
+                    researchMode = false;
+                }
                 break;
         }
 
@@ -745,13 +891,22 @@ public class Main extends ApplicationAdapter implements GameController {
         hudFont.draw(b, String.format("Wood:  %5.0f   Stone: %5.0f", totalWood,  totalStone), x, y); y -= lineH;
         hudFont.draw(b, String.format("Food:  %5.0f   Goods: %5.0f", totalFood,  totalGoods), x, y); y -= lineH;
         hudFont.draw(b, String.format("Gold:  %5.0f   Routes: %d  Caravans: %d",
-            totalGold, routes, caravans), x, y);
+            totalGold, routes, caravans), x, y); y -= lineH;
+        if (world.techTree.hasActiveResearch()) {
+            GameConfig.TechConfig active = gameConfig.getTech(world.techTree.getActiveResearchId());
+            if (active != null) {
+                int pct = (int)(world.techTree.getResearchProgress() / active.cost * 100);
+                hudFont.setColor(new Color(0.4f, 0.8f, 1f, 1f));
+                hudFont.draw(b, String.format("Research: %s  %d%%", active.name, pct), x, y);
+            }
+        }
         hudFont.setColor(Color.WHITE);
     }
 
     @Override
     public void dispose() {
         world.saveSettlements(Gdx.files.local("data/settlements.dat"));
+        world.techTree.save(Gdx.files.local("data/techtree.dat"));
         world.saveDirtyChunks();
         renderer.dispose();
         settlementPanel.dispose();
@@ -769,6 +924,7 @@ public class Main extends ApplicationAdapter implements GameController {
         if (roadIcon != null) roadIcon.dispose();
         if (destroyIcon != null) destroyIcon.dispose();
         if (collectCacheIcon != null) collectCacheIcon.dispose();
+        if (researchIcon != null) researchIcon.dispose();
         if (hudFont != null) hudFont.dispose();
     }
 

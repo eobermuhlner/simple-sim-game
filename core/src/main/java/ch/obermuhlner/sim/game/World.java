@@ -30,6 +30,8 @@ public class World {
     private final GameConfig config;
     private boolean headless = false;
 
+    public final TechTree techTree = new TechTree();
+
     public World(int chunkSize, GameConfig config) {
         this.chunkSize = chunkSize;
         this.config = config;

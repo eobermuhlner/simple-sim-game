@@ -385,3 +385,127 @@ buildings:
   CHICKEN_COOP:
     cost: 8
     population_capacity: 2
+
+tech_tree:
+  research_gold_per_tick: 2.0
+  techs:
+    BASIC_ROADS:
+      name: Basic Roads
+      branch: GENERAL
+      cost: 50.0
+      required_tech: ""
+      required_level: VILLAGE
+      allow:
+        roads: [STONE]
+    EXPLORATION:
+      name: Exploration
+      branch: GENERAL
+      cost: 75.0
+      required_tech: ""
+      required_level: VILLAGE
+      effects:
+        reveal_radius_bonus: 1.0
+    STORAGE_EXPANSION:
+      name: Storage Expansion
+      branch: GENERAL
+      cost: 100.0
+      required_tech: ""
+      required_level: VILLAGE
+      effects:
+        storage_multiplier: 0.5
+    FORESTRY:
+      name: Forestry
+      branch: LOGGING_CAMP
+      cost: 100.0
+      required_tech: ""
+      required_level: TOWN
+      effects:
+        wood_multiplier: 0.25
+    ADVANCED_WOODWORK:
+      name: Advanced Woodwork
+      branch: LOGGING_CAMP
+      cost: 150.0
+      required_tech: FORESTRY
+      required_level: TOWN
+      effects:
+        wood_multiplier: 0.25
+    TREE_FARMING:
+      name: Tree Farming
+      branch: LOGGING_CAMP
+      cost: 200.0
+      required_tech: ADVANCED_WOODWORK
+      required_level: CITY
+      effects:
+        wood_multiplier: 0.5
+    DEEP_MINING:
+      name: Deep Mining
+      branch: MINING_TOWN
+      cost: 100.0
+      required_tech: ""
+      required_level: TOWN
+      effects:
+        stone_multiplier: 0.25
+    STONE_PROCESSING:
+      name: Stone Processing
+      branch: MINING_TOWN
+      cost: 150.0
+      required_tech: DEEP_MINING
+      required_level: TOWN
+      effects:
+        stone_multiplier: 0.25
+    QUARRY_UPGRADES:
+      name: Quarry Upgrades
+      branch: MINING_TOWN
+      cost: 200.0
+      required_tech: STONE_PROCESSING
+      required_level: CITY
+      effects:
+        stone_multiplier: 0.5
+    IRRIGATION:
+      name: Irrigation
+      branch: FARMING_VILLAGE
+      cost: 100.0
+      required_tech: ""
+      required_level: TOWN
+      effects:
+        food_multiplier: 0.25
+    CROP_VARIETY:
+      name: Crop Variety
+      branch: FARMING_VILLAGE
+      cost: 150.0
+      required_tech: IRRIGATION
+      required_level: TOWN
+      effects:
+        food_multiplier: 0.25
+    FOOD_STORAGE:
+      name: Food Storage
+      branch: FARMING_VILLAGE
+      cost: 200.0
+      required_tech: CROP_VARIETY
+      required_level: CITY
+      effects:
+        food_multiplier: 0.5
+    CARAVAN_IMPROVEMENTS:
+      name: Caravan Improvements
+      branch: TRADE_HUB
+      cost: 100.0
+      required_tech: ""
+      required_level: TOWN
+      effects:
+        caravan_speed_bonus: 0.25
+    COBBLESTONE_ROADS:
+      name: Cobblestone Roads
+      branch: TRADE_HUB
+      cost: 150.0
+      required_tech: CARAVAN_IMPROVEMENTS
+      required_level: TOWN
+      allow:
+        roads: [COBBLESTONE]
+    ROMAN_ROADS:
+      name: Roman Roads
+      branch: TRADE_HUB
+      cost: 250.0
+      required_tech: COBBLESTONE_ROADS
+      required_level: CITY
+      allow:
+        roads: [ROMAN]

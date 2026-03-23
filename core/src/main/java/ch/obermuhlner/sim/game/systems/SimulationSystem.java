@@ -41,6 +41,7 @@ public class SimulationSystem {
             world.routesDirty = false;
         }
         tickSpawnTimers(deltaTime, settlements);
+        tickResearch(settlements);
         tickCount++;
     }
 
@@ -83,6 +84,11 @@ public class SimulationSystem {
             rawWood  *= config.getSpecWoodMultiplier(s.specialization);
             rawStone *= config.getSpecStoneMultiplier(s.specialization);
             rawFood  *= config.getSpecFoodMultiplier(s.specialization);
+
+            // Apply tech tree production bonuses
+            rawWood  *= (1f + world.techTree.getEffectTotal("wood_multiplier",  config));
+            rawStone *= (1f + world.techTree.getEffectTotal("stone_multiplier", config));
+            rawFood  *= (1f + world.techTree.getEffectTotal("food_multiplier",  config));
             float rawGoods = s.population * config.getGoodsDemandMultiplier() * config.getSpecGoodsMultiplier(s.specialization);
 
             float smoothingAlpha = config.getSmoothingAlpha();
@@ -333,6 +339,20 @@ public class SimulationSystem {
         if (roadType == 0) return baseSpeed;
         RoadType rt = RoadType.fromId(roadType);
         return rt != null ? baseSpeed * config.getRoadSpeedMultiplier(rt) : baseSpeed;
+    }
+
+    // ---- Research ----
+
+    private void tickResearch(List<Settlement> settlements) {
+        if (!world.techTree.hasActiveResearch()) return;
+        float ratePerTick = config.getResearchGoldPerTick();
+        Settlement richest = null;
+        for (Settlement s : settlements) {
+            if (richest == null || s.gold > richest.gold) richest = s;
+        }
+        if (richest == null || richest.gold < ratePerTick) return;
+        float consumed = world.techTree.addProgress(ratePerTick, config);
+        richest.gold -= consumed;
     }
 
     private static float lerp(float a, float b, float t) {
