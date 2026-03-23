@@ -84,12 +84,14 @@ public class GameConfig {
         public String image = "";
         public boolean walkable = false;
         public Map<String, Float> spawn = new LinkedHashMap<>();
+        public Map<String, Float> harvest = new LinkedHashMap<>();
     }
 
     public static class ExplorationRewardConfig {
         public String name = "";
         public int id = 0;
         public String image = "";
+        public boolean walkable = false;
         public String reward_type = "ONE_TIME"; // ONE_TIME or BONUS
         public String required_level = "VILLAGE";
         public Map<String, Float> rewards = new LinkedHashMap<>();          // resource -> one-time amount
@@ -282,6 +284,12 @@ public class GameConfig {
                     toc.spawn.put(se.getKey().toUpperCase(), ((Number) se.getValue()).floatValue());
                 }
             }
+            Map<String, Object> harvestRaw = (Map<String, Object>) data.get("harvest");
+            if (harvestRaw != null) {
+                for (Map.Entry<String, Object> he : harvestRaw.entrySet()) {
+                    toc.harvest.put(he.getKey().toUpperCase(), ((Number) he.getValue()).floatValue());
+                }
+            }
             r.terrain_objects.put(name, toc);
         }
     }
@@ -299,6 +307,7 @@ public class GameConfig {
             erc.name = name;
             if (data.containsKey("id")) erc.id = ((Number) data.get("id")).intValue();
             if (data.containsKey("image")) erc.image = (String) data.get("image");
+            if (data.containsKey("walkable")) erc.walkable = (Boolean) data.get("walkable");
             if (data.containsKey("reward_type")) erc.reward_type = ((String) data.get("reward_type")).toUpperCase();
             if (data.containsKey("required_level")) erc.required_level = ((String) data.get("required_level")).toUpperCase();
             Map<String, Object> rewardsRaw = (Map<String, Object>) data.get("rewards");
@@ -452,6 +461,13 @@ public class GameConfig {
 
     public List<TerrainObjectConfig> getTerrainObjects() {
         return new ArrayList<>(root.terrain_objects.values());
+    }
+
+    public Map<String, Float> getTerrainObjectHarvest(int objectId) {
+        for (TerrainObjectConfig toc : root.terrain_objects.values()) {
+            if (toc.id == objectId) return toc.harvest;
+        }
+        return java.util.Collections.emptyMap();
     }
 
     // ---- Exploration reward accessors ----

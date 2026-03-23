@@ -250,12 +250,26 @@ public class Main extends ApplicationAdapter implements GameController {
             }
             world.setBuilding(tx, ty, 0);
         } else if (tile.hasObject()) {
+            giveHarvestYield(tx, ty, tile.objectId);
             world.removeObject(tx, ty);
         } else if (tile.roadType != 0) {
             world.removeRoad(tx, ty);
         }
 
         updateAvailableTools();
+    }
+
+    private void giveHarvestYield(int tx, int ty, int objectId) {
+        Map<String, Float> harvest = gameConfig.getTerrainObjectHarvest(objectId);
+        if (harvest.isEmpty()) return;
+        Settlement nearest = getClosestSettlement(tx, ty);
+        if (nearest == null) return;
+        for (Map.Entry<String, Float> entry : harvest.entrySet()) {
+            try {
+                ResourceType type = ResourceType.valueOf(entry.getKey());
+                nearest.addResource(type, entry.getValue());
+            } catch (IllegalArgumentException ignored) {}
+        }
     }
 
     private void createSpecIcon(Specialization spec, Color color) {

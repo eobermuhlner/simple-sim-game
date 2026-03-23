@@ -56,7 +56,7 @@ public class TileObjectRegistry {
         for (GameConfig.ExplorationRewardConfig reward : config.getExplorationRewards()) {
             Set<String> validTerrains = reward.spawn.keySet();
             register(reward.id, new SimpleObject(reward.id, reward.name, TileObjectType.NATURAL,
-                t -> validTerrains.contains(t.name()), true));
+                t -> validTerrains.contains(t.name()), reward.walkable));
         }
     }
 
