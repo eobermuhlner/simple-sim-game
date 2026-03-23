@@ -18,10 +18,15 @@ public class SettlementBoundaryLayer implements RenderLayer {
     private final World world;
     private final boolean fogOfWar;
     private Texture lineTexture;
+    private Settlement selectedSettlement;
 
     public SettlementBoundaryLayer(World world, boolean fogOfWar) {
         this.world = world;
         this.fogOfWar = fogOfWar;
+    }
+
+    public void setSelectedSettlement(Settlement settlement) {
+        this.selectedSettlement = settlement;
     }
 
     @Override
@@ -42,9 +47,9 @@ public class SettlementBoundaryLayer implements RenderLayer {
 
     @Override
     public void renderFull(SpriteBatch batch, OrthographicCamera camera) {
-        for (Settlement settlement : world.getSettlements()) {
-            renderSettlementBoundary(settlement, batch, camera);
-        }
+        if (selectedSettlement == null) return;
+
+        renderSettlementBoundary(selectedSettlement, batch, camera);
     }
 
     private void renderSettlementBoundary(Settlement settlement, SpriteBatch batch, OrthographicCamera camera) {

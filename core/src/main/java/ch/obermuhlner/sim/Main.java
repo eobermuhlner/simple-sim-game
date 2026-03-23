@@ -85,6 +85,7 @@ public class Main extends ApplicationAdapter implements GameController {
     private OrthographicCamera camera;
     private World world;
     private Renderer renderer;
+    private SettlementBoundaryLayer boundaryLayer;
     private InputMultiplexer inputMultiplexer;
     private GameMode currentMode;
     private SimulationSystem simulation;
@@ -142,7 +143,8 @@ public class Main extends ApplicationAdapter implements GameController {
         renderer.addLayer(new RoadRenderLayer(world, true));
         renderer.addLayer(new BuildingRenderLayer(world, true, gameConfig));
         renderer.addLayer(new SettlementRenderLayer(world, true, gameConfig));
-        renderer.addLayer(new SettlementBoundaryLayer(world, true));
+        boundaryLayer = new SettlementBoundaryLayer(world, true);
+        renderer.addLayer(boundaryLayer);
         renderer.addLayer(new CaravanRenderLayer(world));
         renderer.addLayer(new FogOfWarRenderLayer(world, gameConfig));
 
@@ -400,6 +402,8 @@ public class Main extends ApplicationAdapter implements GameController {
         boolean isBuildable = tile.isBuildable();
         Settlement onTile = world.getSettlementAt(selectedTileX, selectedTileY);
         Settlement nearby = getNearbySettlement(selectedTileX, selectedTileY);
+
+        boundaryLayer.setSelectedSettlement(nearby);
 
         if (onTile != null && onTile.needsSpecializationChoice()) {
             // Focused specialization choice — Village → Town upgrade
