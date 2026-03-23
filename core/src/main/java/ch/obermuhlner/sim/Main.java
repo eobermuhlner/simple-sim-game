@@ -352,8 +352,14 @@ public class Main extends ApplicationAdapter implements GameController {
         if (!world.isRevealed(tileX, tileY)) {
             TerrainType terrain = world.getTerrain(tileX, tileY);
             if (terrain.isWater()) {
-                // Sea tiles: reveal if adjacent to a revealed tile and there's a nearby harbor
-                if (world.hasRevealedNeighbor(tileX, tileY) && hasNearbyHarbor(tileX, tileY)) {
+                // Water tile adjacent to a revealed land tile can always be revealed (coastal discovery),
+                // regardless of whether it is shallow or deep sea.
+                // Exploring further into the sea (only water neighbors) requires a nearby harbor,
+                // and deep sea additionally requires the sea_exploration tech.
+                boolean adjacentToLand = world.hasRevealedLandNeighbor(tileX, tileY);
+                if (adjacentToLand) {
+                    world.reveal(tileX, tileY);
+                } else if (world.hasRevealedNeighbor(tileX, tileY) && hasNearbyHarbor(tileX, tileY)) {
                     boolean deepSeaAllowed = terrain == TerrainType.DEEP_SEA
                         && world.techTree.isAllowed("sea_exploration", "DEEP_SEA", gameConfig);
                     if (terrain == TerrainType.SHALLOW_SEA || deepSeaAllowed) {
@@ -432,7 +438,7 @@ public class Main extends ApplicationAdapter implements GameController {
             }
 
             if (tile.terrain.isTraversable() && !tile.hasObject()) {
-                if (isToolVisible("roads", "DIRT"))
+                if (isToolAvailable("roads", "DIRT"))
                     addRoadButton(TOOL_BUILD_ROAD, "Dirt Road", RoadType.DIRT, roadIcon);
                 if (isToolAvailable("roads", "STONE"))
                     addRoadButton(TOOL_BUILD_ROAD_STONE, "Stone Road", RoadType.STONE, roadIcon);
@@ -455,11 +461,11 @@ public class Main extends ApplicationAdapter implements GameController {
             }
 
             if (isBuildable && nearby != null) {
-                addBuildingButton(TOOL_HOUSE,     BuildingType.HOUSE_SIMPLE);
-                addBuildingButton(TOOL_FARM,      BuildingType.FARM_SMALL);
-                addBuildingButton(TOOL_MARKET,    BuildingType.MARKET_SMALL);
-                addBuildingButton(TOOL_WAREHOUSE, BuildingType.WAREHOUSE);
-                addBuildingButton(TOOL_WELL,      BuildingType.WELL_WATER);
+                if (isToolAvailable("buildings", "HOUSE_SIMPLE"))  addBuildingButton(TOOL_HOUSE,     BuildingType.HOUSE_SIMPLE);
+                if (isToolAvailable("buildings", "FARM_SMALL"))    addBuildingButton(TOOL_FARM,      BuildingType.FARM_SMALL);
+                if (isToolAvailable("buildings", "MARKET_SMALL"))  addBuildingButton(TOOL_MARKET,    BuildingType.MARKET_SMALL);
+                if (isToolAvailable("buildings", "WAREHOUSE"))     addBuildingButton(TOOL_WAREHOUSE, BuildingType.WAREHOUSE);
+                if (isToolAvailable("buildings", "WELL_WATER"))    addBuildingButton(TOOL_WELL,      BuildingType.WELL_WATER);
             }
 
             // Harbor: available on coastal tiles near a settlement (requires HARBOR_CONSTRUCTION tech)
@@ -548,11 +554,6 @@ public class Main extends ApplicationAdapter implements GameController {
     private boolean isToolAvailable(String category, String name) {
         return world.techTree.isAllowed(category, name, gameConfig)
             && !world.techTree.isDenied(category, name, gameConfig);
-    }
-
-    /** True if the item is NOT denied. For always-on items (no allow required). */
-    private boolean isToolVisible(String category, String name) {
-        return !world.techTree.isDenied(category, name, gameConfig);
     }
 
     private void addBuildingButton(int toolId, BuildingType type) {

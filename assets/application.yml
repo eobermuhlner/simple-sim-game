@@ -56,8 +56,8 @@ terrain:
   persistence: 0.5
   tileset: 64x64/map.png
   thresholds:
-    water: 0.45
-    shallow_sea: 0.47
+    deep_sea: 0.35
+    shallow_sea: 0.45
     grass: 0.55
     forest: 0.60
     stone: 0.65
@@ -393,6 +393,9 @@ buildings:
 
 tech_tree:
   research_gold_per_tick: 2.0
+  initially_available:
+    roads: [DIRT]
+    buildings: [HOUSE_SIMPLE, FARM_SMALL, MARKET_SMALL, WAREHOUSE, WELL_WATER]
   techs:
     BASIC_ROADS:
       name: Basic Roads

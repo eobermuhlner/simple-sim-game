@@ -97,6 +97,8 @@ public class TechTree {
     public boolean isAllowed(String category, String name, GameConfig config) {
         String cat = category.toLowerCase();
         String upper = name.toUpperCase();
+        List<String> initial = config.getInitiallyAvailable(cat);
+        if (initial != null && initial.contains(upper)) return true;
         for (String id : researchedTechs) {
             GameConfig.TechConfig tech = config.getTech(id);
             if (tech == null) continue;

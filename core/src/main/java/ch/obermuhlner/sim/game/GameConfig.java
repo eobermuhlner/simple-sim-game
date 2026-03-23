@@ -68,8 +68,8 @@ public class GameConfig {
     }
 
     public static class ThresholdConfig {
-        public double water = 0.45;
-        public double shallow_sea = 0.45; // same as water → no shallow sea unless configured in YAML
+        public double deep_sea = 0.35;
+        public double shallow_sea = 0.45;
         public double grass = 0.55;
         public double forest = 0.60;
         public double stone = 0.65;
@@ -132,6 +132,7 @@ public class GameConfig {
 
     public static class TechTreeConfig {
         public float research_gold_per_tick = 2.0f;
+        public Map<String, List<String>> initially_available = new LinkedHashMap<>();
         public Map<String, TechConfig> techs = new LinkedHashMap<>();
     }
 
@@ -281,7 +282,7 @@ public class GameConfig {
         if (m.containsKey("tileset")) t.tileset = (String) m.get("tileset");
         Map<String, Object> thresh = (Map<String, Object>) m.get("thresholds");
         if (thresh != null) {
-            if (thresh.containsKey("water"))       t.thresholds.water       = ((Number) thresh.get("water")).doubleValue();
+            if (thresh.containsKey("deep_sea"))    t.thresholds.deep_sea    = ((Number) thresh.get("deep_sea")).doubleValue();
             if (thresh.containsKey("shallow_sea")) t.thresholds.shallow_sea = ((Number) thresh.get("shallow_sea")).doubleValue();
             if (thresh.containsKey("grass"))       t.thresholds.grass       = ((Number) thresh.get("grass")).doubleValue();
             if (thresh.containsKey("forest"))      t.thresholds.forest      = ((Number) thresh.get("forest")).doubleValue();
@@ -431,6 +432,19 @@ public class GameConfig {
         if (ttMap.containsKey("research_gold_per_tick")) {
             r.tech_tree.research_gold_per_tick = ((Number) ttMap.get("research_gold_per_tick")).floatValue();
         }
+        Object iaRaw = ttMap.get("initially_available");
+        if (iaRaw instanceof Map) {
+            Map<String, Object> iaMap = (Map<String, Object>) iaRaw;
+            for (Map.Entry<String, Object> e : iaMap.entrySet()) {
+                String cat = e.getKey().toLowerCase();
+                List<String> names = new ArrayList<>();
+                if (e.getValue() instanceof List) {
+                    for (Object item : (List<Object>) e.getValue())
+                        if (item instanceof String) names.add(((String) item).toUpperCase());
+                }
+                r.tech_tree.initially_available.put(cat, names);
+            }
+        }
         Object techsRaw = ttMap.get("techs");
         if (!(techsRaw instanceof Map)) return;
         Map<String, Object> techsMap = (Map<String, Object>) techsRaw;
@@ -537,7 +551,7 @@ public class GameConfig {
 
     public double getTerrainThreshold(String terrainName) {
         switch (terrainName.toLowerCase()) {
-            case "water":       return root.terrain.thresholds.water;
+            case "deep_sea":    return root.terrain.thresholds.deep_sea;
             case "shallow_sea": return root.terrain.thresholds.shallow_sea;
             case "grass":       return root.terrain.thresholds.grass;
             case "forest":      return root.terrain.thresholds.forest;
@@ -683,6 +697,10 @@ public class GameConfig {
     // ---- Tech tree accessors ----
 
     public float getResearchGoldPerTick() { return root.tech_tree.research_gold_per_tick; }
+
+    public List<String> getInitiallyAvailable(String category) {
+        return root.tech_tree.initially_available.getOrDefault(category.toLowerCase(), java.util.Collections.emptyList());
+    }
 
     public TechConfig getTech(String id) {
         return root.tech_tree.techs.get(id.toUpperCase());
