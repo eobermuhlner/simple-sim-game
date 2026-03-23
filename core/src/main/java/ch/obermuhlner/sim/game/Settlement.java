@@ -154,7 +154,7 @@ public class Settlement {
         if (!canRespecialize()) return;
         this.specialization = newSpec;
         settlementLevelIndex = Math.max(0, settlementLevelIndex - 1);
-        population = getLevel().getMinPopulation();
+        population = getLevel().getMaxPopulation();
     }
 
     /** Upgrades a Town/City to the next level (no specialization required). */

@@ -257,7 +257,7 @@ public class SettlementTest {
 
         assertEquals(SettlementLevel.VILLAGE, settlement.getLevel());
         assertEquals(Specialization.MINING_TOWN, settlement.specialization);
-        assertEquals(SettlementLevel.VILLAGE.getMinPopulation(), settlement.population);
+        assertEquals(SettlementLevel.VILLAGE.getMaxPopulation(), settlement.population);
     }
 
     @Test

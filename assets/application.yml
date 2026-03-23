@@ -34,14 +34,14 @@ settlement:
   storage_capacity: 500.0
   max_buildings:
     VILLAGE: 5
-    TOWN: 15
-    CITY: 30
-    METROPOLIS: 50
+    TOWN: 10
+    CITY: 15
+    METROPOLIS: 20
   radius:
-    VILLAGE: 5
-    TOWN: 15
-    CITY: 30
-    METROPOLIS: 50
+    VILLAGE: 3
+    TOWN: 4
+    CITY: 5
+    METROPOLIS: 6
 
 trade:
   max_caravans_per_route: 3
