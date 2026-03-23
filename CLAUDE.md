@@ -78,6 +78,8 @@ When fixing bugs or adding features:
 
 **Note:** Tests that require OpenGL (texture creation) cannot run in headless mode. Use the GUI debug console for testing UI rendering.
 
+**Always:** Run tests after finishing an implementation or bugfix.
+
 ## Debugging
 
 ### Debug Console (GUI + Commands)

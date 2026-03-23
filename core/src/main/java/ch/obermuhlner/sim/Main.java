@@ -468,9 +468,9 @@ public class Main extends ApplicationAdapter implements GameController {
                 if (isToolAvailable("buildings", "WELL_WATER"))    addBuildingButton(TOOL_WELL,      BuildingType.WELL_WATER);
             }
 
-            // Harbor: available on coastal tiles near a settlement
-            if (isBuildable && nearby != null && !tile.hasBuilding()
-                    && world.isCoastal(selectedTileX, selectedTileY)
+            // Harbor: available on water tiles adjacent to land near a settlement
+            if (nearby != null && !tile.hasBuilding()
+                    && world.isCoastalWater(selectedTileX, selectedTileY)
                     && isToolAvailable("buildings", "HARBOR")) {
                 addBuildingButton(TOOL_BUILD_HARBOR, BuildingType.HARBOR);
             }
@@ -797,11 +797,11 @@ public class Main extends ApplicationAdapter implements GameController {
     }
 
     private void placeHarbor(int tx, int ty) {
-        if (!world.isCoastal(tx, ty)) return;
+        if (!world.isCoastalWater(tx, ty)) return;
         Settlement settlement = getNearbySettlement(tx, ty);
         if (settlement == null) return;
         Tile tile = world.getTile(tx, ty);
-        if (!tile.isBuildable() || tile.hasBuilding()) return;
+        if (tile.hasBuilding()) return;
 
         BuildingType type = BuildingType.HARBOR;
         float cost = gameConfig.getBuildingCost(type);

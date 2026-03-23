@@ -79,10 +79,10 @@ public class SeaExplorationTest {
     // ---- ThresholdConfig default keeps SHALLOW_SEA disabled ----
 
     @Test
-    public void testShallowSeaDefaultThresholdEqualsWater() {
+    public void testShallowSeaDefaultThresholdDiffersFromDeepSea() {
         GameConfig.ThresholdConfig tc = new GameConfig.ThresholdConfig();
-        assertEquals("Default shallow_sea threshold should equal deep_sea (disabled)",
-            tc.deep_sea, tc.shallow_sea, 0.0001);
+        assertEquals("Default deep_sea threshold is 0.35", 0.35, tc.deep_sea, 0.0001);
+        assertEquals("Default shallow_sea threshold is 0.45", 0.45, tc.shallow_sea, 0.0001);
     }
 
     // ---- HARBOR building type ----
@@ -146,6 +146,40 @@ public class SeaExplorationTest {
         setTerrain(5, 5, TerrainType.SHALLOW_SEA);
 
         assertFalse("Sea tile itself is not coastal (not buildable)", world.isCoastal(5, 5));
+    }
+
+    @Test
+    public void testIsCoastalWaterShallowSeaAdjacentToGrass() {
+        makeGrass(5, 5);
+        setTerrain(6, 5, TerrainType.SHALLOW_SEA);  // east neighbor is shallow sea
+
+        assertTrue("Shallow sea tile next to GRASS should be coastal water", world.isCoastalWater(6, 5));
+    }
+
+    @Test
+    public void testIsCoastalWaterDeepSeaAdjacentToGrass() {
+        makeGrass(5, 5);
+        setTerrain(5, 6, TerrainType.DEEP_SEA);  // north neighbor is deep sea
+
+        assertTrue("Deep sea tile next to GRASS should be coastal water", world.isCoastalWater(5, 6));
+    }
+
+    @Test
+    public void testIsCoastalWaterSurroundedByWater() {
+        setTerrain(5, 5, TerrainType.SHALLOW_SEA);
+        setTerrain(4, 5, TerrainType.SHALLOW_SEA);
+        setTerrain(6, 5, TerrainType.SHALLOW_SEA);
+        setTerrain(5, 4, TerrainType.SHALLOW_SEA);
+        setTerrain(5, 6, TerrainType.SHALLOW_SEA);
+
+        assertFalse("Shallow sea surrounded by water is not coastal water", world.isCoastalWater(5, 5));
+    }
+
+    @Test
+    public void testIsCoastalWaterLandTileReturnsFalse() {
+        makeGrass(5, 5);
+
+        assertFalse("Land tile is not coastal water", world.isCoastalWater(5, 5));
     }
 
     // ---- World.settlementHasHarbor() ----

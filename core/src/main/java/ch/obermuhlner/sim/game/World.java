@@ -551,6 +551,17 @@ public class World {
         return false;
     }
 
+    /** Returns true if this water tile is adjacent (4-dir) to buildable land. */
+    public boolean isCoastalWater(int tx, int ty) {
+        TerrainType t = getTerrain(tx, ty);
+        if (!t.isWater()) return false;
+        int[][] dirs = {{-1,0},{1,0},{0,-1},{0,1}};
+        for (int[] dir : dirs) {
+            if (getTerrain(tx + dir[0], ty + dir[1]).isBuildable()) return true;
+        }
+        return false;
+    }
+
     /** Returns true if this settlement has a HARBOR building. */
     public boolean settlementHasHarbor(Settlement s) {
         return s.buildingIds.contains(BuildingType.HARBOR.getId());
