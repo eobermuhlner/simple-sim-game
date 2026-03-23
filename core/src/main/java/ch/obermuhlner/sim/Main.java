@@ -40,7 +40,6 @@ import java.util.Map;
 public class Main extends ApplicationAdapter implements GameController {
     private static final int TILE_SIZE = 64;
     private static final int CHUNK_SIZE = 16;
-    private static final long WORLD_SEED = 42L;
 
     // Tool ID ranges:
     //   0       – New Settlement
@@ -69,7 +68,7 @@ public class Main extends ApplicationAdapter implements GameController {
     private static final int TOOL_BUILD_ROAD     = 50;
     private static final int TOOL_DESTROY        = 51;
 
-    private static final float TICK_INTERVAL = 1.0f;
+    private float tickInterval;
 
     private SpriteBatch batch;
     private OrthographicCamera camera;
@@ -103,20 +102,23 @@ public class Main extends ApplicationAdapter implements GameController {
     public void create() {
         TileObjectRegistry.init();
 
+        gameConfig = new GameConfig();
+        tickInterval = gameConfig.getTickInterval();
+
         batch = new SpriteBatch();
         uiBatch = new SpriteBatch();
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.position.set(TILE_SIZE / 2f, TILE_SIZE / 2f, 0);
 
-        world = new World(CHUNK_SIZE, WORLD_SEED);
+        world = new World(CHUNK_SIZE, gameConfig);
 
         boolean settlementsLoaded = world.loadSettlements(Gdx.files.local("data/settlements.dat"));
         if (!settlementsLoaded) {
             world.createStarterSettlement();
         }
 
-        simulation = new SimulationSystem(world);
+        simulation = new SimulationSystem(world, gameConfig);
 
         renderer = new Renderer(world, batch, camera);
         renderer.addLayer(new TerrainRenderLayer(world, true));
@@ -129,7 +131,6 @@ public class Main extends ApplicationAdapter implements GameController {
 
         roadIcon = new Texture(Gdx.files.internal("64x64/single-tiles/road-dirt-ns.png"));
         destroyIcon = createDestroyIcon();
-        gameConfig = new GameConfig();
 
         settlementPanel = new SettlementInfoPanel();
         buildToolbar = new BuildToolbar();
@@ -217,7 +218,7 @@ public class Main extends ApplicationAdapter implements GameController {
                 s.buildingIds.remove(Integer.valueOf(bid));
                 BuildingType type = BuildingType.fromId(bid);
                 if (type != null) {
-                    s.addPopulation(-type.getPopulationCapacity());
+                    s.addPopulation(-gameConfig.getBuildingPopulationCapacity(type));
                 }
             }
             world.setBuilding(tx, ty, 0);
@@ -337,7 +338,7 @@ public class Main extends ApplicationAdapter implements GameController {
     private Settlement getNearbySettlement(int tx, int ty) {
         for (Settlement s : world.getSettlements()) {
             double dist = Math.hypot(tx - s.centerX, ty - s.centerY);
-            if (dist <= 5) {
+            if (dist <= gameConfig.getNearbySettlementRadius()) {
                 return s;
             }
         }
@@ -475,7 +476,7 @@ public class Main extends ApplicationAdapter implements GameController {
         world.setBuilding(tx, ty, buildingId);
         settlement.addBuilding(buildingId);
         if (type != null) {
-            settlement.addPopulation(type.getPopulationCapacity());
+            settlement.addPopulation(gameConfig.getBuildingPopulationCapacity(type));
         }
     }
 
@@ -545,9 +546,9 @@ public class Main extends ApplicationAdapter implements GameController {
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
         tickAccumulator += delta;
-        while (tickAccumulator >= TICK_INTERVAL) {
-            simulation.tick(TICK_INTERVAL);
-            tickAccumulator -= TICK_INTERVAL;
+        while (tickAccumulator >= tickInterval) {
+            simulation.tick(tickInterval);
+            tickAccumulator -= tickInterval;
         }
         simulation.updateCaravans(delta);
 

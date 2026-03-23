@@ -27,18 +27,21 @@ public class World {
     private final List<Caravan> caravans = new ArrayList<>();
     public boolean routesDirty = true;
 
-    public World(int chunkSize, long seed) {
-        this.chunkSize = chunkSize;
-        this.terrainGenerator = new TerrainGenerator(seed);
-    }
-    
-    public World(int chunkSize, long seed, boolean headless) {
-        this.chunkSize = chunkSize;
-        this.terrainGenerator = new TerrainGenerator(seed);
-        this.headless = headless;
-    }
-    
+    private final GameConfig config;
     private boolean headless = false;
+
+    public World(int chunkSize, GameConfig config) {
+        this.chunkSize = chunkSize;
+        this.config = config;
+        this.terrainGenerator = new TerrainGenerator(config.getWorldSeed(), config);
+    }
+
+    public World(int chunkSize, GameConfig config, boolean headless) {
+        this.chunkSize = chunkSize;
+        this.config = config;
+        this.headless = headless;
+        this.terrainGenerator = new TerrainGenerator(config.getWorldSeed(), config);
+    }
 
     public Settlement createStarterSettlement() {
         for (int radius = 0; radius < 50; radius++) {
@@ -92,7 +95,7 @@ public class World {
         if (!tile.isBuildable()) {
             return null;
         }
-        Settlement settlement = new Settlement(name, tx, ty);
+        Settlement settlement = new Settlement(name, tx, ty, config);
         settlements.add(settlement);
         revealArea(tx, ty, 3);
         routesDirty = true;
@@ -337,13 +340,16 @@ public class World {
     /**
      * Dijkstra pathfinding through road tiles, preferring higher-quality roads.
      * Cost per tile = 1 / speedMultiplier (Roman=0.33, Stone=0.67, Dirt=1.0).
-     * Tiles within 2 of start or end are walkable without a road (cost=2.0)
+     * Tiles within bridge_zone_radius of start or end are walkable without a road
      * to bridge the gap between settlement centers and the road network.
-     * Returns null if no path exists. Max search: 300 tiles Manhattan distance.
+     * Returns null if no path exists.
      */
     public List<int[]> findRoadPath(int x1, int y1, int x2, int y2) {
-        int maxManhattan = 300;
+        int maxManhattan = config.getMaxManhattan();
         if (Math.abs(x2 - x1) + Math.abs(y2 - y1) > maxManhattan) return null;
+
+        int bridgeRadius = config.getBridgeZoneRadius();
+        double bridgeCost = config.getBridgeZoneCost();
 
         Map<Long, Long> parent = new HashMap<>();
         Map<Long, Double> dist = new HashMap<>();
@@ -373,8 +379,8 @@ public class World {
                 int nx = cx + dir[0], ny = cy + dir[1];
                 if (Math.abs(nx - x1) + Math.abs(ny - y1) > maxManhattan) continue;
 
-                boolean nearStart = Math.abs(nx - x1) <= 2 && Math.abs(ny - y1) <= 2;
-                boolean nearEnd   = Math.abs(nx - x2) <= 2 && Math.abs(ny - y2) <= 2;
+                boolean nearStart = Math.abs(nx - x1) <= bridgeRadius && Math.abs(ny - y1) <= bridgeRadius;
+                boolean nearEnd   = Math.abs(nx - x2) <= bridgeRadius && Math.abs(ny - y2) <= bridgeRadius;
                 int roadType = getTile(nx, ny).roadType;
                 boolean hasRoad = roadType > 0;
 
@@ -383,9 +389,9 @@ public class World {
                 double stepCost;
                 if (hasRoad) {
                     RoadType rt = RoadType.fromId(roadType);
-                    stepCost = rt != null ? 1.0 / rt.getSpeedMultiplier() : 1.0;
+                    stepCost = rt != null ? 1.0 / config.getRoadSpeedMultiplier(rt) : 1.0;
                 } else {
-                    stepCost = 2.0; // off-road bridge zone: passable but expensive
+                    stepCost = bridgeCost;
                 }
 
                 double newDist = curCost + stepCost;
@@ -478,7 +484,7 @@ public class World {
                 int levelIdx  = dis.readInt();
                 int specOrd   = dis.readInt();
                 Specialization spec = (specOrd >= 0 && specOrd < specs.length) ? specs[specOrd] : Specialization.NONE;
-                Settlement s = new Settlement(id, name, cx, cy, pop, levelIdx, spec);
+                Settlement s = new Settlement(id, name, cx, cy, pop, levelIdx, spec, config);
                 s.wood            = dis.readFloat();
                 s.stone           = dis.readFloat();
                 s.food            = dis.readFloat();

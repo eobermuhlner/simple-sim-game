@@ -3,16 +3,13 @@ package ch.obermuhlner.sim.game;
 import java.util.Random;
 
 public class TerrainGenerator {
-    private static final double NOISE_SCALE = 0.04;
-    private static final int NOISE_OCTAVES = 4;
-    private static final double PERSISTENCE = 0.5;
-    private static final double[] TERRAIN_THRESHOLDS = {0.45, 0.55, 0.6, 0.65};
-
     private final long seed;
     private final int[] perm;
+    private final GameConfig config;
 
-    public TerrainGenerator(long seed) {
+    public TerrainGenerator(long seed, GameConfig config) {
         this.seed = seed;
+        this.config = config;
         this.perm = buildPermutationTable(seed);
     }
 
@@ -32,17 +29,19 @@ public class TerrainGenerator {
     public void generate(Chunk chunk) {
         Random random = new Random(chunk.cx * 31L + chunk.cy * 17L + seed);
         int size = chunk.tiles.length;
+        double noiseScale = config.getNoiseScale();
+        int noiseOctaves = config.getNoiseOctaves();
+        double persistence = config.getPersistence();
 
         for (int ly = 0; ly < size; ly++) {
             for (int lx = 0; lx < size; lx++) {
                 int tx = chunk.cx * size + lx;
                 int ty = chunk.cy * size + ly;
 
-                double n = octaveNoise(tx * NOISE_SCALE, ty * NOISE_SCALE, NOISE_OCTAVES, PERSISTENCE);
+                double n = octaveNoise(tx * noiseScale, ty * noiseScale, noiseOctaves, persistence);
                 TerrainType terrain = getTerrainFromNoise(n);
 
-                int objectId = TileObjectRegistry.NONE;
-                objectId = generateNaturalObjects(random, terrain);
+                int objectId = generateNaturalObjects(random, terrain);
 
                 Tile tile = new Tile(terrain, objectId);
                 chunk.setTile(lx, ly, tile);
@@ -53,30 +52,30 @@ public class TerrainGenerator {
     protected int generateNaturalObjects(Random random, TerrainType terrain) {
         switch (terrain) {
             case GRASS:
-                if (random.nextFloat() < 0.5f) {
-                    return random.nextFloat() < 0.2f ? 
-                        TileObjectRegistry.TREE_SMALL : 
-                        TileObjectRegistry.TREE_LARGE;
-                } else if (random.nextFloat() < 0.1f) {
+                if (random.nextFloat() < config.getSpawnProbability("grass_tree")) {
+                    return random.nextFloat() < config.getSpawnProbability("grass_tree_small_ratio")
+                        ? TileObjectRegistry.TREE_SMALL
+                        : TileObjectRegistry.TREE_LARGE;
+                } else if (random.nextFloat() < config.getSpawnProbability("grass_boulder_large")) {
                     return TileObjectRegistry.BOULDER_LARGE;
-                } else if (random.nextFloat() < 0.1f) {
+                } else if (random.nextFloat() < config.getSpawnProbability("grass_boulder_small")) {
                     return TileObjectRegistry.BOULDER_SMALL;
                 }
                 break;
             case FOREST:
-                if (random.nextFloat() < 0.2f) {
+                if (random.nextFloat() < config.getSpawnProbability("forest_boulder_large")) {
                     return TileObjectRegistry.BOULDER_LARGE;
                 }
                 break;
             case STONE:
-                if (random.nextFloat() < 0.4f) {
+                if (random.nextFloat() < config.getSpawnProbability("stone_boulder_small")) {
                     return TileObjectRegistry.BOULDER_SMALL;
-                } else if (random.nextFloat() < 0.2f) {
+                } else if (random.nextFloat() < config.getSpawnProbability("stone_boulder_large")) {
                     return TileObjectRegistry.BOULDER_LARGE;
                 }
                 break;
             case SNOW:
-                if (random.nextFloat() < 0.2f) {
+                if (random.nextFloat() < config.getSpawnProbability("snow_boulder")) {
                     return TileObjectRegistry.BOULDER_SNOW;
                 }
                 break;
@@ -87,10 +86,10 @@ public class TerrainGenerator {
     }
 
     protected TerrainType getTerrainFromNoise(double n) {
-        if (n < TERRAIN_THRESHOLDS[0]) return TerrainType.WATER;
-        if (n < TERRAIN_THRESHOLDS[1]) return TerrainType.GRASS;
-        if (n < TERRAIN_THRESHOLDS[2]) return TerrainType.FOREST;
-        if (n < TERRAIN_THRESHOLDS[3]) return TerrainType.STONE;
+        if (n < config.getTerrainThreshold("water"))  return TerrainType.WATER;
+        if (n < config.getTerrainThreshold("grass"))  return TerrainType.GRASS;
+        if (n < config.getTerrainThreshold("forest")) return TerrainType.FOREST;
+        if (n < config.getTerrainThreshold("stone"))  return TerrainType.STONE;
         return TerrainType.SNOW;
     }
 

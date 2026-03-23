@@ -20,9 +20,9 @@ public class Settlement {
     public float stone = 0f;
     public float food  = 0f;
     public float goods = 0f;
-    public float gold  = 50f;
+    public float gold;
 
-    public float storageCapacity = 500f;
+    public float storageCapacity;
 
     // Smoothed production rates (exponential moving average)
     public float smoothedWoodProd  = 0f;
@@ -30,23 +30,32 @@ public class Settlement {
     public float smoothedFoodProd  = 0f;
     public float smoothedGoodsProd = 0f;
 
-    // Dynamic price multipliers (clamped to [0.5, 2.0])
+    // Dynamic price multipliers (clamped to [price_min, price_max])
     public float woodPriceMult  = 1f;
     public float stonePriceMult = 1f;
     public float foodPriceMult  = 1f;
     public float goodsPriceMult = 1f;
 
+    private final GameConfig config;
+
     public Settlement(String name, int centerX, int centerY) {
+        this(name, centerX, centerY, new GameConfig(new GameConfig.Root()));
+    }
+
+    public Settlement(String name, int centerX, int centerY, GameConfig config) {
         this.id = nextId++;
         this.name = name;
         this.centerX = centerX;
         this.centerY = centerY;
-        this.population = 10;
+        this.config = config;
+        this.population = config.getStartingPopulation();
+        this.gold = config.getStartingGold();
+        this.storageCapacity = config.getStorageCapacity();
         this.settlementLevelIndex = SettlementLevel.VILLAGE.ordinal();
     }
 
     /** Package-private constructor for deserialization — does NOT trigger normal initialization. */
-    Settlement(int id, String name, int centerX, int centerY, int population, int levelIndex, Specialization spec) {
+    Settlement(int id, String name, int centerX, int centerY, int population, int levelIndex, Specialization spec, GameConfig config) {
         this.id = id;
         if (id >= nextId) nextId = id + 1;
         this.name = name;
@@ -55,6 +64,9 @@ public class Settlement {
         this.population = population;
         this.settlementLevelIndex = levelIndex;
         this.specialization = spec;
+        this.config = config;
+        this.storageCapacity = 0f; // overwritten by loadSettlements
+        this.gold = 0f;            // overwritten by loadSettlements
     }
 
     public SettlementLevel getLevel() {
@@ -91,13 +103,7 @@ public class Settlement {
     }
 
     public int getMaxBuildings() {
-        switch (getLevel()) {
-            case VILLAGE: return 5;
-            case TOWN: return 15;
-            case CITY: return 30;
-            case METROPOLIS: return 50;
-            default: return 5;
-        }
+        return config.getMaxBuildings(getLevel());
     }
 
     /**

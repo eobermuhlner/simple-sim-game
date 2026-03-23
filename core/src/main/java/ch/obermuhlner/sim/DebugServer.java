@@ -1,5 +1,6 @@
 package ch.obermuhlner.sim;
 
+import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.World;
 import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.debug.GameDebugger;
@@ -31,7 +32,7 @@ public class DebugServer extends ApplicationAdapter {
     
     @Override
     public void create() {
-        world = new World(16, 42L);
+        world = new World(16, new GameConfig());
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
         batch = new SpriteBatch();

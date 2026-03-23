@@ -16,9 +16,6 @@ public class TradeRoute {
     public int pathLength;
     public int activeCaravans = 0;
 
-    public static final int MAX_CARAVANS = 3;
-    private static final float BASE_INTERVAL = 120f;
-
     public TradeRoute(int idA, int idB, List<int[]> path) {
         this.id = nextId++;
         this.idA = Math.min(idA, idB);
@@ -27,13 +24,13 @@ public class TradeRoute {
         this.pathLength = path.size();
     }
 
-    public boolean canSpawnCaravan() {
-        return activeCaravans < MAX_CARAVANS;
+    public boolean canSpawnCaravan(int maxCaravans) {
+        return activeCaravans < maxCaravans;
     }
 
-    /** Ticks between spawns: BASE_INTERVAL / sqrt(popA + popB). */
-    public float spawnInterval(int popA, int popB) {
-        return BASE_INTERVAL / (float) Math.sqrt(Math.max(1, popA + popB));
+    /** Ticks between spawns: baseInterval / sqrt(popA + popB). */
+    public float spawnInterval(int popA, int popB, float baseInterval) {
+        return baseInterval / (float) Math.sqrt(Math.max(1, popA + popB));
     }
 
     public boolean connects(int settlementId) {

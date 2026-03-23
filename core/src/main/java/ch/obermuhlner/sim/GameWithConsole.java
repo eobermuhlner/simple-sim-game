@@ -1,6 +1,7 @@
 package ch.obermuhlner.sim;
 
 import ch.obermuhlner.sim.game.BuildingType;
+import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.GameController;
 import ch.obermuhlner.sim.game.Tile;
 import ch.obermuhlner.sim.game.TileObjectRegistry;
@@ -32,7 +33,6 @@ import java.util.concurrent.Executors;
 public class GameWithConsole extends ApplicationAdapter implements GameController {
     private static final int TILE_SIZE = 64;
     private static final int CHUNK_SIZE = 16;
-    private static final long WORLD_SEED = 42L;
 
     private SpriteBatch batch;
     private OrthographicCamera camera;
@@ -59,7 +59,7 @@ public class GameWithConsole extends ApplicationAdapter implements GameControlle
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.position.set(TILE_SIZE / 2f, TILE_SIZE / 2f, 0);
 
-        world = new World(CHUNK_SIZE, WORLD_SEED);
+        world = new World(CHUNK_SIZE, new GameConfig());
         world.createStarterSettlement();
         debugger = new GameDebugger(world);
         

@@ -1,62 +1,263 @@
+world:
+  seed: 42
+  tick_interval: 1.0
+  nearby_settlement_radius: 5
+
+simulation:
+  scan_radius: 3
+  food_demand_per_pop: 0.15
+  growth_rate: 0.01
+  starvation_rate: 0.02
+  price_lerp_alpha: 0.2
+  smoothing_alpha: 0.15
+  caravan_base_speed: 0.5
+  cargo_threshold: 0.2
+  cargo_batch: 0.3
+  caravan_upkeep_per_tile: 0.005
+  price_min: 0.5
+  price_max: 2.0
+  goods_demand_multiplier: 0.01
+  arbitrage_threshold: 0.8
+  level_growth_multipliers:
+    VILLAGE: 1.0
+    TOWN: 0.8
+    CITY: 0.6
+    METROPOLIS: 0.4
+  terrain_production:
+    FOREST_WOOD: 2.0
+    STONE_STONE: 1.0
+    GRASS_FOOD: 0.5
+
+settlement:
+  starting_population: 10
+  starting_gold: 50.0
+  storage_capacity: 500.0
+  max_buildings:
+    VILLAGE: 5
+    TOWN: 15
+    CITY: 30
+    METROPOLIS: 50
+
+trade:
+  max_caravans_per_route: 3
+  base_spawn_interval: 120.0
+
+pathfinding:
+  max_manhattan: 300
+  bridge_zone_radius: 2
+  bridge_zone_cost: 2.0
+
+terrain:
+  noise_scale: 0.04
+  noise_octaves: 4
+  persistence: 0.5
+  thresholds:
+    water: 0.45
+    grass: 0.55
+    forest: 0.60
+    stone: 0.65
+  spawn_probabilities:
+    grass_tree: 0.5
+    grass_tree_small_ratio: 0.2
+    grass_boulder_large: 0.1
+    grass_boulder_small: 0.1
+    forest_boulder_large: 0.2
+    stone_boulder_small: 0.4
+    stone_boulder_large: 0.2
+    snow_boulder: 0.2
+
 roads:
-  DIRT: 5
-  STONE: 20
-  COBBLESTONE: 50
-  ROMAN: 100
+  DIRT:
+    cost: 5
+    speed_multiplier: 1.0
+    capacity: 2
+    upkeep_per_tick: 0.0
+  STONE:
+    cost: 20
+    speed_multiplier: 1.5
+    capacity: 4
+    upkeep_per_tick: 0.01
+  COBBLESTONE:
+    cost: 50
+    speed_multiplier: 2.0
+    capacity: 6
+    upkeep_per_tick: 0.02
+  ROMAN:
+    cost: 100
+    speed_multiplier: 3.0
+    capacity: 10
+    upkeep_per_tick: 0.05
+
+specializations:
+  NONE:            { wood: 1.0, stone: 1.0, food: 1.0, goods: 1.0 }
+  LOGGING_CAMP:    { wood: 2.0, stone: 0.5, food: 0.5, goods: 1.0 }
+  MINING_TOWN:     { wood: 0.5, stone: 2.0, food: 0.5, goods: 1.0 }
+  FARMING_VILLAGE: { wood: 0.5, stone: 0.5, food: 2.0, goods: 1.0 }
+  TRADE_HUB:       { wood: 1.0, stone: 1.0, food: 1.0, goods: 1.5 }
 
 buildings:
-  HOUSE_SIMPLE: 10
-  HOUSE_LARGE: 15
-  HOUSE_STONE: 12
-  HOUSE_THATCHED: 10
-  FARM_SMALL: 15
-  FARM_LARGE: 25
-  WELL_EMPTY: 8
-  WELL_WATER: 10
-  WELL_DECORATED: 12
-  MARKET_SMALL: 20
-  MARKET_LARGE: 35
-  BAKERY: 18
-  BLACKSMITH: 20
-  INN_SMALL: 18
-  INN_LARGE: 30
-  WAREHOUSE: 20
-  GRANARY: 18
-  CHURCH_SMALL: 25
-  CHURCH_LARGE: 50
-  TEMPLE_SMALL: 40
-  TEMPLE_LARGE: 80
-  CASTLE_SMALL: 100
-  CASTLE_LARGE: 200
-  PALACE: 500
-  TOWER_SMALL: 30
-  TOWER_LARGE: 60
-  WALL_STONE: 15
-  WALL_WOOD: 8
-  GATE_STONE: 20
-  GATE_WOOD: 12
-  MILL_WIND: 22
-  MILL_WATER: 28
-  TAVERN: 25
-  SQUARE: 20
-  MONUMENT: 50
-  SHRINE: 15
-  BARRACKS: 30
-  TRAINING_YARD: 25
-  ARCHERY_RANGE: 25
-  FORGE_SMALL: 20
-  FORGE_LARGE: 40
-  BUTCHER: 15
-  TANNER: 15
-  WEAVER: 15
-  COOPER: 15
-  FOUNTAIN: 12
-  GARDEN: 18
-  ORCHARD: 15
-  VINEYARD: 18
-  FIELD_WHEAT: 10
-  FIELD_VEGETABLE: 10
-  PEN_SHEEP: 12
-  PEN_CATTLE: 15
-  PIG_STY: 12
-  CHICKEN_COOP: 8
+  HOUSE_SIMPLE:
+    cost: 10
+    population_capacity: 4
+  HOUSE_LARGE:
+    cost: 15
+    population_capacity: 8
+  HOUSE_STONE:
+    cost: 12
+    population_capacity: 6
+  HOUSE_THATCHED:
+    cost: 10
+    population_capacity: 5
+  FARM_SMALL:
+    cost: 15
+    population_capacity: 3
+  FARM_LARGE:
+    cost: 25
+    population_capacity: 6
+  WELL_EMPTY:
+    cost: 8
+    population_capacity: 1
+  WELL_WATER:
+    cost: 10
+    population_capacity: 2
+  WELL_DECORATED:
+    cost: 12
+    population_capacity: 2
+  MARKET_SMALL:
+    cost: 20
+    population_capacity: 5
+  MARKET_LARGE:
+    cost: 35
+    population_capacity: 10
+  BAKERY:
+    cost: 18
+    population_capacity: 4
+  BLACKSMITH:
+    cost: 20
+    population_capacity: 4
+  INN_SMALL:
+    cost: 18
+    population_capacity: 5
+  INN_LARGE:
+    cost: 30
+    population_capacity: 8
+  WAREHOUSE:
+    cost: 20
+    population_capacity: 3
+  GRANARY:
+    cost: 18
+    population_capacity: 3
+  CHURCH_SMALL:
+    cost: 25
+    population_capacity: 6
+  CHURCH_LARGE:
+    cost: 50
+    population_capacity: 12
+  TEMPLE_SMALL:
+    cost: 40
+    population_capacity: 8
+  TEMPLE_LARGE:
+    cost: 80
+    population_capacity: 15
+  CASTLE_SMALL:
+    cost: 100
+    population_capacity: 20
+  CASTLE_LARGE:
+    cost: 200
+    population_capacity: 40
+  PALACE:
+    cost: 500
+    population_capacity: 50
+  TOWER_SMALL:
+    cost: 30
+    population_capacity: 4
+  TOWER_LARGE:
+    cost: 60
+    population_capacity: 8
+  WALL_STONE:
+    cost: 15
+    population_capacity: 2
+  WALL_WOOD:
+    cost: 8
+    population_capacity: 1
+  GATE_STONE:
+    cost: 20
+    population_capacity: 3
+  GATE_WOOD:
+    cost: 12
+    population_capacity: 2
+  MILL_WIND:
+    cost: 22
+    population_capacity: 5
+  MILL_WATER:
+    cost: 28
+    population_capacity: 6
+  TAVERN:
+    cost: 25
+    population_capacity: 6
+  SQUARE:
+    cost: 20
+    population_capacity: 5
+  MONUMENT:
+    cost: 50
+    population_capacity: 10
+  SHRINE:
+    cost: 15
+    population_capacity: 4
+  BARRACKS:
+    cost: 30
+    population_capacity: 6
+  TRAINING_YARD:
+    cost: 25
+    population_capacity: 5
+  ARCHERY_RANGE:
+    cost: 25
+    population_capacity: 5
+  FORGE_SMALL:
+    cost: 20
+    population_capacity: 5
+  FORGE_LARGE:
+    cost: 40
+    population_capacity: 10
+  BUTCHER:
+    cost: 15
+    population_capacity: 3
+  TANNER:
+    cost: 15
+    population_capacity: 3
+  WEAVER:
+    cost: 15
+    population_capacity: 3
+  COOPER:
+    cost: 15
+    population_capacity: 3
+  FOUNTAIN:
+    cost: 12
+    population_capacity: 3
+  GARDEN:
+    cost: 18
+    population_capacity: 5
+  ORCHARD:
+    cost: 15
+    population_capacity: 4
+  VINEYARD:
+    cost: 18
+    population_capacity: 4
+  FIELD_WHEAT:
+    cost: 10
+    population_capacity: 2
+  FIELD_VEGETABLE:
+    cost: 10
+    population_capacity: 2
+  PEN_SHEEP:
+    cost: 12
+    population_capacity: 3
+  PEN_CATTLE:
+    cost: 15
+    population_capacity: 4
+  PIG_STY:
+    cost: 12
+    population_capacity: 3
+  CHICKEN_COOP:
+    cost: 8
+    population_capacity: 2

@@ -11,17 +11,8 @@ import java.util.Random;
  * Update order: Resources → Population → Pricing → Trade Routes → Caravans
  */
 public class SimulationSystem {
-    private static final int SCAN_RADIUS = 3;
-    private static final float FOOD_DEMAND_PER_POP = 0.15f;
-    private static final float GROWTH_RATE = 0.01f;
-    private static final float STARVATION_RATE = 0.02f;
-    private static final float PRICE_LERP_ALPHA = 0.2f;
-    private static final float SMOOTHING_ALPHA = 0.15f;
-    private static final float CARAVAN_BASE_SPEED = 0.5f;  // tiles per second on dirt road
-    private static final float CARGO_THRESHOLD = 0.2f;     // send cargo when stock > 20% of capacity
-    private static final float CARGO_BATCH = 0.3f;         // send up to 30% of capacity per trip
-
     private final World world;
+    private final GameConfig config;
     private final Random random = new Random();
 
     // Spawn timer per trade route id
@@ -29,8 +20,9 @@ public class SimulationSystem {
 
     private long tickCount = 0;
 
-    public SimulationSystem(World world) {
+    public SimulationSystem(World world, GameConfig config) {
         this.world = world;
+        this.config = config;
     }
 
     public long getTickCount() { return tickCount; }
@@ -62,33 +54,33 @@ public class SimulationSystem {
     // ---- Resource Production ----
 
     private void gatherResources(List<Settlement> settlements) {
+        int scanRadius = config.getScanRadius();
         for (Settlement s : settlements) {
             float rawWood = 0, rawStone = 0, rawFood = 0;
 
-            for (int dy = -SCAN_RADIUS; dy <= SCAN_RADIUS; dy++) {
-                for (int dx = -SCAN_RADIUS; dx <= SCAN_RADIUS; dx++) {
-                    if (dx * dx + dy * dy > SCAN_RADIUS * SCAN_RADIUS) continue;
+            for (int dy = -scanRadius; dy <= scanRadius; dy++) {
+                for (int dx = -scanRadius; dx <= scanRadius; dx++) {
+                    if (dx * dx + dy * dy > scanRadius * scanRadius) continue;
                     TerrainType terrain = world.getTerrain(s.centerX + dx, s.centerY + dy);
                     switch (terrain) {
-                        case FOREST: rawWood  += 2.0f; break;
-                        case STONE:  rawStone += 1.0f; break;
-                        case GRASS:  rawFood  += 0.5f; break;
+                        case FOREST: rawWood  += config.getTerrainProduction("FOREST_WOOD"); break;
+                        case STONE:  rawStone += config.getTerrainProduction("STONE_STONE"); break;
+                        case GRASS:  rawFood  += config.getTerrainProduction("GRASS_FOOD"); break;
                     }
                 }
             }
 
-            rawWood  *= s.specialization.woodMultiplier;
-            rawStone *= s.specialization.stoneMultiplier;
-            rawFood  *= s.specialization.foodMultiplier;
-            float rawGoods = s.population * 0.01f * s.specialization.goodsMultiplier;
+            rawWood  *= config.getSpecWoodMultiplier(s.specialization);
+            rawStone *= config.getSpecStoneMultiplier(s.specialization);
+            rawFood  *= config.getSpecFoodMultiplier(s.specialization);
+            float rawGoods = s.population * config.getGoodsDemandMultiplier() * config.getSpecGoodsMultiplier(s.specialization);
 
-            // Update smoothed production (EMA)
-            s.smoothedWoodProd  = lerp(s.smoothedWoodProd,  rawWood,  SMOOTHING_ALPHA);
-            s.smoothedStoneProd = lerp(s.smoothedStoneProd, rawStone, SMOOTHING_ALPHA);
-            s.smoothedFoodProd  = lerp(s.smoothedFoodProd,  rawFood,  SMOOTHING_ALPHA);
-            s.smoothedGoodsProd = lerp(s.smoothedGoodsProd, rawGoods, SMOOTHING_ALPHA);
+            float smoothingAlpha = config.getSmoothingAlpha();
+            s.smoothedWoodProd  = lerp(s.smoothedWoodProd,  rawWood,  smoothingAlpha);
+            s.smoothedStoneProd = lerp(s.smoothedStoneProd, rawStone, smoothingAlpha);
+            s.smoothedFoodProd  = lerp(s.smoothedFoodProd,  rawFood,  smoothingAlpha);
+            s.smoothedGoodsProd = lerp(s.smoothedGoodsProd, rawGoods, smoothingAlpha);
 
-            // Add to stockpiles
             s.wood  = Math.min(s.storageCapacity, s.wood  + rawWood);
             s.stone = Math.min(s.storageCapacity, s.stone + rawStone);
             s.food  = Math.min(s.storageCapacity, s.food  + rawFood);
@@ -99,23 +91,26 @@ public class SimulationSystem {
     // ---- Population Growth ----
 
     private void consumeAndGrow(List<Settlement> settlements) {
+        float foodDemandPerPop = config.getFoodDemandPerPop();
+        float growthRate = config.getGrowthRate();
+        float starvationRate = config.getStarvationRate();
+
         for (Settlement s : settlements) {
-            float foodConsumed = s.population * FOOD_DEMAND_PER_POP;
+            float foodConsumed = s.population * foodDemandPerPop;
             s.food = Math.max(0, s.food - foodConsumed);
 
             float prodVsConsume = s.smoothedFoodProd - foodConsumed;
 
             if (prodVsConsume > 0) {
-                float levelMult = getLevelMultiplier(s.getLevel());
-                float growth = prodVsConsume * GROWTH_RATE * levelMult;
+                float levelMult = config.getLevelGrowthMultiplier(s.getLevel());
+                float growth = prodVsConsume * growthRate * levelMult;
                 int intGrowth = (int) growth;
                 if (random.nextFloat() < (growth - intGrowth)) intGrowth++;
                 if (intGrowth > 0) s.addPopulation(intGrowth);
 
             } else if (s.food <= 0 && prodVsConsume < -0.1f) {
-                // Starvation only when stockpile empty AND production < consumption
                 float deficit = -prodVsConsume;
-                float starvation = deficit * STARVATION_RATE;
+                float starvation = deficit * starvationRate;
                 starvation = Math.min(starvation, s.population * 0.1f);
                 int intStarve = Math.max(0, (int) Math.ceil(starvation));
                 if (intStarve > 0) s.addPopulation(-intStarve);
@@ -123,19 +118,13 @@ public class SimulationSystem {
         }
     }
 
-    private float getLevelMultiplier(SettlementLevel level) {
-        switch (level) {
-            case VILLAGE:    return 1.0f;
-            case TOWN:       return 0.8f;
-            case CITY:       return 0.6f;
-            case METROPOLIS: return 0.4f;
-            default:         return 1.0f;
-        }
-    }
-
     // ---- Dynamic Pricing ----
 
     private void updatePrices(List<Settlement> settlements) {
+        float priceMin = config.getPriceMin();
+        float priceMax = config.getPriceMax();
+        float priceLerpAlpha = config.getPriceLerpAlpha();
+
         for (Settlement s : settlements) {
             if (s.population <= 0) continue;
             for (ResourceType type : new ResourceType[]{
@@ -143,9 +132,9 @@ public class SimulationSystem {
                 float smoothedProd = s.getSmoothedProd(type);
                 float demand = getDemand(type, s.population);
                 float ratio = (demand > 0) ? smoothedProd / demand : 2.0f;
-                float clampedRatio = Math.max(0.5f, Math.min(2.0f, ratio));
+                float clampedRatio = Math.max(priceMin, Math.min(priceMax, ratio));
                 float prevMult = s.getPriceMult(type);
-                float newMult = lerp(prevMult, clampedRatio, PRICE_LERP_ALPHA);
+                float newMult = lerp(prevMult, clampedRatio, priceLerpAlpha);
                 s.setPriceMult(type, newMult);
             }
         }
@@ -153,15 +142,14 @@ public class SimulationSystem {
 
     private float getDemand(ResourceType type, int population) {
         switch (type) {
-            case FOOD:  return population * FOOD_DEMAND_PER_POP;
-            default:    return population * 0.01f;
+            case FOOD:  return population * config.getFoodDemandPerPop();
+            default:    return population * config.getGoodsDemandMultiplier();
         }
     }
 
     // ---- Trade Route Discovery ----
 
     private void rebuildTradeRoutes(List<Settlement> settlements) {
-        // For each pair, check if a road path exists and add/keep route
         List<TradeRoute> existing = new ArrayList<>(world.getTradeRoutes());
 
         for (int i = 0; i < settlements.size(); i++) {
@@ -176,7 +164,6 @@ public class SimulationSystem {
                     if (route == null) {
                         world.addTradeRoute(new TradeRoute(a.id, b.id, path));
                     } else {
-                        // Update path so caravans use newly built or upgraded roads
                         route.path = path;
                         route.pathLength = path.size();
                     }
@@ -188,21 +175,23 @@ public class SimulationSystem {
             }
         }
 
-        // Remove routes for removed settlements
         existing.clear();
     }
 
     // ---- Caravan Spawning ----
 
     private void tickSpawnTimers(float deltaTime, List<Settlement> settlements) {
+        int maxCaravans = config.getMaxCaravansPerRoute();
+        float baseInterval = config.getBaseSpawnInterval();
+
         for (TradeRoute route : world.getTradeRoutes()) {
-            if (!route.canSpawnCaravan()) continue;
+            if (!route.canSpawnCaravan(maxCaravans)) continue;
 
             Settlement sA = world.getSettlement(route.idA);
             Settlement sB = world.getSettlement(route.idB);
             if (sA == null || sB == null) continue;
 
-            float interval = route.spawnInterval(sA.population, sB.population);
+            float interval = route.spawnInterval(sA.population, sB.population, baseInterval);
             float timer = spawnTimers.getOrDefault(route.id, interval);
             timer -= deltaTime;
 
@@ -215,7 +204,6 @@ public class SimulationSystem {
     }
 
     private void trySpawnCaravan(TradeRoute route, Settlement sA, Settlement sB) {
-        // Try A→B then B→A
         if (!trySpawnDirection(route, sA, sB)) {
             trySpawnDirection(route, sB, sA);
         }
@@ -224,15 +212,16 @@ public class SimulationSystem {
     private boolean trySpawnDirection(TradeRoute route, Settlement src, Settlement dst) {
         ResourceType bestType = null;
         float bestExcess = 0;
+        float cargoThreshold = config.getCargoThreshold();
+        float arbitrageThreshold = config.getArbitrageThreshold();
 
         for (ResourceType type : new ResourceType[]{
                 ResourceType.FOOD, ResourceType.WOOD, ResourceType.STONE, ResourceType.GOODS}) {
             float amount = src.getResource(type);
-            float threshold = src.storageCapacity * CARGO_THRESHOLD;
+            float threshold = src.storageCapacity * cargoThreshold;
             float excess = amount - threshold;
             if (excess > bestExcess) {
-                // Also check that destination price is higher (arbitrage)
-                if (dst.getCurrentPrice(type) >= src.getCurrentPrice(type) * 0.8f) {
+                if (dst.getCurrentPrice(type) >= src.getCurrentPrice(type) * arbitrageThreshold) {
                     bestExcess = excess;
                     bestType = type;
                 }
@@ -241,29 +230,19 @@ public class SimulationSystem {
 
         if (bestType == null) return false;
 
-        float cargoAmount = Math.min(bestExcess, src.storageCapacity * CARGO_BATCH);
+        float cargoAmount = Math.min(bestExcess, src.storageCapacity * config.getCargoBatch());
         src.addResource(bestType, -cargoAmount);
 
-        // Upkeep: 0.005 gold per tile per caravan
-        float upkeepPerTile = 0.005f * route.pathLength;
+        float upkeepPerTile = config.getCaravanUpkeepPerTile() * route.pathLength;
 
-        // Determine direction for path indexing
         int fromId = src.id;
         int toId = dst.id;
         List<int[]> path = route.path;
-        // If going B→A, we need to use the path reversed
-        // For simplicity, create a caravan that traverses the stored path
-        // If src is idB, the path is reversed from the route's stored direction
         if (src.id == route.idB) {
-            // Use reversed path: wrap in a helper that reverses
             path = reversePath(route.path);
         }
 
         Caravan caravan = new Caravan(route.id, fromId, toId, bestType, cargoAmount, upkeepPerTile);
-        // Store the effective path on the caravan via a thread-local workaround:
-        // We store the reversed path in a small wrapper field we add to Caravan
-        // For now, store path reference; Caravan only uses route.path which may be wrong for B→A
-        // Simple fix: store path on the caravan itself
         caravan.setEffectivePath(path);
         world.getCaravans().add(caravan);
         route.activeCaravans++;
@@ -294,23 +273,19 @@ public class SimulationSystem {
                 continue;
             }
 
-            // Get road speed at current tile
             float speed = getRoadSpeed(path, caravan.pathIndex);
             caravan.subTileProgress += speed * deltaTime;
 
-            // Advance path index for each full tile crossed
             while (caravan.subTileProgress >= 1.0f && caravan.pathIndex < path.size() - 1) {
                 caravan.subTileProgress -= 1.0f;
                 caravan.pathIndex++;
 
-                // Deduct upkeep per tile
                 Settlement src = world.getSettlement(caravan.fromSettlementId);
                 if (src != null) {
                     src.gold = Math.max(0, src.gold - caravan.upkeepPerTile);
                 }
             }
 
-            // Check arrival at destination
             if (caravan.pathIndex >= path.size() - 1 && caravan.subTileProgress >= 1.0f) {
                 deliverCargo(caravan, route);
                 toRemove.add(caravan);
@@ -329,7 +304,6 @@ public class SimulationSystem {
                     dst.storageCapacity - dst.getResource(caravan.cargoType));
             dst.addResource(caravan.cargoType, received);
 
-            // Pay source settlement: buyer (dst) pays seller (src)
             if (src != null && received > 0) {
                 float price = dst.getCurrentPrice(caravan.cargoType);
                 float payment = received * price * 0.1f;
@@ -342,12 +316,13 @@ public class SimulationSystem {
     }
 
     private float getRoadSpeed(List<int[]> path, int pathIndex) {
-        if (pathIndex >= path.size()) return CARAVAN_BASE_SPEED;
+        float baseSpeed = config.getCaravanBaseSpeed();
+        if (pathIndex >= path.size()) return baseSpeed;
         int[] tile = path.get(pathIndex);
         int roadType = world.getTile(tile[0], tile[1]).roadType;
-        if (roadType == 0) return CARAVAN_BASE_SPEED;
+        if (roadType == 0) return baseSpeed;
         RoadType rt = RoadType.fromId(roadType);
-        return rt != null ? CARAVAN_BASE_SPEED * rt.getSpeedMultiplier() : CARAVAN_BASE_SPEED;
+        return rt != null ? baseSpeed * config.getRoadSpeedMultiplier(rt) : baseSpeed;
     }
 
     private static float lerp(float a, float b, float t) {

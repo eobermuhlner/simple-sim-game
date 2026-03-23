@@ -10,15 +10,28 @@ import static org.junit.Assert.*;
 
 public class SimulationSystemTest {
     private static final int CHUNK_SIZE = 16;
-    private static final long SEED = 99999L;  // seed that gives grass near origin
+    private static final long SEED = 99999L;
 
     private World world;
     private SimulationSystem sim;
 
     @Before
     public void setUp() {
-        world = new World(CHUNK_SIZE, SEED, true);
-        sim = new SimulationSystem(world);
+        GameConfig.Root root = new GameConfig.Root();
+        root.world.seed = SEED;
+        GameConfig config = new GameConfig(root);
+        world = new World(CHUNK_SIZE, config, true);
+        sim = new SimulationSystem(world, config);
+    }
+
+    /** Remove any natural object from a tile so it is buildable/road-placeable. */
+    private void clearTile(int tx, int ty) {
+        world.getTile(tx, ty).objectId = TileObjectRegistry.NONE;
+    }
+
+    /** Clear all tiles along y=tileY from x=x1 to x=x2 (inclusive). */
+    private void clearRow(int x1, int x2, int tileY) {
+        for (int x = x1; x <= x2; x++) clearTile(x, tileY);
     }
 
     @Test
@@ -91,7 +104,7 @@ public class SimulationSystemTest {
 
     @Test
     public void testGoodsProductionFromPopulation() {
-        // Create a settlement and run a tick - goods should accumulate
+        clearTile(5, 5);
         Settlement settlement = world.createSettlement("GoodsTest", 5, 5);
         assertNotNull(settlement);
         settlement.setPopulation(20);
@@ -105,6 +118,7 @@ public class SimulationSystemTest {
 
     @Test
     public void testFoodConsumptionReducesFood() {
+        clearTile(5, 5);
         Settlement settlement = world.createSettlement("FoodTest", 5, 5);
         assertNotNull(settlement);
         settlement.setPopulation(10);
@@ -112,34 +126,24 @@ public class SimulationSystemTest {
         // Set smoothed food prod to 0 so no production offsets consumption
         settlement.smoothedFoodProd = 0f;
 
-        // Run a few ticks - food should be consumed
-        // (actual production will happen too but let's check direction)
-        float initialFood = settlement.food;
         sim.tick(1.0f);
-        // After tick: food += production, then food -= consumption
-        // Net change depends on terrain around (5,5)
         // Test that simulation runs without error
         assertTrue("Simulation ran", sim.getTickCount() == 1);
     }
 
     @Test
     public void testStarvationReducesPopulation() {
+        clearTile(5, 5);
         Settlement settlement = world.createSettlement("StarveTest", 5, 5);
         assertNotNull(settlement);
         settlement.setPopulation(10);
         settlement.food = 0f;
-        // Force zero food production by overriding smoothed prod
         settlement.smoothedFoodProd = 0f;
-        // Override the terrain production by setting smoothed values
-        // (tick will recalculate production from terrain)
-        // For this test, we verify population doesn't increase when food is empty
 
-        int initialPop = settlement.population;
         // Run multiple ticks to see starvation
         for (int i = 0; i < 5; i++) {
             settlement.food = 0f;
             settlement.smoothedFoodProd = 0f;
-            // We can't easily zero out terrain production, so just verify no crash
             sim.tick(1.0f);
         }
         // Population should be at least 1 (never below 1)
@@ -148,7 +152,8 @@ public class SimulationSystemTest {
 
     @Test
     public void testTradeRouteCreatedWhenSettlementsConnectedByRoad() {
-        // Place two settlements close enough to connect with a few road tiles
+        // Clear tiles so settlements and roads can be placed at the desired positions
+        clearRow(0, 5, 0);
         Settlement a = world.createSettlement("TownA", 0, 0);
         Settlement b = world.createSettlement("TownB", 5, 0);
         assertNotNull(a);
@@ -173,6 +178,8 @@ public class SimulationSystemTest {
 
     @Test
     public void testNoTradeRouteWithoutRoad() {
+        clearTile(0, 0);
+        clearTile(10, 0);
         Settlement a = world.createSettlement("TownA", 0, 0);
         Settlement b = world.createSettlement("TownB", 10, 0);
         assertNotNull(a);
@@ -186,7 +193,8 @@ public class SimulationSystemTest {
 
     @Test
     public void testBfsFindsPath() {
-        // Place road tiles in a straight line
+        // Clear the road corridor and place road tiles in a straight line
+        clearRow(2, 7, 0);
         for (int x = 2; x <= 7; x++) {
             world.placeRoad(x, 0, RoadType.DIRT);
         }
@@ -206,7 +214,8 @@ public class SimulationSystemTest {
 
     @Test
     public void testCaravanSpawnedWhenRouteExists() {
-        // Create connected settlements and give source enough resources
+        // Clear tiles so settlements and roads can be placed
+        clearRow(0, 5, 0);
         Settlement a = world.createSettlement("A", 0, 0);
         Settlement b = world.createSettlement("B", 5, 0);
         assertNotNull(a);
@@ -222,21 +231,19 @@ public class SimulationSystemTest {
 
         // Run enough ticks for caravan to spawn
         // spawnInterval = 120 / sqrt(10+10) ≈ 26.8 ticks
-        // Run 30 ticks
         for (int i = 0; i < 30; i++) {
             a.food = a.storageCapacity * 0.8f;  // keep food high
             sim.tick(1.0f);
         }
 
-        // At least one caravan should have been spawned and possibly delivered by now
         // We just verify no crash and route exists
         assertTrue("Route still exists", world.getTradeRoutes().size() >= 1);
     }
 
     @Test
     public void testTradeRouteRemoveWhenRoadRemoved() {
-        // Use settlements far enough apart that a removed road tile is outside
-        // both 2-tile BFS neighborhoods around each settlement center
+        // Clear all tiles needed for settlements and road corridor
+        clearRow(0, 15, 0);
         Settlement a = world.createSettlement("A", 0, 0);
         Settlement b = world.createSettlement("B", 15, 0);
         assertNotNull(a);

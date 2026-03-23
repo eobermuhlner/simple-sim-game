@@ -14,7 +14,9 @@ public class WorldTest {
 
     @Before
     public void setUp() {
-        world = new World(CHUNK_SIZE, SEED, true);
+        GameConfig.Root root = new GameConfig.Root();
+        root.world.seed = SEED;
+        world = new World(CHUNK_SIZE, new GameConfig(root), true);
     }
 
     @Test

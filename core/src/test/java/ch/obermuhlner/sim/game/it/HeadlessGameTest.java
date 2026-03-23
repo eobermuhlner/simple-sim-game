@@ -7,6 +7,7 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.backends.headless.HeadlessApplication;
 import com.badlogic.gdx.backends.headless.HeadlessApplicationConfiguration;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.GameController;
 import ch.obermuhlner.sim.game.TileObjectRegistry;
 import ch.obermuhlner.sim.game.World;
@@ -30,7 +31,7 @@ public abstract class HeadlessGameTest implements GameController {
         
         TileObjectRegistry.init();
         
-        world = new World(16, 42L, true);
+        world = new World(16, new GameConfig(new GameConfig.Root()), true);
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
         camera.position.set(32, 32, 0);
