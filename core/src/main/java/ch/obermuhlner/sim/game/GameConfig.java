@@ -257,6 +257,25 @@ public class GameConfig {
         }
         return r;
     }
+    
+    @SuppressWarnings("unchecked")
+    public void loadFromMap(Map<String, Object> raw) {
+        bindWorld(root, raw);
+        bindSimulation(root, raw);
+        bindSettlement(root, raw);
+        bindTrade(root, raw);
+        bindPathfinding(root, raw);
+        bindDestroy(root, raw);
+        bindTerrain(root, raw);
+        bindRoads(root, raw);
+        bindBuildings(root, raw);
+        bindSpecializations(root, raw);
+        bindTerrainObjects(root, raw);
+        bindSettlementImages(root, raw);
+        bindExplorationRewards(root, raw);
+        bindResources(root, raw);
+        bindTechTree(root, raw);
+    }
 
     @SuppressWarnings("unchecked")
     private void bindWorld(Root r, Map<String, Object> raw) {

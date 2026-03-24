@@ -2,7 +2,11 @@ package ch.obermuhlner.sim;
 
 import ch.obermuhlner.sim.game.*;
 import ch.obermuhlner.sim.game.systems.SimulationSystem;
+import org.yaml.snakeyaml.Yaml;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.*;
 
 public class SimulationRunner {
@@ -23,22 +27,22 @@ public class SimulationRunner {
     public void setupDefaultScenario() {
         world.createStarterSettlement();
         
-        world.reveal(5, 0);
-        Settlement s2 = world.createSettlement("Town Alpha", 5, 0);
+        world.reveal(8, 0);
+        Settlement s2 = world.createSettlement("Town Alpha", 8, 0);
         if (s2 != null) {
             s2.specialize(Specialization.LOGGING_CAMP);
             s2.population = 20;
         }
         
-        world.reveal(-6, 4);
-        Settlement s3 = world.createSettlement("Mining Camp", -6, 4);
+        world.reveal(-10, 6);
+        Settlement s3 = world.createSettlement("Mining Camp", -10, 6);
         if (s3 != null) {
             s3.specialize(Specialization.MINING_TOWN);
             s3.population = 15;
         }
         
-        world.reveal(0, -7);
-        Settlement s4 = world.createSettlement("Farming Village", 0, -7);
+        world.reveal(3, -8);
+        Settlement s4 = world.createSettlement("Farming Village", 3, -8);
         if (s4 != null) {
             s4.specialize(Specialization.FARMING_VILLAGE);
             s4.population = 25;
@@ -277,10 +281,39 @@ public class SimulationRunner {
     }
     
     public static void runSimulation(int ticks) {
-        GameConfig config = new GameConfig(new GameConfig.Root());
+        GameConfig config = loadConfigFromYaml();
         
         SimulationRunner runner = new SimulationRunner(config, ticks);
         runner.setupDefaultScenario();
         runner.run();
+    }
+    
+    private static GameConfig loadConfigFromYaml() {
+        String workingDir = System.getProperty("user.dir");
+        File projectRoot = new File(workingDir);
+        if (!new File(projectRoot, "assets/application.yml").exists()) {
+            projectRoot = projectRoot.getParentFile();
+        }
+        File configFile = new File(projectRoot, "assets/application.yml");
+        if (!configFile.exists()) {
+            System.out.println("Warning: assets/application.yml not found at " + configFile.getAbsolutePath() + ", using defaults");
+            return new GameConfig(new GameConfig.Root());
+        }
+        
+        try (InputStream is = new FileInputStream(configFile)) {
+            Yaml yaml = new Yaml();
+            Map<String, Object> raw = yaml.load(is);
+            if (raw == null) {
+                return new GameConfig(new GameConfig.Root());
+            }
+            
+            GameConfig gameConfig = new GameConfig(new GameConfig.Root());
+            gameConfig.loadFromMap(raw);
+            System.out.println("Loaded configuration from assets/application.yml");
+            return gameConfig;
+        } catch (Exception e) {
+            System.out.println("Warning: Failed to load application.yml: " + e.getMessage());
+            return new GameConfig(new GameConfig.Root());
+        }
     }
 }

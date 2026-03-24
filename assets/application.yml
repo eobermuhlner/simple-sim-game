@@ -5,17 +5,17 @@ world:
 
 simulation:
   scan_radius: 3
-  food_demand_per_pop: 0.15
-  growth_rate: 0.01
+  food_demand_per_pop: 0.10
+  growth_rate: 0.005
   starvation_rate: 0.02
-  price_lerp_alpha: 0.2
+  price_lerp_alpha: 0.05
   smoothing_alpha: 0.15
   caravan_base_speed: 0.5
   cargo_threshold: 0.2
   cargo_batch: 0.3
   caravan_upkeep_per_tile: 0.005
-  price_min: 0.5
-  price_max: 2.0
+  price_min: 0.7
+  price_max: 1.5
   goods_demand_multiplier: 0.01
   arbitrage_threshold: 0.8
   level_growth_multipliers:
@@ -25,8 +25,8 @@ simulation:
     METROPOLIS: 0.4
   terrain_production:
     FOREST_WOOD: 2.0
-    STONE_STONE: 1.0
-    GRASS_FOOD: 0.5
+    STONE_STONE: 1.5
+    GRASS_FOOD: 1.5
 
 settlement:
   starting_population: 10
