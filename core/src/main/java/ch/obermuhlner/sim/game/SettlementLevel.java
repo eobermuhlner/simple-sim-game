@@ -1,39 +1,55 @@
 package ch.obermuhlner.sim.game;
 
-public enum SettlementLevel {
-    VILLAGE(1, 50, "Village"),
-    TOWN(51, 200, "Town"),
-    CITY(201, 500, "City"),
-    METROPOLIS(501, Integer.MAX_VALUE, "Metropolis");
+/**
+ * Represents a settlement level (e.g. VILLAGE, TOWN, CITY, METROPOLIS).
+ * Instances are created and owned by {@link GameConfig}; the ordered list of
+ * known levels lives in the {@code settlement.types} section of application.yml.
+ */
+public class SettlementLevel {
 
+    private final String id;
+    private final String displayName;
     private final int minPopulation;
     private final int maxPopulation;
-    private final String displayName;
+    private final int maxBuildings;
+    private final int radius;
+    private final int index;
 
-    SettlementLevel(int minPopulation, int maxPopulation, String displayName) {
+    public SettlementLevel(String id, String displayName, int minPopulation, int maxPopulation, int maxBuildings, int radius, int index) {
+        this.id = id;
+        this.displayName = displayName;
         this.minPopulation = minPopulation;
         this.maxPopulation = maxPopulation;
-        this.displayName = displayName;
+        this.maxBuildings = maxBuildings;
+        this.radius = radius;
+        this.index = index;
     }
 
-    public int getMinPopulation() {
-        return minPopulation;
+    /** Stable string key (e.g. "VILLAGE"). Replaces enum {@code name()}. */
+    public String getId() { return id; }
+
+    /** Alias for {@link #getId()} kept for call-site compatibility. */
+    public String name() { return id; }
+
+    public String getDisplayName()  { return displayName; }
+    public int getMinPopulation()   { return minPopulation; }
+    public int getMaxPopulation()   { return maxPopulation; }
+    public int getMaxBuildings()    { return maxBuildings; }
+    public int getRadius()          { return radius; }
+
+    /** Position in the ordered level list. Replaces enum {@code ordinal()}. */
+    public int ordinal() { return index; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SettlementLevel)) return false;
+        return id.equals(((SettlementLevel) o).id);
     }
 
-    public int getMaxPopulation() {
-        return maxPopulation;
-    }
+    @Override
+    public int hashCode() { return id.hashCode(); }
 
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public static SettlementLevel fromPopulation(int population) {
-        for (SettlementLevel level : values()) {
-            if (population >= level.minPopulation && population <= level.maxPopulation) {
-                return level;
-            }
-        }
-        return VILLAGE;
-    }
+    @Override
+    public String toString() { return id; }
 }

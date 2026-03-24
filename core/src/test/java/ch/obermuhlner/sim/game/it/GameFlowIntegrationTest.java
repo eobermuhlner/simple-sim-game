@@ -1,5 +1,6 @@
 package ch.obermuhlner.sim.game.it;
 
+import ch.obermuhlner.sim.game.GameConfig;
 import ch.obermuhlner.sim.game.Settlement;
 import ch.obermuhlner.sim.game.SettlementLevel;
 import ch.obermuhlner.sim.game.TerrainType;
@@ -12,6 +13,12 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class GameFlowIntegrationTest extends HeadlessGameTest {
+
+    private static final GameConfig TEST_CONFIG = new GameConfig(new GameConfig.Root());
+    private static final SettlementLevel VILLAGE    = TEST_CONFIG.getLevelById("VILLAGE");
+    private static final SettlementLevel TOWN       = TEST_CONFIG.getLevelById("TOWN");
+    private static final SettlementLevel CITY       = TEST_CONFIG.getLevelById("CITY");
+    private static final SettlementLevel METROPOLIS = TEST_CONFIG.getLevelById("METROPOLIS");
 
     @Before
     public void initExploreMode() {
@@ -85,7 +92,7 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
             assertEquals("New Town", settlement.name);
             assertEquals(tx, settlement.centerX);
             assertEquals(ty, settlement.centerY);
-            assertEquals(SettlementLevel.VILLAGE, settlement.getLevel());
+            assertEquals(VILLAGE, settlement.getLevel());
             assertEquals(10, settlement.population);
             assertEquals(5, settlement.getMaxBuildings());
             assertTrue(settlement.buildingIds.isEmpty());
@@ -112,7 +119,7 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
             return;
         }
         
-        assertEquals(SettlementLevel.VILLAGE, settlement.getLevel());
+        assertEquals(VILLAGE, settlement.getLevel());
         assertEquals(10, settlement.population);
         
         settlement.setPopulation(50);
@@ -120,7 +127,7 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
         assertFalse("Village uses specialize(), not upgrade()", settlement.needsUpgrade());
 
         settlement.specialize(ch.obermuhlner.sim.game.Specialization.TRADE_HUB);
-        assertEquals(SettlementLevel.TOWN, settlement.getLevel());
+        assertEquals(TOWN, settlement.getLevel());
         assertEquals(51, settlement.population);
         assertEquals(15, settlement.getMaxBuildings());
 
@@ -128,7 +135,7 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
         assertTrue(settlement.needsUpgrade());
 
         settlement.upgrade();
-        assertEquals(SettlementLevel.CITY, settlement.getLevel());
+        assertEquals(CITY, settlement.getLevel());
         assertEquals(201, settlement.population);
         assertEquals(30, settlement.getMaxBuildings());
 
@@ -136,7 +143,7 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
         assertFalse(settlement.needsUpgrade());
 
         settlement.upgrade();
-        assertEquals(SettlementLevel.METROPOLIS, settlement.getLevel());
+        assertEquals(METROPOLIS, settlement.getLevel());
         assertEquals(501, settlement.population);
     }
 
@@ -170,7 +177,7 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
         
         settlement.setPopulation(50);
         settlement.specialize(ch.obermuhlner.sim.game.Specialization.FARMING_VILLAGE);
-        assertEquals(SettlementLevel.TOWN, settlement.getLevel());
+        assertEquals(TOWN, settlement.getLevel());
         assertEquals(15, settlement.getMaxBuildings());
         
         for (int i = 0; i < 10; i++) {
@@ -257,11 +264,11 @@ public class GameFlowIntegrationTest extends HeadlessGameTest {
             first.setPopulation(50);
             first.specialize(ch.obermuhlner.sim.game.Specialization.LOGGING_CAMP);
             first.setPopulation(100);
-            assertEquals(SettlementLevel.TOWN, first.getLevel());
+            assertEquals(TOWN, first.getLevel());
             
             for (Settlement s : world.getSettlements()) {
                 if (s != first) {
-                    assertEquals(SettlementLevel.VILLAGE, s.getLevel());
+                    assertEquals(VILLAGE, s.getLevel());
                 }
             }
         }

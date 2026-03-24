@@ -81,12 +81,12 @@ public class SettlementRenderLayer implements RenderLayer {
     }
 
     private Color getLevelColor(SettlementLevel level) {
-        switch (level) {
-            case VILLAGE:    return new Color(0.3f, 0.7f, 0.3f, 1f);
-            case TOWN:       return new Color(0.3f, 0.5f, 0.9f, 1f);
-            case CITY:       return new Color(0.8f, 0.6f, 0.2f, 1f);
-            case METROPOLIS: return new Color(0.9f, 0.3f, 0.9f, 1f);
-            default:         return new Color(0.3f, 0.7f, 0.3f, 1f);
+        switch (level.getId()) {
+            case "VILLAGE":    return new Color(0.3f, 0.7f, 0.3f, 1f);
+            case "TOWN":       return new Color(0.3f, 0.5f, 0.9f, 1f);
+            case "CITY":       return new Color(0.8f, 0.6f, 0.2f, 1f);
+            case "METROPOLIS": return new Color(0.9f, 0.3f, 0.9f, 1f);
+            default:           return new Color(0.3f, 0.7f, 0.3f, 1f);
         }
     }
 

@@ -131,14 +131,12 @@ public class TechTree {
      * not already researched, prerequisite met, level requirement met,
      * and (for specialization branches) a matching settlement exists.
      */
-    public boolean canResearch(GameConfig.TechConfig tech, List<Settlement> settlements, SettlementLevel maxLevel) {
+    public boolean canResearch(GameConfig.TechConfig tech, List<Settlement> settlements, SettlementLevel maxLevel, GameConfig config) {
         if (isResearched(tech.id)) return false;
         if (tech.id.equals(activeResearchId)) return false;
         if (!tech.required_tech.isEmpty() && !isResearched(tech.required_tech)) return false;
-        try {
-            SettlementLevel req = SettlementLevel.valueOf(tech.required_level);
-            if (maxLevel.ordinal() < req.ordinal()) return false;
-        } catch (IllegalArgumentException ignored) {}
+        SettlementLevel req = config.getLevelById(tech.required_level);
+        if (req != null && maxLevel.ordinal() < req.ordinal()) return false;
         if (!"GENERAL".equals(tech.branch)) {
             boolean found = false;
             for (Settlement s : settlements) {
@@ -156,16 +154,13 @@ public class TechTree {
      * Returns a hint explaining why a tech is locked.
      * Returns null if the tech is available or already researched.
      */
-    public String getLockHint(GameConfig.TechConfig tech, List<Settlement> settlements, SettlementLevel maxLevel) {
+    public String getLockHint(GameConfig.TechConfig tech, List<Settlement> settlements, SettlementLevel maxLevel, GameConfig config) {
         if (isResearched(tech.id)) return null;
         if (!tech.required_tech.isEmpty() && !isResearched(tech.required_tech)) {
-            GameConfig.TechConfig prereq = null; // hint will use raw id
             return "Req: " + tech.required_tech.replace('_', ' ');
         }
-        try {
-            SettlementLevel req = SettlementLevel.valueOf(tech.required_level);
-            if (maxLevel.ordinal() < req.ordinal()) return "Req: " + req.name();
-        } catch (IllegalArgumentException ignored) {}
+        SettlementLevel req = config.getLevelById(tech.required_level);
+        if (req != null && maxLevel.ordinal() < req.ordinal()) return "Req: " + req.getId();
         if (!"GENERAL".equals(tech.branch)) {
             boolean found = false;
             for (Settlement s : settlements) {

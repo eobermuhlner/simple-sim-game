@@ -5,6 +5,12 @@ import static org.junit.Assert.*;
 
 public class SettlementTest {
 
+    private static final GameConfig CONFIG    = new GameConfig(new GameConfig.Root());
+    private static final SettlementLevel VILLAGE    = CONFIG.getLevelById("VILLAGE");
+    private static final SettlementLevel TOWN       = CONFIG.getLevelById("TOWN");
+    private static final SettlementLevel CITY       = CONFIG.getLevelById("CITY");
+    private static final SettlementLevel METROPOLIS = CONFIG.getLevelById("METROPOLIS");
+
     @Test
     public void testNewSettlementHasDefaultValues() {
         Settlement settlement = new Settlement("Test Town", 5, 10);
@@ -13,7 +19,7 @@ public class SettlementTest {
         assertEquals(5, settlement.centerX);
         assertEquals(10, settlement.centerY);
         assertEquals(10, settlement.population);
-        assertEquals(SettlementLevel.VILLAGE, settlement.getLevel());
+        assertEquals(VILLAGE, settlement.getLevel());
         assertEquals(Specialization.NONE, settlement.specialization);
         assertTrue(settlement.buildingIds.isEmpty());
     }
@@ -24,8 +30,8 @@ public class SettlementTest {
 
         // Without specialization, population is capped at Village max
         settlement.setPopulation(51);
-        assertEquals("Level stays VILLAGE without specialization", SettlementLevel.VILLAGE, settlement.getLevel());
-        assertEquals("Population capped at Village max", SettlementLevel.VILLAGE.getMaxPopulation(), settlement.population);
+        assertEquals("Level stays VILLAGE without specialization", VILLAGE, settlement.getLevel());
+        assertEquals("Population capped at Village max", VILLAGE.getMaxPopulation(), settlement.population);
     }
 
     @Test
@@ -36,9 +42,9 @@ public class SettlementTest {
         assertTrue(settlement.needsSpecializationChoice());
         settlement.specialize(Specialization.LOGGING_CAMP);
 
-        assertEquals(SettlementLevel.TOWN, settlement.getLevel());
+        assertEquals(TOWN, settlement.getLevel());
         assertEquals(Specialization.LOGGING_CAMP, settlement.specialization);
-        assertEquals(SettlementLevel.TOWN.getMinPopulation(), settlement.population);
+        assertEquals(TOWN.getMinPopulation(), settlement.population);
     }
 
     @Test
@@ -49,7 +55,7 @@ public class SettlementTest {
 
         // specialize() should be a no-op
         settlement.specialize(Specialization.MINING_TOWN);
-        assertEquals(SettlementLevel.VILLAGE, settlement.getLevel());
+        assertEquals(VILLAGE, settlement.getLevel());
         assertEquals(Specialization.NONE, settlement.specialization);
     }
 
@@ -57,27 +63,27 @@ public class SettlementTest {
     public void testSettlementLevelsWithSpecialization() {
         Settlement settlement = new Settlement("Test", 0, 0);
 
-        assertEquals(SettlementLevel.VILLAGE, settlement.getLevel());
+        assertEquals(VILLAGE, settlement.getLevel());
 
         // Reach Village max, specialize to Town
         settlement.setPopulation(50);
         settlement.specialize(Specialization.TRADE_HUB);
-        assertEquals(SettlementLevel.TOWN, settlement.getLevel());
+        assertEquals(TOWN, settlement.getLevel());
 
         // Town → City
         settlement.setPopulation(200);
-        assertEquals(SettlementLevel.TOWN, settlement.getLevel());
+        assertEquals(TOWN, settlement.getLevel());
         settlement.setPopulation(201);
-        assertEquals(SettlementLevel.CITY, settlement.getLevel());
+        assertEquals(CITY, settlement.getLevel());
 
         // City → Metropolis
         settlement.setPopulation(500);
-        assertEquals(SettlementLevel.CITY, settlement.getLevel());
+        assertEquals(CITY, settlement.getLevel());
         settlement.setPopulation(501);
-        assertEquals(SettlementLevel.METROPOLIS, settlement.getLevel());
+        assertEquals(METROPOLIS, settlement.getLevel());
 
         settlement.setPopulation(1000);
-        assertEquals(SettlementLevel.METROPOLIS, settlement.getLevel());
+        assertEquals(METROPOLIS, settlement.getLevel());
     }
 
     @Test
@@ -90,8 +96,8 @@ public class SettlementTest {
 
         // Cannot exceed Village max without specialization
         settlement.addPopulation(100);
-        assertEquals(SettlementLevel.VILLAGE.getMaxPopulation(), settlement.population);
-        assertEquals(SettlementLevel.VILLAGE, settlement.getLevel());
+        assertEquals(VILLAGE.getMaxPopulation(), settlement.population);
+        assertEquals(VILLAGE, settlement.getLevel());
     }
 
     @Test
@@ -107,12 +113,12 @@ public class SettlementTest {
 
         // Without spec, cannot go above Village max
         settlement.setPopulation(100);
-        assertEquals(SettlementLevel.VILLAGE.getMaxPopulation(), settlement.population);
-        assertEquals(SettlementLevel.VILLAGE, settlement.getLevel());
+        assertEquals(VILLAGE.getMaxPopulation(), settlement.population);
+        assertEquals(VILLAGE, settlement.getLevel());
 
         settlement.setPopulation(1);
         assertEquals(1, settlement.population);
-        assertEquals(SettlementLevel.VILLAGE, settlement.getLevel());
+        assertEquals(VILLAGE, settlement.getLevel());
     }
 
     @Test
@@ -183,7 +189,7 @@ public class SettlementTest {
         assertTrue("TOWN at max pop - can upgrade", settlement.needsUpgrade());
 
         settlement.upgrade();
-        assertEquals(SettlementLevel.CITY, settlement.getLevel());
+        assertEquals(CITY, settlement.getLevel());
 
         settlement.setPopulation(501);
         assertFalse("METROPOLIS cannot upgrade", settlement.needsUpgrade());
@@ -195,13 +201,13 @@ public class SettlementTest {
 
         settlement.setPopulation(50);
         settlement.specialize(Specialization.TRADE_HUB);
-        assertEquals(SettlementLevel.TOWN, settlement.getLevel());
+        assertEquals(TOWN, settlement.getLevel());
 
         settlement.setPopulation(200);
         settlement.upgrade();
 
-        assertEquals(SettlementLevel.CITY, settlement.getLevel());
-        assertEquals(SettlementLevel.CITY.getMinPopulation(), settlement.population);
+        assertEquals(CITY, settlement.getLevel());
+        assertEquals(CITY.getMinPopulation(), settlement.population);
     }
 
     @Test
@@ -210,15 +216,15 @@ public class SettlementTest {
 
         settlement.setPopulation(50);
         settlement.specialize(Specialization.TRADE_HUB);
-        assertEquals(SettlementLevel.TOWN.getMinPopulation(), settlement.population);
+        assertEquals(TOWN.getMinPopulation(), settlement.population);
 
         settlement.setPopulation(200);
         settlement.upgrade();
-        assertEquals(SettlementLevel.CITY.getMinPopulation(), settlement.population);
-        assertEquals(SettlementLevel.CITY, settlement.getLevel());
+        assertEquals(CITY.getMinPopulation(), settlement.population);
+        assertEquals(CITY, settlement.getLevel());
 
         settlement.setPopulation(501);
-        assertEquals(SettlementLevel.METROPOLIS, settlement.getLevel());
+        assertEquals(METROPOLIS, settlement.getLevel());
         assertFalse("METROPOLIS cannot upgrade", settlement.needsUpgrade());
     }
 
@@ -228,10 +234,10 @@ public class SettlementTest {
         settlement.setPopulation(50);
         settlement.specialize(Specialization.TRADE_HUB);
         settlement.setPopulation(501);
-        assertEquals(SettlementLevel.METROPOLIS, settlement.getLevel());
+        assertEquals(METROPOLIS, settlement.getLevel());
 
         settlement.upgrade();
-        assertEquals(SettlementLevel.METROPOLIS, settlement.getLevel());
+        assertEquals(METROPOLIS, settlement.getLevel());
     }
 
     @Test
@@ -251,13 +257,13 @@ public class SettlementTest {
 
         settlement.setPopulation(50);
         settlement.specialize(Specialization.LOGGING_CAMP);
-        assertEquals(SettlementLevel.TOWN, settlement.getLevel());
+        assertEquals(TOWN, settlement.getLevel());
 
         settlement.respecialize(Specialization.MINING_TOWN);
 
-        assertEquals(SettlementLevel.VILLAGE, settlement.getLevel());
+        assertEquals(VILLAGE, settlement.getLevel());
         assertEquals(Specialization.MINING_TOWN, settlement.specialization);
-        assertEquals(SettlementLevel.VILLAGE.getMaxPopulation(), settlement.population);
+        assertEquals(VILLAGE.getMaxPopulation(), settlement.population);
     }
 
     @Test
@@ -267,11 +273,11 @@ public class SettlementTest {
         settlement.specialize(Specialization.FARMING_VILLAGE);
         settlement.setPopulation(200);
         settlement.upgrade();
-        assertEquals(SettlementLevel.CITY, settlement.getLevel());
+        assertEquals(CITY, settlement.getLevel());
 
         settlement.respecialize(Specialization.TRADE_HUB);
 
-        assertEquals(SettlementLevel.TOWN, settlement.getLevel());
+        assertEquals(TOWN, settlement.getLevel());
         assertEquals(Specialization.TRADE_HUB, settlement.specialization);
     }
 

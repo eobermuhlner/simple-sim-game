@@ -503,7 +503,7 @@ public class Main extends ApplicationAdapter implements GameController {
         List<GameConfig.TechConfig> locked = new ArrayList<>();
         for (GameConfig.TechConfig tech : gameConfig.getAllTechs()) {
             if (world.techTree.isResearched(tech.id)) continue;
-            if (world.techTree.canResearch(tech, settlements, maxLevel)) {
+            if (world.techTree.canResearch(tech, settlements, maxLevel, gameConfig)) {
                 available.add(tech);
             } else {
                 locked.add(tech);
@@ -527,7 +527,7 @@ public class Main extends ApplicationAdapter implements GameController {
         // Then show locked techs with hints (remaining slots up to 6 total)
         for (GameConfig.TechConfig tech : locked) {
             if (slot >= 6) break;
-            String hint = world.techTree.getLockHint(tech, settlements, maxLevel);
+            String hint = world.techTree.getLockHint(tech, settlements, maxLevel, gameConfig);
             BuildToolbar.ToolButton btn = new BuildToolbar.ToolButton(TOOL_RESEARCH_BASE + slot, tech.name, null);
             btn.costLabel = hint != null ? hint : "Locked";
             availableTools.add(btn);
@@ -609,16 +609,12 @@ public class Main extends ApplicationAdapter implements GameController {
         if (!reward.required_unlock.isEmpty()
                 && !world.techTree.isAllowed("rewards", reward.required_unlock, gameConfig))
             return null;
-        try {
-            SettlementLevel required = SettlementLevel.valueOf(reward.required_level);
-            return maxLevel.ordinal() >= required.ordinal() ? reward : null;
-        } catch (IllegalArgumentException e) {
-            return reward;
-        }
+        SettlementLevel required = gameConfig.getLevelById(reward.required_level);
+        return (required == null || maxLevel.ordinal() >= required.ordinal()) ? reward : null;
     }
 
     private SettlementLevel getMaxSettlementLevel() {
-        SettlementLevel max = SettlementLevel.VILLAGE;
+        SettlementLevel max = gameConfig.getFirstLevel();
         for (Settlement s : world.getSettlements()) {
             if (s.getLevel().ordinal() > max.ordinal()) max = s.getLevel();
         }

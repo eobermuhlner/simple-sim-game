@@ -32,21 +32,31 @@ settlement:
   starting_population: 10
   starting_gold: 50.0
   storage_capacity: 500.0
-  max_buildings:
-    VILLAGE: 5
-    TOWN: 10
-    CITY: 15
-    METROPOLIS: 20
-  radius:
-    VILLAGE: 3
-    TOWN: 4
-    CITY: 5
-    METROPOLIS: 6
-  levels:
-    VILLAGE:   { min_population: 1,   max_population: 50  }
-    TOWN:      { min_population: 51,  max_population: 200 }
-    CITY:      { min_population: 201, max_population: 500 }
-    METROPOLIS: { min_population: 501, max_population: 2147483647 }
+  types:
+    - id: VILLAGE
+      display_name: Village
+      min_population: 1
+      max_population: 50
+      max_buildings: 5
+      radius: 3
+    - id: TOWN
+      display_name: Town
+      min_population: 51
+      max_population: 200
+      max_buildings: 10
+      radius: 4
+    - id: CITY
+      display_name: City
+      min_population: 201
+      max_population: 500
+      max_buildings: 15
+      radius: 5
+    - id: METROPOLIS
+      display_name: Metropolis
+      min_population: 501
+      max_population: 2147483647
+      max_buildings: 20
+      radius: 6
 
 trade:
   max_caravans_per_route: 3

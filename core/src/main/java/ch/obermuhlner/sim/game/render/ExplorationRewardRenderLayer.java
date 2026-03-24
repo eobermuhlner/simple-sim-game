@@ -81,7 +81,7 @@ public class ExplorationRewardRenderLayer implements RenderLayer {
     }
 
     private SettlementLevel getMaxSettlementLevel() {
-        SettlementLevel max = SettlementLevel.VILLAGE;
+        SettlementLevel max = config.getFirstLevel();
         for (Settlement s : world.getSettlements()) {
             if (s.getLevel().ordinal() > max.ordinal()) {
                 max = s.getLevel();
@@ -91,12 +91,9 @@ public class ExplorationRewardRenderLayer implements RenderLayer {
     }
 
     private boolean meetsLevelRequirement(SettlementLevel maxLevel, String requiredLevel) {
-        try {
-            SettlementLevel required = SettlementLevel.valueOf(requiredLevel);
-            return maxLevel.ordinal() >= required.ordinal();
-        } catch (IllegalArgumentException e) {
-            return true;
-        }
+        SettlementLevel required = config.getLevelById(requiredLevel);
+        if (required == null) return true;
+        return maxLevel.ordinal() >= required.ordinal();
     }
 
     private Texture createRewardTexture(GameConfig.ExplorationRewardConfig reward) {

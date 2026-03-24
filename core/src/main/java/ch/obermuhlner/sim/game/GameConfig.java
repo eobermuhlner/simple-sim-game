@@ -5,6 +5,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,22 +48,41 @@ public class GameConfig {
         }};
     }
 
-    public static class SettlementLevelConfig {
+    public static class SettlementTypeConfig {
+        public String id = "";
+        public String display_name = "";
         public int min_population = 1;
         public int max_population = Integer.MAX_VALUE;
+        public int max_buildings = 5;
+        public int radius = 3;
     }
 
     public static class SettlementConfig {
         public int starting_population = 10;
         public float starting_gold = 50.0f;
         public float storage_capacity = 500.0f;
-        public Map<String, Integer> max_buildings = new HashMap<String, Integer>() {{
-            put("VILLAGE", 5); put("TOWN", 15); put("CITY", 30); put("METROPOLIS", 50);
-        }};
-        public Map<String, Integer> radius = new HashMap<String, Integer>() {{
-            put("VILLAGE", 5); put("TOWN", 15); put("CITY", 30); put("METROPOLIS", 50);
-        }};
-        public Map<String, SettlementLevelConfig> levels = new LinkedHashMap<>();
+        public List<SettlementTypeConfig> types = defaultTypes();
+
+        private static List<SettlementTypeConfig> defaultTypes() {
+            List<SettlementTypeConfig> list = new ArrayList<>();
+            list.add(typeConfig("VILLAGE",    "Village",    1,   50,              5,  3));
+            list.add(typeConfig("TOWN",       "Town",       51,  200,             15, 4));
+            list.add(typeConfig("CITY",       "City",       201, 500,             30, 5));
+            list.add(typeConfig("METROPOLIS", "Metropolis", 501, Integer.MAX_VALUE, 50, 6));
+            return list;
+        }
+
+        private static SettlementTypeConfig typeConfig(String id, String displayName,
+                int minPop, int maxPop, int maxBuildings, int radius) {
+            SettlementTypeConfig tc = new SettlementTypeConfig();
+            tc.id = id;
+            tc.display_name = displayName;
+            tc.min_population = minPop;
+            tc.max_population = maxPop;
+            tc.max_buildings = maxBuildings;
+            tc.radius = radius;
+            return tc;
+        }
     }
 
     public static class TradeConfig {
@@ -181,14 +201,29 @@ public class GameConfig {
     }
 
     private final Root root;
+    private final List<SettlementLevel> settlementLevels;
 
     public GameConfig() {
         this.root = loadRoot();
+        this.settlementLevels = buildSettlementLevels();
     }
 
     /** Constructor for tests and headless contexts — bypasses YAML loading. */
     public GameConfig(Root root) {
         this.root = root;
+        this.settlementLevels = buildSettlementLevels();
+    }
+
+    private List<SettlementLevel> buildSettlementLevels() {
+        List<SettlementLevel> result = new ArrayList<>();
+        for (int i = 0; i < root.settlement.types.size(); i++) {
+            SettlementTypeConfig tc = root.settlement.types.get(i);
+            result.add(new SettlementLevel(
+                tc.id.toUpperCase(), tc.display_name,
+                tc.min_population, tc.max_population,
+                tc.max_buildings, tc.radius, i));
+        }
+        return Collections.unmodifiableList(result);
     }
 
     @SuppressWarnings("unchecked")
@@ -269,28 +304,20 @@ public class GameConfig {
         if (m.containsKey("starting_population")) s.starting_population = ((Number) m.get("starting_population")).intValue();
         if (m.containsKey("starting_gold")) s.starting_gold = ((Number) m.get("starting_gold")).floatValue();
         if (m.containsKey("storage_capacity")) s.storage_capacity = ((Number) m.get("storage_capacity")).floatValue();
-        Map<String, Object> mb = (Map<String, Object>) m.get("max_buildings");
-        if (mb != null) {
-            for (Map.Entry<String, Object> e : mb.entrySet()) {
-                s.max_buildings.put(e.getKey().toUpperCase(), ((Number) e.getValue()).intValue());
-            }
-        }
-        Map<String, Object> mr = (Map<String, Object>) m.get("radius");
-        if (mr != null) {
-            for (Map.Entry<String, Object> e : mr.entrySet()) {
-                s.radius.put(e.getKey().toUpperCase(), ((Number) e.getValue()).intValue());
-            }
-        }
-        Map<String, Object> levelsRaw = (Map<String, Object>) m.get("levels");
-        if (levelsRaw != null) {
-            for (Map.Entry<String, Object> e : levelsRaw.entrySet()) {
-                String key = e.getKey().toUpperCase();
-                if (!(e.getValue() instanceof Map)) continue;
-                Map<String, Object> lData = (Map<String, Object>) e.getValue();
-                SettlementLevelConfig lc = new SettlementLevelConfig();
-                if (lData.containsKey("min_population")) lc.min_population = ((Number) lData.get("min_population")).intValue();
-                if (lData.containsKey("max_population")) lc.max_population = ((Number) lData.get("max_population")).intValue();
-                s.levels.put(key, lc);
+        List<Object> typesRaw = (List<Object>) m.get("types");
+        if (typesRaw != null) {
+            s.types.clear();
+            for (Object typeObj : typesRaw) {
+                if (!(typeObj instanceof Map)) continue;
+                Map<String, Object> tData = (Map<String, Object>) typeObj;
+                SettlementTypeConfig tc = new SettlementTypeConfig();
+                if (tData.containsKey("id"))              tc.id             = ((String) tData.get("id")).toUpperCase();
+                if (tData.containsKey("display_name"))    tc.display_name   = (String) tData.get("display_name");
+                if (tData.containsKey("min_population"))  tc.min_population = ((Number) tData.get("min_population")).intValue();
+                if (tData.containsKey("max_population"))  tc.max_population = ((Number) tData.get("max_population")).intValue();
+                if (tData.containsKey("max_buildings"))   tc.max_buildings  = ((Number) tData.get("max_buildings")).intValue();
+                if (tData.containsKey("radius"))          tc.radius         = ((Number) tData.get("radius")).intValue();
+                s.types.add(tc);
             }
         }
     }
@@ -587,7 +614,7 @@ public class GameConfig {
     public float getArbitrageThreshold() { return root.simulation.arbitrage_threshold; }
 
     public float getLevelGrowthMultiplier(SettlementLevel level) {
-        return root.simulation.level_growth_multipliers.getOrDefault(level.name(), 1.0f);
+        return root.simulation.level_growth_multipliers.getOrDefault(level.getId(), 1.0f);
     }
 
     public float getTerrainProduction(String key) {
@@ -600,31 +627,60 @@ public class GameConfig {
     public float getStartingGold() { return root.settlement.starting_gold; }
     public float getStorageCapacity() { return root.settlement.storage_capacity; }
 
+    /** Ordered list of all settlement levels as configured in application.yml. */
+    public List<SettlementLevel> getSettlementTypes() { return settlementLevels; }
+
+    /** The lowest/starting level (replaces the former {@code SettlementLevel.VILLAGE} constant). */
+    public SettlementLevel getFirstLevel() {
+        return settlementLevels.isEmpty() ? null : settlementLevels.get(0);
+    }
+
+    /** The highest level (replaces the former {@code SettlementLevel.METROPOLIS} constant). */
+    public SettlementLevel getLastLevel() {
+        return settlementLevels.isEmpty() ? null : settlementLevels.get(settlementLevels.size() - 1);
+    }
+
+    /** The second level — the target when the first level specializes (replaces {@code SettlementLevel.TOWN}). */
+    public SettlementLevel getSecondLevel() {
+        return settlementLevels.size() > 1 ? settlementLevels.get(1) : getFirstLevel();
+    }
+
+    /**
+     * Looks up a level by its string id (case-insensitive).
+     * Returns {@code null} if the id is unknown (replaces {@code SettlementLevel.valueOf(str)}).
+     */
+    public SettlementLevel getLevelById(String id) {
+        if (id == null) return getFirstLevel();
+        String upper = id.toUpperCase();
+        for (SettlementLevel level : settlementLevels) {
+            if (level.getId().equals(upper)) return level;
+        }
+        return null;
+    }
+
     public int getMaxBuildings(SettlementLevel level) {
-        return root.settlement.max_buildings.getOrDefault(level.name(), 5);
+        return level.getMaxBuildings();
     }
 
     public int getSettlementRadius(SettlementLevel level) {
-        return root.settlement.radius.getOrDefault(level.name(), 5);
+        return level.getRadius();
     }
 
     public int getMinPopulation(SettlementLevel level) {
-        SettlementLevelConfig lc = root.settlement.levels.get(level.name());
-        return lc != null ? lc.min_population : level.getMinPopulation();
+        return level.getMinPopulation();
     }
 
     public int getMaxPopulation(SettlementLevel level) {
-        SettlementLevelConfig lc = root.settlement.levels.get(level.name());
-        return lc != null ? lc.max_population : level.getMaxPopulation();
+        return level.getMaxPopulation();
     }
 
     public SettlementLevel getLevelForPopulation(int population) {
-        for (SettlementLevel level : SettlementLevel.values()) {
-            if (population >= getMinPopulation(level) && population <= getMaxPopulation(level)) {
+        for (SettlementLevel level : settlementLevels) {
+            if (population >= level.getMinPopulation() && population <= level.getMaxPopulation()) {
                 return level;
             }
         }
-        return SettlementLevel.VILLAGE;
+        return getFirstLevel();
     }
 
     // ---- Trade accessors ----

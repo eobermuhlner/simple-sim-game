@@ -71,8 +71,8 @@ public class SimulationSystem {
                     // Apply bonus production from BONUS-type exploration rewards
                     GameConfig.ExplorationRewardConfig reward = config.getExplorationReward(tile.objectId);
                     if (reward != null && reward.isBonus()) {
-                        SettlementLevel required = SettlementLevel.valueOf(reward.required_level);
-                        if (s.getLevel().ordinal() >= required.ordinal()) {
+                        SettlementLevel required = config.getLevelById(reward.required_level);
+                        if (required == null || s.getLevel().ordinal() >= required.ordinal()) {
                             rawWood  += reward.bonus_production.getOrDefault("WOOD",  0f);
                             rawStone += reward.bonus_production.getOrDefault("STONE", 0f);
                             rawFood  += reward.bonus_production.getOrDefault("FOOD",  0f);
