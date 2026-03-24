@@ -8,23 +8,172 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SimulationRunner {
-    private final World world;
     private final GameConfig config;
-    private final SimulationSystem simulation;
+    private final SimulationOptions options;
     
-    private final int ticks;
-    private final Map<String, BalanceTracker> trackers = new HashMap<>();
-    
-    public SimulationRunner(GameConfig config, int ticks) {
+    public SimulationRunner(GameConfig config, SimulationOptions options) {
         this.config = config;
-        this.ticks = ticks;
-        this.world = new World(16, config, true);
-        this.simulation = new SimulationSystem(world, config);
+        this.options = options;
     }
     
-    public void setupDefaultScenario() {
+    public static void main(String[] args) {
+        SimulationOptions opts = parseArguments(args);
+        if (opts.help) {
+            printHelp();
+            return;
+        }
+        
+        runMultipleSimulations(opts);
+    }
+    
+    private static SimulationOptions parseArguments(String[] args) {
+        SimulationOptions opts = new SimulationOptions();
+        
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            switch (arg) {
+                case "--runs":
+                case "-n":
+                    if (i + 1 < args.length) {
+                        opts.runs = Math.max(1, Math.min(100, Integer.parseInt(args[++i])));
+                    }
+                    break;
+                case "--ticks":
+                case "-t":
+                    if (i + 1 < args.length) {
+                        opts.ticks = Math.max(10, Integer.parseInt(args[++i]));
+                    }
+                    break;
+                case "--seed":
+                case "-s":
+                    if (i + 1 < args.length) {
+                        String seedStr = args[++i];
+                        if (!seedStr.equalsIgnoreCase("random")) {
+                            opts.seed = Long.parseLong(seedStr);
+                            opts.seedSet = true;
+                        }
+                    }
+                    break;
+                case "--verbose":
+                case "-v":
+                    opts.verbose = true;
+                    break;
+                case "--quiet":
+                case "-q":
+                    opts.quiet = true;
+                    break;
+                case "--help":
+                case "-h":
+                    opts.help = true;
+                    break;
+                default:
+                    System.out.println("Unknown argument: " + arg);
+                    opts.help = true;
+            }
+        }
+        return opts;
+    }
+    
+    private static void printHelp() {
+        System.out.println("Usage: SimulationRunner [options]");
+        System.out.println();
+        System.out.println("Options:");
+        System.out.println("  --runs N, -n N       Number of simulations to run (default: 1, max: 100)");
+        System.out.println("  --ticks N, -t N     Ticks per simulation (default: 500)");
+        System.out.println("  --seed N, -s N      World seed (default: random, or specific number)");
+        System.out.println("  --verbose, -v       Show detailed per-settlement output");
+        System.out.println("  --quiet, -q         Suppress individual runs, show only summary");
+        System.out.println("  --help, -h          Show this help");
+        System.out.println();
+        System.out.println("Examples:");
+        System.out.println("  SimulationRunner                     # Run single simulation");
+        System.out.println("  SimulationRunner --runs 5            # Run 5 simulations");
+        System.out.println("  SimulationRunner --runs 10 --ticks 1000  # 10 long simulations");
+        System.out.println("  SimulationRunner -n 5 -v             # Verbose output");
+        System.out.println("  SimulationRunner -s 12345            # Reproducible seed");
+    }
+    
+    public static void runSimulation(int ticks) {
+        SimulationOptions opts = new SimulationOptions();
+        opts.ticks = ticks;
+        runMultipleSimulations(opts);
+    }
+    
+    private static void runMultipleSimulations(SimulationOptions opts) {
+        GameConfig config = loadConfigFromYaml();
+        
+        List<SimulationResult> results = new ArrayList<>();
+        Random seedRandom = new Random();
+        
+        for (int run = 1; run <= opts.runs; run++) {
+            long seed = opts.seedSet ? opts.seed : seedRandom.nextLong();
+            
+            if (!opts.quiet || opts.verbose) {
+                System.out.println();
+                System.out.println("=== Run " + run + "/" + opts.runs + " (seed=" + seed + ") ===");
+            }
+            
+            SimulationRunner runner = new SimulationRunner(config, opts);
+            SimulationResult result = runner.runSingleSimulation(seed);
+            results.add(result);
+            
+            if (opts.verbose) {
+                result.printDetailedOutput();
+            } else if (!opts.quiet) {
+                result.printSummary();
+            }
+        }
+        
+        printAggregatedResults(results, opts);
+    }
+    
+    private static String rns(int n) {
+        return String.valueOf(n);
+    }
+    
+    private SimulationResult runSingleSimulation(long seed) {
+        config.setWorldSeed(seed);
+        World world = new World(16, config, true);
+        SimulationSystem simulation = new SimulationSystem(world, config);
+        
+        setupDefaultScenario(world);
+        
+        int settlementCount = world.getSettlements().size();
+        SimulationResult result = new SimulationResult(seed, settlementCount);
+        
+        Map<String, BalanceTracker> trackers = new HashMap<>();
+        for (Settlement s : world.getSettlements()) {
+            trackers.put(s.name, new BalanceTracker(s.name));
+        }
+        
+        for (int i = 0; i < options.ticks; i++) {
+            simulation.tick(1.0f);
+            simulation.updateCaravans(1.0f / 60f);
+            
+            for (Settlement s : world.getSettlements()) {
+                trackers.get(s.name).record(s, config);
+            }
+            
+            if (!options.quiet && (i + 1) % 100 == 0) {
+                System.out.print(".");
+            }
+        }
+        
+        if (!options.quiet) {
+            System.out.println();
+        }
+        
+        for (Map.Entry<String, BalanceTracker> entry : trackers.entrySet()) {
+            result.addSettlementResult(entry.getKey(), entry.getValue());
+        }
+        
+        return result;
+    }
+    
+    public void setupDefaultScenario(World world) {
         world.createStarterSettlement();
         
         world.reveal(8, 0);
@@ -60,148 +209,343 @@ public class SimulationRunner {
         }
     }
     
-    public void run() {
-        System.out.println("=== Running Economy Simulation ===");
-        System.out.println("Duration: " + ticks + " ticks (" + (ticks / 60.0) + " sim-minutes)");
-        System.out.println("Settlements: " + world.getSettlements().size());
-        System.out.println();
-        
-        for (Settlement s : world.getSettlements()) {
-            trackers.put(s.name, new BalanceTracker(s.name));
+    public void placeBuilding(Settlement s, BuildingType type, int offsetX, int offsetY) {
+        if (s != null) {
+            s.addBuilding(type.getId());
         }
-        
-        for (int i = 0; i < ticks; i++) {
-            simulation.tick(1.0f);
-            simulation.updateCaravans(1.0f / 60f);
-            
-            for (Settlement s : world.getSettlements()) {
-                trackers.get(s.name).record(s, config);
-            }
-            
-            if ((i + 1) % 100 == 0) {
-                System.out.print(".");
-            }
-        }
-        System.out.println();
-        System.out.println();
-        
-        printAnalysis();
     }
     
-    private void printAnalysis() {
-        System.out.println("=== BALANCE ANALYSIS ===");
+    public void addFarmingBuildings(Settlement s) {
+        placeBuilding(s, BuildingType.FARM_SMALL, 1, 0);
+        placeBuilding(s, BuildingType.FARM_SMALL, 0, 1);
+        placeBuilding(s, BuildingType.FARM_SMALL, -1, 0);
+    }
+    
+    public void addHousingBuildings(Settlement s) {
+        placeBuilding(s, BuildingType.HOUSE_SIMPLE, 1, 0);
+        placeBuilding(s, BuildingType.HOUSE_SIMPLE, 0, 1);
+        placeBuilding(s, BuildingType.HOUSE_LARGE, -1, 0);
+    }
+    
+    public void addMarketBuildings(Settlement s) {
+        placeBuilding(s, BuildingType.MARKET_SMALL, 0, 0);
+    }
+    
+    public void addMiningBuildings(Settlement s) {
+        placeBuilding(s, BuildingType.FORGE_SMALL, 0, 0);
+    }
+    
+    public void addLoggingBuildings(Settlement s) {
+        placeBuilding(s, BuildingType.WAREHOUSE, 0, 0);
+    }
+    
+    public void addBasicBuildings(Settlement s) {
+        placeBuilding(s, BuildingType.HOUSE_SIMPLE, 1, 0);
+        placeBuilding(s, BuildingType.WELL_WATER, 0, 1);
+        placeBuilding(s, BuildingType.WAREHOUSE, -1, 0);
+    }
+    
+    private static void printAggregatedResults(List<SimulationResult> results, SimulationOptions opts) {
+        if (results.isEmpty()) return;
+        
+        System.out.println();
+        System.out.println("=== AGGREGATED RESULTS (" + results.size() + " runs) ===");
         System.out.println();
         
-        boolean hasIssues = false;
+        Set<String> allSettlements = new TreeSet<>();
+        for (SimulationResult r : results) {
+            allSettlements.addAll(r.settlementResults.keySet());
+        }
         
-        for (BalanceTracker tracker : trackers.values()) {
-            System.out.println("--- " + tracker.settlementName + " ---");
+        System.out.println("Duration: " + opts.ticks + " ticks per simulation");
+        System.out.println("World Seeds: " + results.stream().map(r -> String.valueOf(r.seed)).reduce((a, b) -> a + ", " + b).orElse("none"));
+        System.out.println();
+        
+        System.out.println("--- Food Balance (avg per tick) ---");
+        for (String settlement : allSettlements) {
+            List<Double> values = new ArrayList<>();
+            for (SimulationResult r : results) {
+                SettlementResult sr = r.settlementResults.get(settlement);
+                if (sr != null) {
+                    values.add(sr.foodBalance);
+                }
+            }
+            if (!values.isEmpty()) {
+                System.out.printf("  %-20s: mean=%7.2f, min=%7.2f, max=%7.2f, std=%6.2f%n",
+                    settlement, mean(values), min(values), max(values), stdDev(values));
+            }
+        }
+        System.out.println();
+        
+        System.out.println("--- Price Volatility (range) ---");
+        for (String settlement : allSettlements) {
+            List<Double> values = new ArrayList<>();
+            for (SimulationResult r : results) {
+                SettlementResult sr = r.settlementResults.get(settlement);
+                if (sr != null) {
+                    values.add(sr.priceVolatility);
+                }
+            }
+            if (!values.isEmpty()) {
+                System.out.printf("  %-20s: mean=%7.2f, min=%7.2f, max=%7.2f, std=%6.2f%n",
+                    settlement, mean(values), min(values), max(values), stdDev(values));
+            }
+        }
+        System.out.println();
+        
+        System.out.println("--- Starvation Ticks ---");
+        for (String settlement : allSettlements) {
+            List<Integer> values = new ArrayList<>();
+            for (SimulationResult r : results) {
+                SettlementResult sr = r.settlementResults.get(settlement);
+                if (sr != null) {
+                    values.add(sr.starvationTicks);
+                }
+            }
+            if (!values.isEmpty()) {
+                System.out.printf("  %-20s: mean=%7.1f, min=%7d, max=%7d%n",
+                    settlement, meanInt(values), minInt(values), maxInt(values));
+            }
+        }
+        System.out.println();
+        
+        System.out.println("--- Trade Revenue (total gold) ---");
+        for (String settlement : allSettlements) {
+            List<Double> values = new ArrayList<>();
+            for (SimulationResult r : results) {
+                SettlementResult sr = r.settlementResults.get(settlement);
+                if (sr != null) {
+                    values.add(sr.tradeRevenue);
+                }
+            }
+            if (!values.isEmpty()) {
+                System.out.printf("  %-20s: mean=%7.1f, min=%7.1f, max=%7.1f%n",
+                    settlement, mean(values), min(values), max(values));
+            }
+        }
+        System.out.println();
+        
+        System.out.println("--- Final Population ---");
+        for (String settlement : allSettlements) {
+            List<Integer> values = new ArrayList<>();
+            for (SimulationResult r : results) {
+                SettlementResult sr = r.settlementResults.get(settlement);
+                if (sr != null) {
+                    values.add(sr.finalPopulation);
+                }
+            }
+            if (!values.isEmpty()) {
+                System.out.printf("  %-20s: mean=%7.1f, min=%7d, max=%7d%n",
+                    settlement, meanInt(values), minInt(values), maxInt(values));
+            }
+        }
+        System.out.println();
+        
+        printOverallIssues(results, allSettlements);
+    }
+    
+    private static void printOverallIssues(List<SimulationResult> results, Set<String> settlements) {
+        System.out.println("--- Overall Issues ---");
+        
+        for (String settlement : settlements) {
+            List<Double> foodBalances = new ArrayList<>();
+            List<Integer> starvationTicks = new ArrayList<>();
+            List<Double> priceVol = new ArrayList<>();
             
-            if (tracker.avgFoodBalance < 0) {
-                System.out.println("  [ISSUE] Food deficit: avg " + String.format("%.2f", tracker.avgFoodBalance) + "/tick");
-                System.out.println("    -> Food production insufficient for population");
-                System.out.println("    -> Consider: increase GRASS_FOOD, adjust growth_rate, or add food bonuses");
-                hasIssues = true;
-            } else {
-                System.out.println("  [OK] Food balance: avg " + String.format("%.2f", tracker.avgFoodBalance) + "/tick");
+            for (SimulationResult r : results) {
+                SettlementResult sr = r.settlementResults.get(settlement);
+                if (sr != null) {
+                    foodBalances.add(sr.foodBalance);
+                    starvationTicks.add(sr.starvationTicks);
+                    priceVol.add(sr.priceVolatility);
+                }
             }
             
-            if (tracker.sampleCount > 0) {
-                tracker.populationGrowthRate = (tracker.finalPop - tracker.initialPop) / (double) tracker.sampleCount;
+            int deficitCount = 0;
+            for (Double fb : foodBalances) {
+                if (fb < 0) deficitCount++;
             }
-            if (tracker.populationGrowthRate < 0.01 && tracker.finalPop > 10 && tracker.initialPop < tracker.finalPop) {
-                System.out.println("  [ISSUE] Slow growth: " + String.format("%.2f", tracker.populationGrowthRate * 100) + "% per tick");
-                System.out.println("    -> Population struggling to grow");
-                System.out.println("    -> Consider: increase growth_rate or food production");
-                hasIssues = true;
-            }
-            
-            if (tracker.starvationTicks > ticks * 0.1) {
-                System.out.println("  [ISSUE] Starvation: " + tracker.starvationTicks + " ticks with starvation");
-                System.out.println("    -> Population dying frequently");
-                System.out.println("    -> Consider: reduce starvation_rate or increase food production");
-                hasIssues = true;
+            if (deficitCount > 0) {
+                System.out.printf("  %s food deficit: appears in %d/%d runs%n", 
+                    settlement, deficitCount, results.size());
             }
             
-            if (tracker.avgGoldBalance < 0) {
-                System.out.println("  [ISSUE] Gold deficit: avg " + String.format("%.2f", tracker.avgGoldBalance) + "/tick");
-                System.out.println("    -> Not enough gold income");
-                System.out.println("    -> Consider: adjust trade prices or caravan revenue");
-                hasIssues = true;
+            int starvationCount = 0;
+            for (Integer st : starvationTicks) {
+                if (st > 0) starvationCount++;
+            }
+            if (starvationCount > 0) {
+                System.out.printf("  %s starvation: appears in %d/%d runs%n",
+                    settlement, starvationCount, results.size());
             }
             
-            double woodProd = tracker.avgWoodProd;
-            double stoneProd = tracker.avgStoneProd;
-            if (woodProd < 1.0 && tracker.finalPop > 30) {
-                System.out.println("  [ISSUE] Low wood production: " + String.format("%.1f", woodProd) + "/tick");
-                System.out.println("    -> Insufficient for building construction");
-                System.out.println("    -> Consider: increase FOREST_WOOD or add specialization bonus");
-                hasIssues = true;
+            int priceVolCount = 0;
+            for (Double pv : priceVol) {
+                if (pv > 1.0) priceVolCount++;
             }
-            if (stoneProd < 0.5 && tracker.finalPop > 30) {
-                System.out.println("  [ISSUE] Low stone production: " + String.format("%.1f", stoneProd) + "/tick");
-                System.out.println("    -> Insufficient for upgrades");
-                System.out.println("    -> Consider: increase STONE_STONE or add specialization bonus");
-                hasIssues = true;
+            if (priceVolCount > 0) {
+                System.out.printf("  %s price volatility >1.0: appears in %d/%d runs%n",
+                    settlement, priceVolCount, results.size());
+            }
+        }
+        System.out.println();
+    }
+    
+    private static double mean(List<Double> values) {
+        return values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+    }
+    
+    private static double meanInt(List<Integer> values) {
+        return values.stream().mapToInt(Integer::intValue).average().orElse(0);
+    }
+    
+    private static double min(List<Double> values) {
+        return values.stream().mapToDouble(Double::doubleValue).min().orElse(0);
+    }
+    
+    private static int minInt(List<Integer> values) {
+        return values.stream().mapToInt(Integer::intValue).min().orElse(0);
+    }
+    
+    private static double max(List<Double> values) {
+        return values.stream().mapToDouble(Double::doubleValue).max().orElse(0);
+    }
+    
+    private static int maxInt(List<Integer> values) {
+        return values.stream().mapToInt(Integer::intValue).max().orElse(0);
+    }
+    
+    private static double stdDev(List<Double> values) {
+        if (values.size() < 2) return 0;
+        double mean = mean(values);
+        double variance = values.stream()
+            .mapToDouble(v -> (v - mean) * (v - mean))
+            .average()
+            .orElse(0);
+        return Math.sqrt(variance);
+    }
+    
+    private static GameConfig loadConfigFromYaml() {
+        String workingDir = System.getProperty("user.dir");
+        File projectRoot = new File(workingDir);
+        if (!new File(projectRoot, "assets/application.yml").exists()) {
+            projectRoot = projectRoot.getParentFile();
+        }
+        File configFile = new File(projectRoot, "assets/application.yml");
+        if (!configFile.exists()) {
+            System.out.println("Warning: assets/application.yml not found at " + configFile.getAbsolutePath() + ", using defaults");
+            return new GameConfig(new GameConfig.Root());
+        }
+        
+        try (InputStream is = new FileInputStream(configFile)) {
+            Yaml yaml = new Yaml();
+            Map<String, Object> raw = yaml.load(is);
+            if (raw == null) {
+                return new GameConfig(new GameConfig.Root());
             }
             
-            double priceVariation = tracker.maxPrice - tracker.minPrice;
-            if (priceVariation > 1.0) {
-                System.out.println("  [ISSUE] Price volatility: " + String.format("%.2f", priceVariation) + " range");
-                System.out.println("    -> Prices fluctuating too much");
-                System.out.println("    -> Consider: adjust price_lerp_alpha or price bounds");
-                hasIssues = true;
-            }
-            
-            if (tracker.tradeRevenue > 0) {
-                System.out.println("  [OK] Trade revenue: " + String.format("%.1f", tracker.tradeRevenue) + " gold total");
-            }
-            
+            GameConfig gameConfig = new GameConfig(new GameConfig.Root());
+            gameConfig.loadFromMap(raw);
+            System.out.println("Loaded configuration from assets/application.yml");
+            return gameConfig;
+        } catch (Exception e) {
+            System.out.println("Warning: Failed to load application.yml: " + e.getMessage());
+            return new GameConfig(new GameConfig.Root());
+        }
+    }
+    
+    static class SimulationOptions {
+        int runs = 1;
+        int ticks = 500;
+        long seed = 42;
+        boolean seedSet = false;
+        boolean verbose = false;
+        boolean quiet = false;
+        boolean help = false;
+    }
+    
+    static class SimulationResult {
+        long seed;
+        int settlementCount;
+        Map<String, SettlementResult> settlementResults = new LinkedHashMap<>();
+        
+        SimulationResult(long seed, int settlementCount) {
+            this.seed = seed;
+            this.settlementCount = settlementCount;
+        }
+        
+        void addSettlementResult(String name, BalanceTracker tracker) {
+            settlementResults.put(name, new SettlementResult(tracker));
+        }
+        
+        void printDetailedOutput() {
+            System.out.println("Duration: " + 500 + " ticks (" + (500 / 60.0) + " sim-minutes)");
+            System.out.println("Settlements: " + settlementCount);
             System.out.println();
+            
+            for (Map.Entry<String, SettlementResult> entry : settlementResults.entrySet()) {
+                System.out.println("--- " + entry.getKey() + " ---");
+                entry.getValue().printDetails();
+                System.out.println();
+            }
         }
         
-        printConfigRecommendations();
-        
-        if (!hasIssues) {
-            System.out.println("[SUCCESS] No major balance issues detected!");
+        void printSummary() {
+            System.out.println("Settlements: " + settlementCount);
+            for (Map.Entry<String, SettlementResult> entry : settlementResults.entrySet()) {
+                String status = entry.getValue().foodBalance >= 0 ? "[OK]" : "[ISSUE]";
+                System.out.printf("  %s %s: food=%.2f, priceVol=%.2f, starve=%d%n",
+                    status, entry.getKey(), 
+                    entry.getValue().foodBalance,
+                    entry.getValue().priceVolatility,
+                    entry.getValue().starvationTicks);
+            }
         }
     }
     
-    private void printConfigRecommendations() {
-        System.out.println("=== CONFIGURATION RECOMMENDATIONS ===");
-        System.out.println();
+    static class SettlementResult {
+        double foodBalance;
+        double priceVolatility;
+        int starvationTicks;
+        double tradeRevenue;
+        int finalPopulation;
+        double populationGrowth;
         
-        System.out.println("To adjust in application.yml:");
-        System.out.println();
+        SettlementResult(BalanceTracker tracker) {
+            this.foodBalance = tracker.avgFoodBalance;
+            this.priceVolatility = tracker.maxPrice - tracker.minPrice;
+            this.starvationTicks = tracker.starvationTicks;
+            this.tradeRevenue = tracker.tradeRevenue;
+            this.finalPopulation = tracker.finalPop;
+            this.populationGrowth = tracker.finalPop - tracker.initialPop;
+        }
         
-        System.out.println("# Food balance:");
-        System.out.println("simulation:");
-        System.out.println("  food_demand_per_pop: 0.15   # Higher = harder to feed population");
-        System.out.println("  growth_rate: 0.01           # Higher = faster population growth");
-        System.out.println("  starvation_rate: 0.02       # Higher = faster death when starving");
-        System.out.println("  terrain_production:");
-        System.out.println("    GRASS_FOOD: 0.5            # Increase if food deficits");
-        System.out.println();
-        
-        System.out.println("# Production balance:");
-        System.out.println("  terrain_production:");
-        System.out.println("    FOREST_WOOD: 2.0           # Increase if wood shortages");
-        System.out.println("    STONE_STONE: 1.0           # Increase if stone shortages");
-        System.out.println();
-        
-        System.out.println("# Price stability:");
-        System.out.println("  price_lerp_alpha: 0.2       # Lower = slower price changes");
-        System.out.println("  price_min: 0.5              # Price floor");
-        System.out.println("  price_max: 2.0              # Price ceiling");
-        System.out.println();
-        
-        System.out.println("# Trade/caravan:");
-        System.out.println("trade:");
-        System.out.println("  max_caravans_per_route: 3   # More = more trade");
-        System.out.println("  base_spawn_interval: 120.0  # Lower = more frequent caravans");
+        void printDetails() {
+            if (foodBalance < 0) {
+                System.out.println("  [ISSUE] Food deficit: avg " + String.format("%.2f", foodBalance) + "/tick");
+            } else {
+                System.out.println("  [OK] Food balance: avg " + String.format("%.2f", foodBalance) + "/tick");
+            }
+            
+            if (priceVolatility > 1.0) {
+                System.out.println("  [ISSUE] Price volatility: " + String.format("%.2f", priceVolatility) + " range");
+            } else {
+                System.out.println("  [OK] Price volatility: " + String.format("%.2f", priceVolatility) + " range");
+            }
+            
+            if (starvationTicks > 0) {
+                System.out.println("  [ISSUE] Starvation: " + starvationTicks + " ticks");
+            }
+            
+            if (tradeRevenue > 0) {
+                System.out.println("  [OK] Trade revenue: " + String.format("%.1f", tradeRevenue) + " gold");
+            }
+            
+            System.out.println("  Population: " + finalPopulation + " (growth: " + (populationGrowth >= 0 ? "+" : "") + (int)populationGrowth + ")");
+        }
     }
     
-    private static class BalanceTracker {
+    static class BalanceTracker {
         final String settlementName;
         
         double totalFoodProd = 0;
@@ -273,47 +617,6 @@ public class SimulationRunner {
             maxPrice = Math.max(maxPrice, avgPrice);
             
             sampleCount++;
-        }
-    }
-    
-    public static void main(String[] args) {
-        runSimulation(500);
-    }
-    
-    public static void runSimulation(int ticks) {
-        GameConfig config = loadConfigFromYaml();
-        
-        SimulationRunner runner = new SimulationRunner(config, ticks);
-        runner.setupDefaultScenario();
-        runner.run();
-    }
-    
-    private static GameConfig loadConfigFromYaml() {
-        String workingDir = System.getProperty("user.dir");
-        File projectRoot = new File(workingDir);
-        if (!new File(projectRoot, "assets/application.yml").exists()) {
-            projectRoot = projectRoot.getParentFile();
-        }
-        File configFile = new File(projectRoot, "assets/application.yml");
-        if (!configFile.exists()) {
-            System.out.println("Warning: assets/application.yml not found at " + configFile.getAbsolutePath() + ", using defaults");
-            return new GameConfig(new GameConfig.Root());
-        }
-        
-        try (InputStream is = new FileInputStream(configFile)) {
-            Yaml yaml = new Yaml();
-            Map<String, Object> raw = yaml.load(is);
-            if (raw == null) {
-                return new GameConfig(new GameConfig.Root());
-            }
-            
-            GameConfig gameConfig = new GameConfig(new GameConfig.Root());
-            gameConfig.loadFromMap(raw);
-            System.out.println("Loaded configuration from assets/application.yml");
-            return gameConfig;
-        } catch (Exception e) {
-            System.out.println("Warning: Failed to load application.yml: " + e.getMessage());
-            return new GameConfig(new GameConfig.Root());
         }
     }
 }

@@ -4,7 +4,21 @@ eclipse.project.name = appName + '-core'
 task runSimulation(type: JavaExec) {
   mainClass = 'ch.obermuhlner.sim.SimulationRunner'
   classpath = sourceSets.main.runtimeClasspath
-  args = [500]
+  if (project.hasProperty("runs")) {
+    args '--runs', project.runs
+  }
+  if (project.hasProperty("ticks")) {
+    args '--ticks', project.ticks
+  }
+  if (project.hasProperty("seed")) {
+    args '--seed', project.seed
+  }
+  if (project.hasProperty("verbose")) {
+    args '--verbose'
+  }
+  if (project.hasProperty("quiet")) {
+    args '--quiet'
+  }
 }
 
 dependencies {

@@ -620,6 +620,7 @@ public class GameConfig {
     // ---- World accessors ----
 
     public long getWorldSeed() { return root.world.seed; }
+    public void setWorldSeed(long seed) { root.world.seed = seed; }
     public float getTickInterval() { return root.world.tick_interval; }
     public int getNearbySettlementRadius() { return root.world.nearby_settlement_radius; }
 
