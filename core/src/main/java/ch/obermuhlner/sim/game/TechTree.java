@@ -21,7 +21,7 @@ public class TechTree {
 
     private final Set<String> researchedTechs = new LinkedHashSet<>();
     private String activeResearchId = null;
-    private float researchProgress = 0f; // gold invested toward activeResearchId
+    private float researchProgress = 0f;
 
     // ---- Queries ----
 
@@ -52,6 +52,16 @@ public class TechTree {
         if (techId.equals(activeResearchId)) return;
         activeResearchId = techId;
         researchProgress = 0f;
+    }
+
+    /** Mark a cross-specialization tech as researched (completed automatically when conditions are met). */
+    public void researchCrossSpecialization(String techId) {
+        researchedTechs.add(techId);
+    }
+
+    /** Mark a conditional tech as researched (completed automatically when conditions are met). */
+    public void researchConditional(String techId) {
+        researchedTechs.add(techId);
     }
 
     /**

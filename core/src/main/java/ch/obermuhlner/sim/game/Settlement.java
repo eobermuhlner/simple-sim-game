@@ -65,8 +65,8 @@ public class Settlement {
         this.settlementLevelIndex = levelIndex;
         this.specialization = spec;
         this.config = config;
-        this.storageCapacity = 0f; // overwritten by loadSettlements
-        this.gold = 0f;            // overwritten by loadSettlements
+        this.storageCapacity = config.getStorageCapacity();
+        this.gold = config.getStartingGold();
     }
 
     public SettlementLevel getLevel() {

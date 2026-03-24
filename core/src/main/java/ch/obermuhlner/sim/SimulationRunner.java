@@ -243,64 +243,93 @@ public class SimulationRunner {
     public void setupTechTestScenario(World world) {
         world.createStarterSettlement();
         
-        world.reveal(8, 0);
-        Settlement loggingCamp = world.createSettlement("Logging Town", 8, 0);
-        if (loggingCamp != null) {
-            loggingCamp.specialize(Specialization.LOGGING_CAMP);
-            loggingCamp.population = 50;
-        }
+        Settlement starterSettlement = world.getSettlements().get(0);
+        int starterX = starterSettlement.centerX;
+        int starterY = starterSettlement.centerY;
         
-        world.reveal(-8, 6);
-        Settlement miningCamp = world.createSettlement("Mining Town", -8, 6);
-        if (miningCamp != null) {
-            miningCamp.specialize(Specialization.MINING_TOWN);
-            miningCamp.population = 50;
-        }
+        Settlement loggingCamp = createSettlementAtDistance(world, "Logging Town", starterX, starterY, 6, 2, Specialization.LOGGING_CAMP);
+        Settlement miningCamp = createSettlementAtDistance(world, "Mining Town", starterX, starterY, -6, 5, Specialization.MINING_TOWN);
+        Settlement farmingVillage = createSettlementAtDistance(world, "Farming Town", starterX, starterY, 0, -6, Specialization.FARMING_VILLAGE);
+        Settlement tradeHub = createSettlementAtDistance(world, "Trade Hub", starterX, starterY, -4, -4, Specialization.TRADE_HUB);
+
+        buildRoadsBetweenSettlements(world, starterSettlement, loggingCamp, miningCamp, farmingVillage, tradeHub);
+
+        addBasicBuildings(loggingCamp);
+        addBasicBuildings(miningCamp);
+        addBasicBuildings(farmingVillage);
+        addBasicBuildings(tradeHub);
+        addBasicBuildings(starterSettlement);
+    }
+    
+    private Settlement createSettlementAtDistance(World world, String name, int fromX, int fromY, int offsetX, int offsetY, Specialization spec) {
+        int targetX = fromX + offsetX;
+        int targetY = fromY + offsetY;
         
-        world.reveal(0, -8);
-        Settlement farmingVillage = world.createSettlement("Farming Town", 0, -8);
-        if (farmingVillage != null) {
-            farmingVillage.specialize(Specialization.FARMING_VILLAGE);
-            farmingVillage.population = 50;
-        }
-        
-        world.reveal(-5, -5);
-        Settlement tradeHub = world.createSettlement("Trade Hub", -5, -5);
-        if (tradeHub != null) {
-            tradeHub.specialize(Specialization.TRADE_HUB);
-            tradeHub.population = 50;
-        }
-        
-        for (int x = 0; x <= 2; x++) {
-            for (int y = 0; y <= 2; y++) {
-                world.placeRoad(x, y, RoadType.DIRT);
+        for (int radius = 0; radius < 10; radius++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                for (int dx = -radius; dx <= radius; dx++) {
+                    if (Math.abs(dx) != radius && Math.abs(dy) != radius) continue;
+                    int tx = targetX + dx;
+                    int ty = targetY + dy;
+                    world.reveal(tx, ty);
+                    Settlement s = world.createSettlement(name, tx, ty);
+                    if (s != null) {
+                        s.specialize(spec);
+                        s.population = 50;
+                        return s;
+                    }
+                }
             }
         }
-        for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-                if (Math.abs(x) + Math.abs(y) <= 3) {
+        return null;
+    }
+    
+    private void buildRoadsBetweenSettlements(World world, Settlement... settlements) {
+        for (Settlement from : settlements) {
+            if (from == null) continue;
+            for (Settlement to : settlements) {
+                if (to == null || to == from) continue;
+                
+                int dx = Integer.signum(to.centerX - from.centerX);
+                int dy = Integer.signum(to.centerY - from.centerY);
+                
+                int x = from.centerX;
+                int y = from.centerY;
+                while (x != to.centerX || y != to.centerY) {
                     world.placeRoad(x, y, RoadType.DIRT);
+                    if (x != to.centerX) x += dx;
+                    else if (y != to.centerY) y += dy;
                 }
+                world.placeRoad(to.centerX, to.centerY, RoadType.DIRT);
             }
         }
     }
     
     private void simulateResearch(World world, GameConfig config, int tick) {
+        if (!world.techTree.hasActiveResearch()) {
+            if (tick % 50 == 0 && tick > 0) {
+                tryAutoResearch(world, world.techTree, world.getSettlements(), config);
+            }
+            return;
+        }
+        
         float researchGoldPerTick = config.getTechTreeConfig().research_gold_per_tick;
         
         for (Settlement s : world.getSettlements()) {
             float goldToResearch = Math.min(s.gold, researchGoldPerTick);
             s.gold -= goldToResearch;
             world.techTree.addProgress(goldToResearch, config);
-            
-            if (tick % 50 == 0 && tick > 0) {
-                tryAutoResearch(world, world.techTree, world.getSettlements(), config);
-            }
+        }
+        
+        if (tick % 50 == 0 && tick > 0) {
+            tryAutoResearch(world, world.techTree, world.getSettlements(), config);
         }
     }
     
     private void tryAutoResearch(World world, TechTree techTree, List<Settlement> settlements, GameConfig config) {
-        if (techTree.hasActiveResearch()) return;
+        if (techTree.hasActiveResearch()) {
+            return;
+        }
         
         SettlementLevel maxLevel = config.getFirstLevel();
         for (Settlement s : settlements) {
@@ -310,15 +339,15 @@ public class SimulationRunner {
         }
         
         for (GameConfig.CrossSpecializationTechConfig csTech : config.getAllCrossSpecializationTechs()) {
-            if (techTree.canResearchCrossSpecialization(csTech, settlements)) {
-                techTree.startResearch(csTech.id);
+            if (techTree.canResearchCrossSpecialization(csTech, settlements) && !techTree.isResearched(csTech.id)) {
+                techTree.researchCrossSpecialization(csTech.id);
                 return;
             }
         }
         
         for (GameConfig.ConditionalTechConfig condTech : config.getAllConditionalTechs()) {
-            if (techTree.canResearchConditional(condTech, settlements, world.getActiveTradeRouteCount())) {
-                techTree.startResearch(condTech.id);
+            if (techTree.canResearchConditional(condTech, settlements, world.getActiveTradeRouteCount()) && !techTree.isResearched(condTech.id)) {
+                techTree.researchConditional(condTech.id);
                 return;
             }
         }
