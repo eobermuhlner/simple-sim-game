@@ -347,16 +347,209 @@ To keep scope realistic:
 
 ---
 
-## 12. Design Summary
+## 11. Technology Tree Expansion
+
+### 11.1 Overview
+The tech tree provides meaningful progression with choices that affect gameplay strategy. All tech tree data is defined in application.yml, allowing content to be added without code changes.
+
+### 11.2 Configuration (application.yml)
+```yaml
+tech_tree:
+  research_gold_per_tick: 2.0
+  initially_available:
+    roads: [DIRT]
+    buildings: [HOUSE_SIMPLE, FARM_SMALL, MARKET_SMALL, WAREHOUSE, WELL_WATER]
+  techs:
+    BASIC_ROADS:
+      name: Basic Roads
+      branch: GENERAL
+      cost: 50.0
+      required_tech: ""
+      required_level: VILLAGE
+      allow:
+        roads: [STONE]
+```
+
+### 11.3 Expansion Elements
+- **Tier 4-5 Tech:** Advanced upgrades per specialization (configurable in application.yml)
+- **Cross-Specialization Tech:** Requires multiple settlement types working together
+- **Conditional Tech:** Unlocks based on game state (settlements count, resources stored, population)
+- **Tech Categories:** GENERAL, LOGGING_CAMP, MINING_TOWN, FARMING_VILLAGE, TRADE_HUB, CROSS_SPECIALIZATION
+
+### 11.4 Cross-Specialization Example
+Some powerful techs require cooperation between settlement types:
+- **Industrial Logging:** Requires Logging Camp + Trade Hub → Unlocks advanced wood production
+- **Mass Mining:** Requires Mining Town + Trade Hub → Unlocks advanced stone production
+- **Agricultural Empire:** Requires Farming Village + Trade Hub → Unlocks food export tech
+
+### 11.5 Conditional Tech Example
+Techs that unlock based on game achievements:
+- **City Planning:** Unlocks when player has 3+ settlements
+- **Empire:** Unlocks when total population reaches 500
+- **Trade Mastery:** Unlocks when player has 5+ active trade routes
+
+---
+
+## 12. Building Upgrade System
+
+### 12.1 Overview
+Buildings can be upgraded for increased benefits, providing progression within settlements. All building data is defined in application.yml.
+
+### 12.2 Configuration (application.yml)
+```yaml
+buildings:
+  HOUSE_SIMPLE:
+    cost: 10
+    population_capacity: 4
+    image: 64x64/objects/house-simple.png
+    description: A modest wooden dwelling.
+    tier: 1
+    upgrade_from: null
+  HOUSE_LARGE:
+    cost: 15
+    population_capacity: 8
+    image: 64x64/objects/house-large.png
+    description: A spacious home housing a larger family.
+    tier: 2
+    upgrade_from: HOUSE_SIMPLE
+    upgrade_cost: 8
+```
+
+### 12.3 Upgrade Mechanics
+- **Tier System:** Buildings have tier 1, 2, 3 (defined in config)
+- **Upgrade Path:** Each building specifies upgrade_from for the chain
+- **Cost:** Upgrades cost less than building from scratch
+- **Requirements:** Some upgrades require settlement level (TOWN, CITY, etc.)
+- **Visual:** Sprite changes based on tier (configurable via image path)
+
+### 12.4 Production Bonuses
+Upgrade tiers can provide production bonuses:
+```yaml
+FARM_LARGE:
+  tier: 2
+  upgrade_from: FARM_SMALL
+  upgrade_cost: 15
+  production_bonus:
+    FOOD: 2.0
+FARM_PLANTATION:
+  tier: 3
+  upgrade_from: FARM_LARGE
+  upgrade_cost: 30
+  required_level: TOWN
+  production_bonus:
+    FOOD: 5.0
+```
+
+---
+
+## 13. Dynamic Events System
+
+### 13.1 Overview
+Random events add unpredictability and memorable moments to gameplay. All events are defined in application.yml.
+
+### 13.2 Configuration (application.yml)
+```yaml
+events:
+  global_settings:
+    min_ticks_between_events: 50
+    max_concurrent_events: 3
+    notification_duration: 5
+  
+  categories:
+    - id: NATURAL
+      weight: 1.0
+    - id: ECONOMIC
+      weight: 0.8
+    - id: SOCIAL
+      weight: 0.6
+    - id: DANGER
+      weight: 0.4
+  
+  event_templates:
+    - id: DROUGHT
+      name: Drought
+      category: NATURAL
+      weight: 0.3
+      duration: 30
+      effects:
+        GRASS_FOOD_MULTIPLIER: 0.5
+      notification: "A drought affects {settlement}! Food production halved."
+      
+    - id: BOUNTIFUL_HARVEST
+      name: Bountiful Harvest
+      category: NATURAL
+      weight: 0.4
+      duration: 20
+      effects:
+        GRASS_FOOD_MULTIPLIER: 2.0
+      notification: "{settlement} enjoys a bountiful harvest!"
+      
+    - id: TRADE_BOOM
+      name: Trade Boom
+      category: ECONOMIC
+      weight: 0.3
+      duration: 30
+      effects:
+        TRADE_INCOME_MULTIPLIER: 1.5
+      notification: "Trade is booming! Merchant activity increased."
+      
+    - id: LOCAL_FESTIVAL
+      name: Local Festival
+      category: SOCIAL
+      weight: 0.2
+      duration: 15
+      choice: true
+      options:
+        - name: Host Festival
+          cost: 50
+          effects:
+            GROWTH_RATE_MULTIPLIER: 1.5
+        - name: Skip
+          cost: 0
+          effects: {}
+      notification: "{settlement} wants to host a festival."
+```
+
+### 13.3 Event Properties
+- **Category:** NATURAL, ECONOMIC, SOCIAL, DANGER (each with weight for frequency)
+- **Weight:** Probability of this event type being selected
+- **Duration:** How long effects last (temporary events)
+- **Effects:** Modifiers to game values (production multipliers, resource changes)
+- **Choice:** Whether player can decide (optional events)
+- **Scope:** SINGLE_SETTLEMENT, REGION, GLOBAL
+
+### 13.4 Effect Types
+| Effect | Description | Example |
+|--------|-------------|---------|
+| RESOURCE_MULTIPLIER | Multiply production | GRASS_FOOD_MULTIPLIER: 0.5 |
+| RESOURCE_BONUS | Add flat production | WOOD_BONUS: 2.0 |
+| GROWTH_MODIFIER | Adjust growth rate | GROWTH_RATE_MULTIPLIER: 1.5 |
+| PRICE_MODIFIER | Adjust prices | PRICE_FLOOR: 0.3 |
+| POPULATION_BONUS | Instant population change | POPULATION: +10 |
+
+### 13.5 Event System Flow
+1. Event timer reaches threshold
+2. Select category based on weights
+3. Select event from category based on weight
+4. Apply to eligible targets (settlement, region, global)
+5. Show notification to player
+6. Apply effects for duration
+7. Remove effects and show recovery notification
+
+---
+
+## 14. Design Summary
 
 This design focuses on:
 
 * Fewer systems, but stronger interactions
 * Strategic choices without complexity
 * Visible, satisfying simulation
+* Configurable content via application.yml
 
 The result is a game that is:
 
 * Easy to learn
 * Hard to optimize
 * Relaxing but engaging
+* Extensible through configuration

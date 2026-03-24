@@ -709,3 +709,283 @@ tech_tree:
       required_level: CITY
       allow:
         sea_exploration: [DEEP_SEA]
+
+# ============================================================
+# Phase 10: Technology Tree Expansion
+# ============================================================
+
+tech_tree_expansion:
+  # Cross-specialization techs require multiple settlement types
+  cross_specialization_techs:
+    INDUSTRIAL_LOGGING:
+      name: Industrial Logging
+      requires: [LOGGING_CAMP, TRADE_HUB]
+      cost: 200.0
+      effects:
+        wood_multiplier: 0.5
+    MASS_MINING:
+      name: Mass Mining
+      requires: [MINING_TOWN, TRADE_HUB]
+      cost: 200.0
+      effects:
+        stone_multiplier: 0.5
+    AGRICULTURAL_EMPIRE:
+      name: Agricultural Empire
+      requires: [FARMING_VILLAGE, TRADE_HUB]
+      cost: 200.0
+      effects:
+        food_multiplier: 0.5
+  
+  # Conditional techs unlock based on game state
+  conditional_techs:
+    CITY_PLANNING:
+      name: City Planning
+      condition: settlements >= 3
+      cost: 200.0
+      unlocks:
+        buildings: [CITY_HALL, PLAZA]
+    EMPIRE:
+      name: Empire
+      condition: total_population >= 500
+      cost: 500.0
+    TRADE_MASTERY:
+      name: Trade Mastery
+      condition: active_trade_routes >= 5
+      cost: 300.0
+
+# ============================================================
+# Phase 11: Building Upgrades
+# ============================================================
+
+# Building upgrade chains - each building specifies upgrade_from
+# Tier system: 1 = basic, 2 = upgraded, 3 = advanced
+building_upgrades:
+  # Farm upgrade chain
+  FARM_SMALL:
+    tier: 1
+    upgrade_from: null
+    production_bonus:
+      FOOD: 1.0
+  FARM_LARGE:
+    tier: 2
+    upgrade_from: FARM_SMALL
+    upgrade_cost: 15
+    production_bonus:
+      FOOD: 3.0
+  FARM_PLANTATION:
+    tier: 3
+    upgrade_from: FARM_LARGE
+    upgrade_cost: 30
+    required_level: TOWN
+    production_bonus:
+      FOOD: 8.0
+  
+  # House upgrade chain
+  HOUSE_SIMPLE:
+    tier: 1
+    upgrade_from: null
+    population_capacity: 4
+  HOUSE_LARGE:
+    tier: 2
+    upgrade_from: HOUSE_SIMPLE
+    upgrade_cost: 8
+    population_capacity: 8
+  HOUSE_MANOR:
+    tier: 3
+    upgrade_from: HOUSE_LARGE
+    upgrade_cost: 20
+    required_level: TOWN
+    population_capacity: 15
+  
+  # Mine upgrade chain
+  MINE_PIT:
+    tier: 1
+    upgrade_from: null
+    production_bonus:
+      STONE: 1.0
+  MINE_QUARRY:
+    tier: 2
+    upgrade_from: MINE_PIT
+    upgrade_cost: 20
+    production_bonus:
+      STONE: 3.0
+  MINE_EXCAVATION:
+    tier: 3
+    upgrade_from: MINE_QUARRY
+    upgrade_cost: 40
+    required_level: CITY
+    production_bonus:
+      STONE: 8.0
+
+# ============================================================
+# Phase 12: Dynamic Events
+# ============================================================
+
+events:
+  global_settings:
+    min_ticks_between_events: 50
+    max_concurrent_events: 3
+    notification_duration: 5
+  
+  categories:
+    - id: NATURAL
+      weight: 1.0
+      description: Weather and environmental events
+    - id: ECONOMIC
+      weight: 0.8
+      description: Trade and market events
+    - id: SOCIAL
+      weight: 0.6
+      description: Population and cultural events
+    - id: DANGER
+      weight: 0.4
+      description: Threats and disasters
+  
+  event_templates:
+    # Natural Events
+    - id: DROUGHT
+      name: Drought
+      category: NATURAL
+      weight: 0.3
+      duration: 30
+      scope: SINGLE_SETTLEMENT
+      effects:
+        - type: PRODUCTION_MULTIPLIER
+          resource: FOOD
+          multiplier: 0.5
+      notification: "A drought affects {settlement}! Food production halved."
+      recovery_notification: "The drought has ended. Food production returns to normal."
+    
+    - id: BOUNTIFUL_HARVEST
+      name: Bountiful Harvest
+      category: NATURAL
+      weight: 0.4
+      duration: 20
+      scope: SINGLE_SETTLEMENT
+      effects:
+        - type: PRODUCTION_MULTIPLIER
+          resource: FOOD
+          multiplier: 2.0
+      notification: "{settlement} enjoys a bountiful harvest!"
+      recovery_notification: "The harvest season has ended."
+    
+    - id: STORM
+      name: Severe Storm
+      category: NATURAL
+      weight: 0.2
+      duration: 15
+      scope: REGION
+      effects:
+        - type: CARAVAN_SPEED_MULTIPLIER
+          multiplier: 0.5
+      notification: "A severe storm is passing through! Caravans slowed."
+      recovery_notification: "The storm has passed. Trade resumes normal speed."
+    
+    # Economic Events
+    - id: TRADE_BOOM
+      name: Trade Boom
+      category: ECONOMIC
+      weight: 0.3
+      duration: 30
+      scope: GLOBAL
+      effects:
+        - type: TRADE_INCOME_MULTIPLIER
+          multiplier: 1.5
+      notification: "Trade is booming! Merchant activity increased."
+      recovery_notification: "The trade boom has ended."
+    
+    - id: MARKET_CRASH
+      name: Market Crash
+      category: ECONOMIC
+      weight: 0.2
+      duration: 25
+      scope: GLOBAL
+      effects:
+        - type: TRADE_INCOME_MULTIPLIER
+          multiplier: 0.5
+      notification: "Markets are crashing! Trade income halved."
+      recovery_notification: "Markets are recovering."
+    
+    - id: RESOURCE_SHORTAGE
+      name: Resource Shortage
+      category: ECONOMIC
+      weight: 0.3
+      duration: 20
+      scope: SINGLE_SETTLEMENT
+      effects:
+        - type: PRICE_MAX_ADJUSTMENT
+          resource: FOOD
+          adjustment: 0.5
+      notification: "{settlement} is experiencing a food shortage!"
+      recovery_notification: "The shortage has ended."
+    
+    # Social Events
+    - id: LOCAL_FESTIVAL
+      name: Local Festival
+      category: SOCIAL
+      weight: 0.2
+      duration: 15
+      scope: SINGLE_SETTLEMENT
+      choice: true
+      options:
+        - name: Host Festival
+          cost: 50
+          effects:
+            - type: GROWTH_RATE_MULTIPLIER
+              multiplier: 1.5
+          result: "The festival was a great success!"
+        - name: Skip
+          cost: 0
+          effects: []
+          result: "The festival was cancelled."
+      notification: "{settlement} wants to host a festival."
+    
+    - id: MIGRATION_WAVE
+      name: Migration Wave
+      category: SOCIAL
+      weight: 0.3
+      duration: 0
+      scope: SINGLE_SETTLEMENT
+      effects:
+        - type: POPULATION_BONUS
+          amount: 10
+      notification: "A migration wave brings new settlers to {settlement}!"
+    
+    - id: BRAIN_DRAIN
+      name: Brain Drain
+      category: SOCIAL
+      weight: 0.2
+      duration: 30
+      scope: SINGLE_SETTLEMENT
+      effects:
+        - type: GROWTH_RATE_MULTIPLIER
+          multiplier: 0.5
+      notification: "{settlement} is experiencing a brain drain. Growth slowed."
+      recovery_notification: "The situation has stabilized."
+    
+    # Danger Events
+    - id: BANDIT_RAID
+      name: Bandit Raid
+      category: DANGER
+      weight: 0.2
+      duration: 0
+      scope: SINGLE_SETTLEMENT
+      effects:
+        - type: RESOURCE_LOSS
+          resource: GOLD
+          amount: 25%
+      notification: "Bandits raid {settlement}! Gold stolen."
+    
+    - id: PLAGUE
+      name: Plague
+      category: DANGER
+      weight: 0.1
+      duration: 40
+      scope: REGION
+      effects:
+        - type: GROWTH_RATE_MULTIPLIER
+          multiplier: 0.0
+        - type: POPULATION_LOSS
+          amount: 10%
+      notification: "A plague spreads through {region}! Population growth halted."
+      recovery_notification: "The plague has subsided."

@@ -858,11 +858,200 @@ These formulas determine pacing, balance, and player experience. Test and iterat
 - [ ] Route cost previews with congestion
 - [ ] Minimap
 - [ ] Save/Load system
-- [ ] Event system implementation
 - [ ] Sound effects
 - [ ] Particle effects
 - [ ] First trade moment time slowdown
 - [ ] Route hover highlight
+
+---
+
+### Phase 10: Technology Tree Expansion
+
+#### Goals
+- Add tier 4-5 tech per specialization branch (configurable in application.yml)
+- Add cross-specialization tech unlocking at 3+ settlements
+- Add conditional tech requirements
+- Update discovery-based UI
+
+#### Configuration (application.yml)
+```yaml
+tech_tree:
+  cross_specialization_techs:
+    - name: "Industrial Logging"
+      requires: [LOGGING_CAMP, TRADE_HUB]
+      unlocks: [LOGGING_ADVANCED]
+      cost: 200.0
+    - name: "Mass Mining"
+      requires: [MINING_TOWN, TRADE_HUB]
+      unlocks: [MINING_ADVANCED]
+      cost: 200.0
+    - name: "Agricultural Empire"
+      requires: [FARMING_VILLAGE, TRADE_HUB]
+      unlocks: [FARMING_ADVANCED]
+      cost: 200.0
+  
+  conditional_techs:
+    - name: "City Planning"
+      condition: "settlements >= 3"
+      cost: 200.0
+      unlocks: buildings: [CITY_HALL]
+    - name: "Empire"
+      condition: "total_population >= 500"
+      cost: 500.0
+```
+
+#### Implementation
+- [ ] Extend tech loading from application.yml (no hardcoded tech definitions)
+- [ ] Add cross-specialization requirement checking in TechTree.isAvailable()
+- [ ] Add condition evaluation system for dynamic unlocks
+- [ ] Update TechTree.java to support dynamic tech list
+- [ ] Update tech panel UI for new tiers
+- [ ] Add cross-specialization tech branch to UI
+
+---
+
+### Phase 11: Building Upgrades
+
+#### Goals
+- Add building tier system (configurable)
+- Implement upgrade mechanics
+- Add upgrade UI to settlement panel
+
+#### Configuration (application.yml)
+```yaml
+buildings:
+  # Example upgrade chain for farms
+  FARM_SMALL:
+    tier: 1
+    upgrade_from: null
+    production_bonus:
+      FOOD: 1.0
+  FARM_LARGE:
+    tier: 2
+    upgrade_from: FARM_SMALL
+    upgrade_cost: 15
+    production_bonus:
+      FOOD: 3.0
+  FARM_PLANTATION:
+    tier: 3
+    upgrade_from: FARM_LARGE
+    upgrade_cost: 30
+    required_level: TOWN
+    production_bonus:
+      FOOD: 8.0
+  
+  # Example upgrade chain for houses
+  HOUSE_SIMPLE:
+    tier: 1
+    upgrade_from: null
+    population_capacity: 4
+  HOUSE_LARGE:
+    tier: 2
+    upgrade_from: HOUSE_SIMPLE
+    upgrade_cost: 8
+    population_capacity: 8
+  HOUSE_MANOR:
+    tier: 3
+    upgrade_from: HOUSE_LARGE
+    upgrade_cost: 20
+    required_level: TOWN
+    population_capacity: 15
+```
+
+#### Implementation
+- [ ] Add tier and upgrade_from fields to BuildingConfig in application.yml
+- [ ] Update BuildingType to use config (not hardcoded enum values)
+- [ ] Add Settlement.canUpgrade(buildingId) method
+- [ ] Add Settlement.upgrade(buildingId) method
+- [ ] Add upgrade button to settlement panel UI
+- [ ] Update SimulationSystem to apply tier production bonuses
+
+---
+
+### Phase 12: Dynamic Events System
+
+#### Goals
+- Create event definition system (config-driven)
+- Implement event trigger and effect system
+- Add event notifications
+
+#### Configuration (application.yml)
+```yaml
+events:
+  global_settings:
+    min_ticks_between_events: 50
+    max_concurrent_events: 3
+    notification_duration: 5
+  
+  categories:
+    - id: NATURAL
+      weight: 1.0
+    - id: ECONOMIC
+      weight: 0.8
+    - id: SOCIAL
+      weight: 0.6
+    - id: DANGER
+      weight: 0.4
+  
+  event_templates:
+    - id: DROUGHT
+      name: Drought
+      category: NATURAL
+      weight: 0.3
+      duration: 30
+      effects:
+        - type: PRODUCTION_MULTIPLIER
+          resource: FOOD
+          multiplier: 0.5
+      notification: "A drought affects {settlement}! Food production halved."
+      
+    - id: BOUNTIFUL_HARVEST
+      name: Bountiful Harvest
+      category: NATURAL
+      weight: 0.4
+      duration: 20
+      effects:
+        - type: PRODUCTION_MULTIPLIER
+          resource: FOOD
+          multiplier: 2.0
+      notification: "{settlement} enjoys a bountiful harvest!"
+      
+    - id: TRADE_BOOM
+      name: Trade Boom
+      category: ECONOMIC
+      weight: 0.3
+      duration: 30
+      effects:
+        - type: TRADE_INCOME_MULTIPLIER
+          multiplier: 1.5
+      notification: "Trade is booming! Merchant activity increased."
+      
+    - id: LOCAL_FESTIVAL
+      name: Local Festival
+      category: SOCIAL
+      weight: 0.2
+      duration: 15
+      choice: true
+      options:
+        - name: Host Festival
+          cost: 50
+          effects:
+            - type: GROWTH_RATE_MULTIPLIER
+              multiplier: 1.5
+        - name: Skip
+          cost: 0
+          effects: []
+      notification: "{settlement} wants to host a festival."
+```
+
+#### Implementation
+- [ ] Create EventConfig.java for loading events from application.yml
+- [ ] Create EventSystem.java for scheduling and triggering events
+- [ ] Implement effect types: PRODUCTION_MULTIPLIER, GROWTH_RATE_MULTIPLIER, TRADE_INCOME_MULTIPLIER
+- [ ] Add event notification UI (toast messages)
+- [ ] Add event log panel
+- [ ] Implement event choice UI for optional events
+- [ ] Update SimulationSystem to apply event modifiers
 
 ---
 
