@@ -357,6 +357,7 @@ public class World {
     // ---- Trade route & caravan management ----
 
     public List<TradeRoute> getTradeRoutes() { return tradeRoutes; }
+    public int getActiveTradeRouteCount() { return tradeRoutes.size(); }
     public List<Caravan> getCaravans() { return caravans; }
 
     /** Returns the first (land or sea) trade route between two settlements. */

@@ -186,6 +186,29 @@ public class GameConfig {
         public Map<String, TechConfig> techs = new LinkedHashMap<>();
     }
 
+    public static class CrossSpecializationTechConfig {
+        public String id = "";
+        public String name = "";
+        public List<String> requires = new ArrayList<>(); // Required specializations
+        public float cost = 100f;
+        public Map<String, Float> effects = new LinkedHashMap<>();
+        public Map<String, List<String>> unlocks = new LinkedHashMap<>(); // buildings, roads, etc.
+    }
+
+    public static class ConditionalTechConfig {
+        public String id = "";
+        public String name = "";
+        public String condition = ""; // e.g., "settlements >= 3"
+        public float cost = 100f;
+        public Map<String, Float> effects = new LinkedHashMap<>();
+        public Map<String, List<String>> unlocks = new LinkedHashMap<>();
+    }
+
+    public static class TechTreeExpansionConfig {
+        public Map<String, CrossSpecializationTechConfig> cross_specialization_techs = new LinkedHashMap<>();
+        public Map<String, ConditionalTechConfig> conditional_techs = new LinkedHashMap<>();
+    }
+
     public static class Root {
         public WorldConfig world = new WorldConfig();
         public SimulationConfig simulation = new SimulationConfig();
@@ -202,6 +225,7 @@ public class GameConfig {
         public Map<String, TerrainObjectConfig> terrain_objects = new LinkedHashMap<>();
         public Map<String, ExplorationRewardConfig> exploration_rewards = new LinkedHashMap<>();
         public TechTreeConfig tech_tree = new TechTreeConfig();
+        public TechTreeExpansionConfig tech_tree_expansion = new TechTreeExpansionConfig();
     }
 
     private final Root root;
@@ -275,6 +299,7 @@ public class GameConfig {
         bindExplorationRewards(root, raw);
         bindResources(root, raw);
         bindTechTree(root, raw);
+        bindTechTreeExpansion(root, raw);
     }
 
     @SuppressWarnings("unchecked")
@@ -617,6 +642,98 @@ public class GameConfig {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private void bindTechTreeExpansion(Root r, Map<String, Object> raw) {
+        Object tteRaw = raw.get("tech_tree_expansion");
+        if (tteRaw == null) return;
+        if (!(tteRaw instanceof Map)) return;
+        Map<String, Object> tteMap = (Map<String, Object>) tteRaw;
+        
+        // Load cross-specialization techs
+        Object csTechsRaw = tteMap.get("cross_specialization_techs");
+        if (csTechsRaw instanceof Map) {
+            Map<String, Object> csTechsMap = (Map<String, Object>) csTechsRaw;
+            for (Map.Entry<String, Object> e : csTechsMap.entrySet()) {
+                String techId = e.getKey().toUpperCase();
+                if (!(e.getValue() instanceof Map)) continue;
+                Map<String, Object> data = (Map<String, Object>) e.getValue();
+                CrossSpecializationTechConfig tc = new CrossSpecializationTechConfig();
+                tc.id = techId;
+                if (data.containsKey("name")) tc.name = (String) data.get("name");
+                if (data.containsKey("cost")) tc.cost = ((Number) data.get("cost")).floatValue();
+                
+                Object requiresRaw = data.get("requires");
+                if (requiresRaw instanceof List) {
+                    for (Object req : (List<Object>) requiresRaw) {
+                        if (req instanceof String) tc.requires.add(((String) req).toUpperCase());
+                    }
+                }
+                
+                Map<String, Object> effectsRaw = (Map<String, Object>) data.get("effects");
+                if (effectsRaw != null) {
+                    for (Map.Entry<String, Object> ef : effectsRaw.entrySet()) {
+                        tc.effects.put(ef.getKey(), ((Number) ef.getValue()).floatValue());
+                    }
+                }
+                
+                Map<String, Object> unlocksRaw = (Map<String, Object>) data.get("unlocks");
+                if (unlocksRaw != null) {
+                    for (Map.Entry<String, Object> ue : unlocksRaw.entrySet()) {
+                        String cat = ue.getKey().toLowerCase();
+                        List<String> names = new ArrayList<>();
+                        if (ue.getValue() instanceof List) {
+                            for (Object item : (List<Object>) ue.getValue()) {
+                                if (item instanceof String) names.add(((String) item).toUpperCase());
+                            }
+                        }
+                        tc.unlocks.put(cat, names);
+                    }
+                }
+                
+                r.tech_tree_expansion.cross_specialization_techs.put(techId, tc);
+            }
+        }
+        
+        // Load conditional techs
+        Object condTechsRaw = tteMap.get("conditional_techs");
+        if (condTechsRaw instanceof Map) {
+            Map<String, Object> condTechsMap = (Map<String, Object>) condTechsRaw;
+            for (Map.Entry<String, Object> e : condTechsMap.entrySet()) {
+                String techId = e.getKey().toUpperCase();
+                if (!(e.getValue() instanceof Map)) continue;
+                Map<String, Object> data = (Map<String, Object>) e.getValue();
+                ConditionalTechConfig tc = new ConditionalTechConfig();
+                tc.id = techId;
+                if (data.containsKey("name")) tc.name = (String) data.get("name");
+                if (data.containsKey("condition")) tc.condition = (String) data.get("condition");
+                if (data.containsKey("cost")) tc.cost = ((Number) data.get("cost")).floatValue();
+                
+                Map<String, Object> effectsRaw = (Map<String, Object>) data.get("effects");
+                if (effectsRaw != null) {
+                    for (Map.Entry<String, Object> ef : effectsRaw.entrySet()) {
+                        tc.effects.put(ef.getKey(), ((Number) ef.getValue()).floatValue());
+                    }
+                }
+                
+                Map<String, Object> unlocksRaw = (Map<String, Object>) data.get("unlocks");
+                if (unlocksRaw != null) {
+                    for (Map.Entry<String, Object> ue : unlocksRaw.entrySet()) {
+                        String cat = ue.getKey().toLowerCase();
+                        List<String> names = new ArrayList<>();
+                        if (ue.getValue() instanceof List) {
+                            for (Object item : (List<Object>) ue.getValue()) {
+                                if (item instanceof String) names.add(((String) item).toUpperCase());
+                            }
+                        }
+                        tc.unlocks.put(cat, names);
+                    }
+                }
+                
+                r.tech_tree_expansion.conditional_techs.put(techId, tc);
+            }
+        }
+    }
+
     // ---- World accessors ----
 
     public long getWorldSeed() { return root.world.seed; }
@@ -941,5 +1058,23 @@ public class GameConfig {
 
     public List<TechConfig> getAllTechs() {
         return new ArrayList<>(root.tech_tree.techs.values());
+    }
+
+    // ---- Tech Tree Expansion accessors ----
+
+    public CrossSpecializationTechConfig getCrossSpecializationTech(String id) {
+        return root.tech_tree_expansion.cross_specialization_techs.get(id.toUpperCase());
+    }
+
+    public List<CrossSpecializationTechConfig> getAllCrossSpecializationTechs() {
+        return new ArrayList<>(root.tech_tree_expansion.cross_specialization_techs.values());
+    }
+
+    public ConditionalTechConfig getConditionalTech(String id) {
+        return root.tech_tree_expansion.conditional_techs.get(id.toUpperCase());
+    }
+
+    public List<ConditionalTechConfig> getAllConditionalTechs() {
+        return new ArrayList<>(root.tech_tree_expansion.conditional_techs.values());
     }
 }

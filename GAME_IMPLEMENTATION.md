@@ -901,10 +901,10 @@ tech_tree:
 ```
 
 #### Implementation
-- [ ] Extend tech loading from application.yml (no hardcoded tech definitions)
-- [ ] Add cross-specialization requirement checking in TechTree.isAvailable()
-- [ ] Add condition evaluation system for dynamic unlocks
-- [ ] Update TechTree.java to support dynamic tech list
+- [x] Extend tech loading from application.yml (no hardcoded tech definitions)
+- [x] Add cross-specialization requirement checking in TechTree.canResearchCrossSpecialization()
+- [x] Add condition evaluation system for dynamic unlocks (evaluateCondition)
+- [x] Update TechTree.java to support dynamic tech list (getEffectTotal, isAllowed)
 - [ ] Update tech panel UI for new tiers
 - [ ] Add cross-specialization tech branch to UI
 

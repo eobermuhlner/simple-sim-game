@@ -10,6 +10,8 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Global tech tree state: tracks researched techs and active research progress.
@@ -79,12 +81,29 @@ public class TechTree {
     /** Returns the summed value of an effect key across all researched techs. */
     public float getEffectTotal(String effectKey, GameConfig config) {
         float total = 0f;
+        
+        // Regular techs
         for (String id : researchedTechs) {
             GameConfig.TechConfig tech = config.getTech(id);
             if (tech != null) {
                 total += tech.effects.getOrDefault(effectKey, 0f);
             }
         }
+        
+        // Cross-specialization techs
+        for (GameConfig.CrossSpecializationTechConfig csTech : config.getAllCrossSpecializationTechs()) {
+            if (isResearched(csTech.id)) {
+                total += csTech.effects.getOrDefault(effectKey, 0f);
+            }
+        }
+        
+        // Conditional techs
+        for (GameConfig.ConditionalTechConfig condTech : config.getAllConditionalTechs()) {
+            if (isResearched(condTech.id)) {
+                total += condTech.effects.getOrDefault(effectKey, 0f);
+            }
+        }
+        
         return total;
     }
 
@@ -99,12 +118,31 @@ public class TechTree {
         String upper = name.toUpperCase();
         List<String> initial = config.getInitiallyAvailable(cat);
         if (initial != null && initial.contains(upper)) return true;
+        
+        // Check regular techs
         for (String id : researchedTechs) {
             GameConfig.TechConfig tech = config.getTech(id);
             if (tech == null) continue;
             List<String> list = tech.allow.get(cat);
             if (list != null && list.contains(upper)) return true;
         }
+        
+        // Check cross-specialization techs
+        for (GameConfig.CrossSpecializationTechConfig csTech : config.getAllCrossSpecializationTechs()) {
+            if (isResearched(csTech.id)) {
+                List<String> list = csTech.unlocks.get(cat);
+                if (list != null && list.contains(upper)) return true;
+            }
+        }
+        
+        // Check conditional techs
+        for (GameConfig.ConditionalTechConfig condTech : config.getAllConditionalTechs()) {
+            if (isResearched(condTech.id)) {
+                List<String> list = condTech.unlocks.get(cat);
+                if (list != null && list.contains(upper)) return true;
+            }
+        }
+        
         return false;
     }
 
@@ -167,6 +205,112 @@ public class TechTree {
                 if (s.specialization.name().equals(tech.branch)) { found = true; break; }
             }
             if (!found) return "Req: " + tech.branch.replace('_', ' ');
+        }
+        return null;
+    }
+
+    // ---- Cross-Specialization Tech ----
+
+    /**
+     * Check if a cross-specialization tech can be researched.
+     */
+    public boolean canResearchCrossSpecialization(GameConfig.CrossSpecializationTechConfig tech, List<Settlement> settlements) {
+        if (isResearched(tech.id)) return false;
+        if (tech.id.equals(activeResearchId)) return false;
+        
+        // Check if all required specializations exist
+        for (String required : tech.requires) {
+            boolean found = false;
+            for (Settlement s : settlements) {
+                if (s.specialization.name().equals(required)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Get lock hint for cross-specialization tech.
+     */
+    public String getCrossSpecializationLockHint(GameConfig.CrossSpecializationTechConfig tech, List<Settlement> settlements) {
+        if (isResearched(tech.id)) return null;
+        
+        for (String required : tech.requires) {
+            boolean found = false;
+            for (Settlement s : settlements) {
+                if (s.specialization.name().equals(required)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) return "Req: " + required.replace('_', ' ');
+        }
+        return null;
+    }
+
+    // ---- Conditional Tech ----
+
+    private static final Pattern CONDITION_PATTERN = Pattern.compile("(\\w+)\\s*(>=|<=|>|<|==)\\s*(\\d+)");
+
+    /**
+     * Evaluate a conditional tech's condition based on current game state.
+     */
+    public boolean evaluateCondition(String condition, List<Settlement> settlements, int activeTradeRoutes) {
+        if (condition == null || condition.isEmpty()) return true;
+        
+        Matcher matcher = CONDITION_PATTERN.matcher(condition);
+        if (!matcher.matches()) return true; // Invalid condition treated as true
+        
+        String variable = matcher.group(1).toLowerCase();
+        String operator = matcher.group(2);
+        int threshold = Integer.parseInt(matcher.group(3));
+        
+        int value = 0;
+        switch (variable) {
+            case "settlements":
+                value = settlements.size();
+                break;
+            case "total_population":
+                value = settlements.stream().mapToInt(s -> s.population).sum();
+                break;
+            case "active_trade_routes":
+                value = activeTradeRoutes;
+                break;
+            default:
+                return true; // Unknown variable treated as true
+        }
+        
+        switch (operator) {
+            case ">=": return value >= threshold;
+            case "<=": return value <= threshold;
+            case ">": return value > threshold;
+            case "<": return value < threshold;
+            case "==": return value == threshold;
+            default: return true;
+        }
+    }
+
+    /**
+     * Check if a conditional tech can be researched.
+     */
+    public boolean canResearchConditional(GameConfig.ConditionalTechConfig tech, List<Settlement> settlements, int activeTradeRoutes) {
+        if (isResearched(tech.id)) return false;
+        if (tech.id.equals(activeResearchId)) return false;
+        
+        return evaluateCondition(tech.condition, settlements, activeTradeRoutes);
+    }
+
+    /**
+     * Get lock hint for conditional tech.
+     */
+    public String getConditionalLockHint(GameConfig.ConditionalTechConfig tech, List<Settlement> settlements, int activeTradeRoutes) {
+        if (isResearched(tech.id)) return null;
+        
+        if (!evaluateCondition(tech.condition, settlements, activeTradeRoutes)) {
+            return "Condition: " + tech.condition;
         }
         return null;
     }
