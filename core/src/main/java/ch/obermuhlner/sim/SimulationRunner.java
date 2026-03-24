@@ -65,6 +65,16 @@ public class SimulationRunner {
                 case "-q":
                     opts.quiet = true;
                     break;
+                case "--scenario":
+                case "--scen":
+                    if (i + 1 < args.length) {
+                        opts.scenario = args[++i];
+                    }
+                    break;
+                case "--research":
+                case "-r":
+                    opts.enableResearch = true;
+                    break;
                 case "--help":
                 case "-h":
                     opts.help = true;
@@ -139,7 +149,7 @@ public class SimulationRunner {
         World world = new World(16, config, true);
         SimulationSystem simulation = new SimulationSystem(world, config);
         
-        setupDefaultScenario(world);
+        setupScenario(world, options.scenario);
         
         int settlementCount = world.getSettlements().size();
         SimulationResult result = new SimulationResult(seed, settlementCount);
@@ -153,6 +163,10 @@ public class SimulationRunner {
             simulation.tick(1.0f);
             simulation.updateCaravans(1.0f / 60f);
             
+            if (options.enableResearch) {
+                simulateResearch(world, config, i);
+            }
+            
             for (Settlement s : world.getSettlements()) {
                 trackers.get(s.name).record(s, config);
             }
@@ -160,6 +174,10 @@ public class SimulationRunner {
             if (!options.quiet && (i + 1) % 100 == 0) {
                 System.out.print(".");
             }
+        }
+        
+        if (options.enableResearch) {
+            printResearchResults(world, result);
         }
         
         if (!options.quiet) {
@@ -171,6 +189,19 @@ public class SimulationRunner {
         }
         
         return result;
+    }
+    
+    public void setupScenario(World world, String scenario) {
+        switch (scenario.toLowerCase()) {
+            case "tech-test":
+            case "tech":
+                setupTechTestScenario(world);
+                break;
+            case "default":
+            default:
+                setupDefaultScenario(world);
+                break;
+        }
     }
     
     public void setupDefaultScenario(World world) {
@@ -206,6 +237,120 @@ public class SimulationRunner {
             for (int y = 3; y <= 4; y++) {
                 world.placeRoad(x, y, RoadType.DIRT);
             }
+        }
+    }
+    
+    public void setupTechTestScenario(World world) {
+        world.createStarterSettlement();
+        
+        world.reveal(8, 0);
+        Settlement loggingCamp = world.createSettlement("Logging Town", 8, 0);
+        if (loggingCamp != null) {
+            loggingCamp.specialize(Specialization.LOGGING_CAMP);
+            loggingCamp.population = 50;
+        }
+        
+        world.reveal(-8, 6);
+        Settlement miningCamp = world.createSettlement("Mining Town", -8, 6);
+        if (miningCamp != null) {
+            miningCamp.specialize(Specialization.MINING_TOWN);
+            miningCamp.population = 50;
+        }
+        
+        world.reveal(0, -8);
+        Settlement farmingVillage = world.createSettlement("Farming Town", 0, -8);
+        if (farmingVillage != null) {
+            farmingVillage.specialize(Specialization.FARMING_VILLAGE);
+            farmingVillage.population = 50;
+        }
+        
+        world.reveal(-5, -5);
+        Settlement tradeHub = world.createSettlement("Trade Hub", -5, -5);
+        if (tradeHub != null) {
+            tradeHub.specialize(Specialization.TRADE_HUB);
+            tradeHub.population = 50;
+        }
+        
+        for (int x = 0; x <= 2; x++) {
+            for (int y = 0; y <= 2; y++) {
+                world.placeRoad(x, y, RoadType.DIRT);
+            }
+        }
+        for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+                if (Math.abs(x) + Math.abs(y) <= 3) {
+                    world.placeRoad(x, y, RoadType.DIRT);
+                }
+            }
+        }
+    }
+    
+    private void simulateResearch(World world, GameConfig config, int tick) {
+        float researchGoldPerTick = config.getTechTreeConfig().research_gold_per_tick;
+        
+        for (Settlement s : world.getSettlements()) {
+            float goldToResearch = Math.min(s.gold, researchGoldPerTick);
+            s.gold -= goldToResearch;
+            world.techTree.addProgress(goldToResearch, config);
+            
+            if (tick % 50 == 0 && tick > 0) {
+                tryAutoResearch(world, world.techTree, world.getSettlements(), config);
+            }
+        }
+    }
+    
+    private void tryAutoResearch(World world, TechTree techTree, List<Settlement> settlements, GameConfig config) {
+        if (techTree.hasActiveResearch()) return;
+        
+        SettlementLevel maxLevel = config.getFirstLevel();
+        for (Settlement s : settlements) {
+            if (s.getLevel().ordinal() > maxLevel.ordinal()) {
+                maxLevel = s.getLevel();
+            }
+        }
+        
+        for (GameConfig.CrossSpecializationTechConfig csTech : config.getAllCrossSpecializationTechs()) {
+            if (techTree.canResearchCrossSpecialization(csTech, settlements)) {
+                techTree.startResearch(csTech.id);
+                return;
+            }
+        }
+        
+        for (GameConfig.ConditionalTechConfig condTech : config.getAllConditionalTechs()) {
+            if (techTree.canResearchConditional(condTech, settlements, world.getActiveTradeRouteCount())) {
+                techTree.startResearch(condTech.id);
+                return;
+            }
+        }
+        
+        for (GameConfig.TechConfig tech : config.getAllTechs()) {
+            if (techTree.canResearch(tech, settlements, maxLevel, config)) {
+                techTree.startResearch(tech.id);
+                return;
+            }
+        }
+    }
+    
+    private void printResearchResults(World world, SimulationResult result) {
+        System.out.println();
+        System.out.println("=== Research Results ===");
+        System.out.println("Techs researched: " + world.techTree.getResearchedTechs());
+        System.out.println("Active research: " + world.techTree.getActiveResearchId());
+        System.out.println("Progress: " + world.techTree.getResearchProgress());
+        
+        System.out.println();
+        System.out.println("=== Tech Tree Expansion Test ===");
+        for (GameConfig.CrossSpecializationTechConfig csTech : config.getAllCrossSpecializationTechs()) {
+            boolean researched = world.techTree.isResearched(csTech.id);
+            boolean canResearch = world.techTree.canResearchCrossSpecialization(csTech, world.getSettlements());
+            System.out.printf("  %s: researched=%s, canResearch=%s%n", 
+                csTech.id, researched, canResearch);
+        }
+        for (GameConfig.ConditionalTechConfig condTech : config.getAllConditionalTechs()) {
+            boolean researched = world.techTree.isResearched(condTech.id);
+            boolean canResearch = world.techTree.canResearchConditional(condTech, world.getSettlements(), world.getActiveTradeRouteCount());
+            System.out.printf("  %s: researched=%s, canResearch=%s (condition: %s)%n", 
+                condTech.id, researched, canResearch, condTech.condition);
         }
     }
     
@@ -462,6 +607,8 @@ public class SimulationRunner {
         boolean verbose = false;
         boolean quiet = false;
         boolean help = false;
+        String scenario = "default";
+        boolean enableResearch = false;
     }
     
     static class SimulationResult {

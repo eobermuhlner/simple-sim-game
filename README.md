@@ -53,36 +53,69 @@ A top-down 2D settlement-building simulation built with [libGDX](https://libgdx.
 
 ### Simulation Runner
 
-A headless simulation runner for testing economy balance without UI.
+A headless simulation runner for testing economy balance and tech tree features without UI.
 
 ```bash
+# Basic usage
 ./gradlew core:runSimulation    # Run simulation (500 ticks)
-./gradlew core:test --tests "ch.obermuhlner.sim.SimulationRunnerTest"  # Quick test run (200 ticks)
+
+# Multiple runs with aggregated statistics
+./gradlew core:runSimulation -Pruns=10    # Run 10 simulations
+
+# Custom duration
+./gradlew core:runSimulation -Pticks=1000  # 1000 ticks
+
+# Specific seed for reproducibility
+./gradlew core:runSimulation -Pseed=42
+
+# Verbose output (detailed per-settlement)
+./gradlew core:runSimulation -Pverbose
+
+# Quiet mode (summary only)
+./gradlew core:runSimulation -Pquiet
+
+# Test tech tree expansion features
+./gradlew core:runSimulation -Pscenario=tech -Presearch -Pticks=2000
 ```
 
-The simulation:
-1. Creates 4 settlements with different specializations
-2. Builds roads between them
-3. Runs the economy for specified ticks
-4. Outputs balance analysis with recommendations
+#### Command Line Options
 
-**Example output:**
+| Option | Description |
+|--------|-------------|
+| `-Pruns=N` | Number of simulations (1-100, default: 1) |
+| `-Pticks=N` | Ticks per simulation (default: 500) |
+| `-Pseed=N` | World seed (default: random) |
+| `-Pverbose` | Show detailed per-settlement output |
+| `-Pquiet` | Suppress individual runs, show only summary |
+| `-Pscenario=NAME` | Scenario name: `default`, `tech` |
+| `-Presearch` | Enable research/tech tree simulation |
+
+#### Features Tested
+
+- Food balance and starvation
+- Price volatility
+- Trade revenue
+- Population growth
+- **Tech tree expansion** (with `-Presearch`):
+  - Cross-specialization techs (requires multiple settlement types)
+  - Conditional techs (unlock based on settlements, population, trade routes)
+
+#### Example Output
+
 ```
-=== BALANCE ANALYSIS ===
+=== Run 1/3 (seed=12345) ===
+Settlements: 3
+  [OK] Town Alpha: food=18.67, priceVol=0.89, starve=0
+  [ISSUE] Farming Village: food=-0.16, priceVol=0.65, starve=500
 
---- Farming Village ---
-  [ISSUE] Food deficit: avg -0.36/tick
-    -> Food production insufficient for population
-    -> Consider: increase GRASS_FOOD, adjust growth_rate
+=== AGGREGATED RESULTS (3 runs) ===
 
-=== CONFIGURATION RECOMMENDATIONS ===
+--- Food Balance (avg per tick) ---
+  Town Alpha:     mean=17.2, min=14.1, max=20.1, std=2.1
+  Farming Village: mean=-0.1, min=-0.8, max=0.4, std=0.4
 
-To adjust in application.yml:
-simulation:
-  food_demand_per_pop: 0.15
-  growth_rate: 0.01
-  terrain_production:
-    GRASS_FOOD: 0.5
+--- Overall Issues ---
+  Farming Village food deficit: appears in 2/3 runs
 ```
 
 ### Test Structure

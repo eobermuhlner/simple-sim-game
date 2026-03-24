@@ -1077,4 +1077,12 @@ public class GameConfig {
     public List<ConditionalTechConfig> getAllConditionalTechs() {
         return new ArrayList<>(root.tech_tree_expansion.conditional_techs.values());
     }
+
+    public TechTreeExpansionConfig getTechTreeExpansion() {
+        return root.tech_tree_expansion;
+    }
+
+    public TechTreeConfig getTechTreeConfig() {
+        return root.tech_tree;
+    }
 }

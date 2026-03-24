@@ -19,6 +19,12 @@ task runSimulation(type: JavaExec) {
   if (project.hasProperty("quiet")) {
     args '--quiet'
   }
+  if (project.hasProperty("scenario")) {
+    args '--scenario', project.scenario
+  }
+  if (project.hasProperty("research")) {
+    args '--research'
+  }
 }
 
 dependencies {

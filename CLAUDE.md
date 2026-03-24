@@ -35,24 +35,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Simulation Runner
 
-Headless economy simulation for balance testing without UI.
+Headless economy simulation for balance and tech tree testing without UI.
 
 **Only run this when the user explicitly asks for simulation balance adjustments.** This is not part of normal development workflow.
 
 ```bash
+# Basic usage
 ./gradlew core:runSimulation    # Run simulation (500 ticks)
-./gradlew core:test --tests "ch.obermuhlner.sim.SimulationRunnerTest"  # Quick run (200 ticks)
+
+# Multiple runs with aggregated statistics
+./gradlew core:runSimulation -Pruns=10    # Run 10 simulations
+
+# Custom duration
+./gradlew core:runSimulation -Pticks=1000  # 1000 ticks
+
+# Reproducible seed
+./gradlew core:runSimulation -Pseed=42
+
+# Verbose output (detailed per-settlement)
+./gradlew core:runSimulation -Pverbose
+
+# Quiet mode (summary only)
+./gradlew core:runSimulation -Pquiet
+
+# Test tech tree expansion features
+./gradlew core:runSimulation -Pscenario=tech -Presearch -Pticks=2000 -Pruns=5
 ```
 
 **What it tests:**
-- Creates 4 settlements with different specializations
+- Creates settlements with different specializations (default or tech-test scenario)
 - Builds roads to enable trade
 - Runs economy simulation
-- Tracks: food balance, population growth, starvation, resource production, price volatility
+- Tracks: food balance, population growth, starvation, resource production, price volatility, trade revenue
+- Tech tree expansion (with `-Presearch`):
+  - Cross-specialization techs (requires multiple settlement types)
+  - Conditional techs (unlock based on settlements, population, trade routes)
 
 **Output includes:**
-- Balance issues per settlement (food deficits, starvation, price volatility)
-- Configuration recommendations for rebalancing (adjust `application.yml` values)
+- Per-run results (food balance, price volatility, starvation, population)
+- Aggregated statistics (mean, min, max, std deviation) across multiple runs
+- Issue frequency analysis (e.g., "Farming Village food deficit: appears in 2/3 runs")
+- Tech tree research status and unlock conditions
 
 ## Testing
 
