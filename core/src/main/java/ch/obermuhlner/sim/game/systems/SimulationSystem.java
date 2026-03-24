@@ -235,15 +235,16 @@ public class SimulationSystem {
             timer -= deltaTime;
 
             if (timer <= 0) {
-                trySpawnCaravan(route, sA, sB);
+                trySpawnCaravan(route, sA, sB, maxCaravans);
                 timer = interval;
             }
             spawnTimers.put(route.id, timer);
         }
     }
 
-    private void trySpawnCaravan(TradeRoute route, Settlement sA, Settlement sB) {
-        if (!trySpawnDirection(route, sA, sB)) {
+    private void trySpawnCaravan(TradeRoute route, Settlement sA, Settlement sB, int maxCaravans) {
+        trySpawnDirection(route, sA, sB);
+        if (route.canSpawnCaravan(maxCaravans)) {
             trySpawnDirection(route, sB, sA);
         }
     }
@@ -272,7 +273,7 @@ public class SimulationSystem {
         float cargoAmount = Math.min(bestExcess, src.storageCapacity * config.getCargoBatch());
         src.addResource(bestType, -cargoAmount);
 
-        float upkeepPerTile = config.getCaravanUpkeepPerTile() * route.pathLength;
+        float upkeepPerTile = config.getCaravanUpkeepPerTile();
 
         int fromId = src.id;
         int toId = dst.id;
@@ -368,14 +369,16 @@ public class SimulationSystem {
 
     private void tickResearch(List<Settlement> settlements) {
         if (!world.techTree.hasActiveResearch()) return;
+        if (settlements.isEmpty()) return;
         float ratePerTick = config.getResearchGoldPerTick();
-        Settlement richest = null;
+        float sharePerSettlement = ratePerTick / settlements.size();
+        float totalPaid = 0;
         for (Settlement s : settlements) {
-            if (richest == null || s.gold > richest.gold) richest = s;
+            float payment = Math.min(s.gold, sharePerSettlement);
+            s.gold -= payment;
+            totalPaid += payment;
         }
-        if (richest == null || richest.gold < ratePerTick) return;
-        float consumed = world.techTree.addProgress(ratePerTick, config);
-        richest.gold -= consumed;
+        world.techTree.addProgress(totalPaid, config);
     }
 
     private static float lerp(float a, float b, float t) {
