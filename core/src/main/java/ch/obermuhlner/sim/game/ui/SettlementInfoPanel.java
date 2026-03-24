@@ -24,7 +24,6 @@ import java.util.Map;
 
 public class SettlementInfoPanel {
     private static final int PANEL_WIDTH = 260;
-    private static final int PANEL_HEIGHT = 348; // fixed height for settlement panel
     private static final int PADDING = 15;
     private static final int LINE_HEIGHT = 18;
     private static final int IMAGE_SIZE = 64;
@@ -108,98 +107,9 @@ public class SettlementInfoPanel {
         return PANEL_WIDTH;
     }
 
-    public int getHeight() {
-        return PANEL_HEIGHT;
-    }
+    // ---- Tile render (settlement may be null for non-center tiles) ----
 
-    // ---- Settlement render ----
-
-    public void render(Settlement settlement, SpriteBatch batch, int screenWidth, int screenHeight) {
-        float panelX = screenWidth - PANEL_WIDTH - 20;
-        float panelY = screenHeight - PANEL_HEIGHT - 20;
-
-        drawBackground(batch, panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT);
-
-        float textX = panelX + PADDING;
-        float textY = panelY + PANEL_HEIGHT - PADDING - 5;
-
-        titleFont.draw(batch, settlement.name, textX, textY);
-        textY -= LINE_HEIGHT + 8;
-
-        font.draw(batch, "Level: " + settlement.getLevel().getDisplayName(), textX, textY);
-        textY -= LINE_HEIGHT;
-
-        font.draw(batch, "Population: " + settlement.population, textX, textY);
-        textY -= LINE_HEIGHT;
-
-        Color specColor = getSpecializationColor(settlement.specialization);
-        font.setColor(specColor);
-        font.draw(batch, "Spec: " + settlement.specialization.displayName, textX, textY);
-        font.setColor(Color.WHITE);
-        textY -= LINE_HEIGHT;
-
-        if (settlement.specialization != Specialization.NONE) {
-            font.setColor(new Color(0.7f, 0.9f, 0.7f, 1f));
-            font.draw(batch, settlement.specialization.getProductionSummary(), textX, textY);
-            font.setColor(Color.WHITE);
-            textY -= LINE_HEIGHT;
-        } else {
-            textY -= LINE_HEIGHT;
-        }
-
-        font.draw(batch, "Buildings: " + settlement.buildingIds.size() + "/" + settlement.getMaxBuildings(), textX, textY);
-        textY -= LINE_HEIGHT;
-
-        boolean hasHarbor = settlement.buildingIds.contains(BuildingType.HARBOR.getId());
-        if (hasHarbor) {
-            font.setColor(new Color(0.4f, 0.7f, 1f, 1f));
-            font.draw(batch, "[Harbor] Sea trade enabled", textX, textY);
-            font.setColor(Color.WHITE);
-        }
-        textY -= LINE_HEIGHT;
-
-        font.draw(batch, "Position: (" + settlement.centerX + ", " + settlement.centerY + ")", textX, textY);
-        textY -= LINE_HEIGHT + 5;
-
-        if (settlement.needsSpecializationChoice()) {
-            font.setColor(new Color(1f, 0.5f, 0.1f, 1f));
-            font.draw(batch, "Choose a specialization!", textX, textY);
-            font.setColor(Color.WHITE);
-        } else if (settlement.needsUpgrade()) {
-            font.setColor(new Color(1f, 0.8f, 0.2f, 1f));
-            font.draw(batch, "[Upgrade] available!", textX, textY);
-            font.setColor(Color.WHITE);
-        } else if (settlement.canRespecialize()) {
-            font.setColor(new Color(0.6f, 0.7f, 1f, 1f));
-            font.draw(batch, "[Re-spec] to change spec", textX, textY);
-            font.setColor(Color.WHITE);
-        } else {
-            int toNext = settlement.getMaxPopulation() - settlement.population;
-            if (toNext < Integer.MAX_VALUE && toNext > 0) {
-                font.draw(batch, "To next level: " + toNext + " pop", textX, textY);
-            }
-        }
-        textY -= LINE_HEIGHT + 3;
-
-        font.setColor(new Color(0.5f, 0.5f, 0.7f, 1f));
-        font.draw(batch, "--- Resources ---", textX, textY);
-        font.setColor(Color.WHITE);
-        textY -= LINE_HEIGHT;
-
-        drawResource(batch, font, textX, textY, "Wood",  settlement.wood,  settlement.smoothedWoodProd,  settlement.woodPriceMult);
-        textY -= LINE_HEIGHT;
-        drawResource(batch, font, textX, textY, "Stone", settlement.stone, settlement.smoothedStoneProd, settlement.stonePriceMult);
-        textY -= LINE_HEIGHT;
-        drawResource(batch, font, textX, textY, "Food",  settlement.food,  settlement.smoothedFoodProd,  settlement.foodPriceMult);
-        textY -= LINE_HEIGHT;
-        drawResource(batch, font, textX, textY, "Goods", settlement.goods, settlement.smoothedGoodsProd, settlement.goodsPriceMult);
-        textY -= LINE_HEIGHT;
-        font.draw(batch, String.format("Gold:  %6.1f", settlement.gold), textX, textY);
-    }
-
-    // ---- Tile render ----
-
-    public void render(Tile tile, int tileX, int tileY, SpriteBatch batch, int screenWidth, int screenHeight) {
+    public void render(Tile tile, int tileX, int tileY, Settlement settlement, SpriteBatch batch, int screenWidth, int screenHeight) {
         float textWidth = PANEL_WIDTH - 2 * PADDING;
         List<Chapter> chapters = new ArrayList<>();
 
@@ -287,6 +197,44 @@ public class SettlementInfoPanel {
                 chapters.add(new Chapter("ROAD", null, null, rStats,
                     config.getRoadDescription(rt), new Color(0.8f, 0.8f, 0.6f, 1f)));
             }
+        }
+
+        // Settlement chapter
+        if (settlement != null) {
+            String imgPath = config.getSettlementImage(settlement.getLevel().name());
+            Texture sTex = (imgPath != null && !imgPath.isEmpty()) ? loadOrGetTexture(imgPath) : null;
+            List<String> sStats = new ArrayList<>();
+            sStats.add("Name: " + settlement.name);
+            sStats.add("Level: " + settlement.getLevel().getDisplayName());
+            sStats.add("Population: " + settlement.population);
+            sStats.add("Spec: " + settlement.specialization.displayName);
+            if (settlement.specialization != Specialization.NONE) {
+                sStats.add("  " + settlement.specialization.getProductionSummary());
+            }
+            sStats.add("Buildings: " + settlement.buildingIds.size() + "/" + settlement.getMaxBuildings());
+            if (settlement.buildingIds.contains(BuildingType.HARBOR.getId())) {
+                sStats.add("Harbor: Sea trade enabled");
+            }
+            sStats.add(String.format("Wood:  %5.0f +%.1f", settlement.wood,  settlement.smoothedWoodProd));
+            sStats.add(String.format("Stone: %5.0f +%.1f", settlement.stone, settlement.smoothedStoneProd));
+            sStats.add(String.format("Food:  %5.0f +%.1f", settlement.food,  settlement.smoothedFoodProd));
+            sStats.add(String.format("Goods: %5.0f +%.1f", settlement.goods, settlement.smoothedGoodsProd));
+            sStats.add(String.format("Gold:  %7.1f", settlement.gold));
+            String sDesc = "";
+            if (settlement.needsSpecializationChoice()) {
+                sDesc = "Choose a specialization!";
+            } else if (settlement.needsUpgrade()) {
+                sDesc = "[Upgrade] available!";
+            } else if (settlement.canRespecialize()) {
+                sDesc = "[Re-spec] to change specialization";
+            } else {
+                int toNext = settlement.getMaxPopulation() - settlement.population;
+                if (toNext < Integer.MAX_VALUE && toNext > 0) {
+                    sDesc = "To next level: " + toNext + " more population";
+                }
+            }
+            chapters.add(new Chapter("SETTLEMENT", null, sTex, sStats, sDesc,
+                new Color(1f, 0.85f, 0.3f, 1f)));
         }
 
         // Calculate total panel height
@@ -397,32 +345,6 @@ public class SettlementInfoPanel {
             this.stats = stats;
             this.description = description;
             this.color = color;
-        }
-    }
-
-    // ---- Helpers ----
-
-    private void drawResource(SpriteBatch batch, BitmapFont font,
-                               float x, float y, String name,
-                               float amount, float prod, float priceMult) {
-        if (priceMult < 0.8f) {
-            font.setColor(new Color(0.4f, 0.9f, 0.4f, 1f));
-        } else if (priceMult > 1.3f) {
-            font.setColor(new Color(1f, 0.4f, 0.4f, 1f));
-        } else {
-            font.setColor(Color.WHITE);
-        }
-        font.draw(batch, String.format("%-5s %5.0f +%-4.1f", name, amount, prod), x, y);
-        font.setColor(Color.WHITE);
-    }
-
-    private Color getSpecializationColor(Specialization spec) {
-        switch (spec) {
-            case LOGGING_CAMP:    return new Color(0.7f, 0.5f, 0.2f, 1f);
-            case MINING_TOWN:     return new Color(0.7f, 0.7f, 0.7f, 1f);
-            case FARMING_VILLAGE: return new Color(0.3f, 0.9f, 0.3f, 1f);
-            case TRADE_HUB:       return new Color(1.0f, 0.85f, 0.2f, 1f);
-            default:              return new Color(0.6f, 0.6f, 0.6f, 1f);
         }
     }
 

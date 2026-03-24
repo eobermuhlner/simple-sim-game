@@ -396,8 +396,10 @@ public class BuildMode implements GameMode {
     public void renderPanel(SettlementInfoPanel panel) {
         if (uiBatch == null) return;
 
+        Tile tile = world.getTile(selectedTileX, selectedTileY);
+        if (tile == null) return;
         Settlement settlement = world.getSettlementAt(selectedTileX, selectedTileY);
-        if (settlement == null) return;
+        Settlement centerSettlement = (settlement != null && settlement.centerX == selectedTileX && settlement.centerY == selectedTileY) ? settlement : null;
 
         if (uiBatch.isDrawing()) {
             uiBatch.end();
@@ -407,7 +409,7 @@ public class BuildMode implements GameMode {
         int screenHeight = Gdx.graphics.getHeight();
         uiBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, screenWidth, screenHeight));
         uiBatch.begin();
-        panel.render(settlement, uiBatch, screenWidth, screenHeight);
+        panel.render(tile, selectedTileX, selectedTileY, centerSettlement, uiBatch, screenWidth, screenHeight);
         uiBatch.end();
     }
 

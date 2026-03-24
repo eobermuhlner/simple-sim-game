@@ -925,13 +925,10 @@ public class Main extends ApplicationAdapter implements GameController {
             buildToolbar.render(uiBatch, screenWidth, screenHeight);
         }
         if (tileSelected && world.isRevealed(selectedTileX, selectedTileY)) {
+            Tile tile = world.getTile(selectedTileX, selectedTileY);
             Settlement settlement = world.getSettlementAt(selectedTileX, selectedTileY);
-            if (settlement != null && settlement.centerX == selectedTileX && settlement.centerY == selectedTileY) {
-                settlementPanel.render(settlement, uiBatch, screenWidth, screenHeight);
-            } else {
-                Tile tile = world.getTile(selectedTileX, selectedTileY);
-                settlementPanel.render(tile, selectedTileX, selectedTileY, uiBatch, screenWidth, screenHeight);
-            }
+            Settlement centerSettlement = (settlement != null && settlement.centerX == selectedTileX && settlement.centerY == selectedTileY) ? settlement : null;
+            settlementPanel.render(tile, selectedTileX, selectedTileY, centerSettlement, uiBatch, screenWidth, screenHeight);
         }
         renderResourceHud(uiBatch, screenWidth, screenHeight);
         uiBatch.end();
