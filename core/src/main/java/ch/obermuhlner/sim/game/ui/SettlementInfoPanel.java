@@ -133,7 +133,7 @@ public class SettlementInfoPanel {
             font.draw(batch, "[Re-spec] to change spec", textX, textY);
             font.setColor(Color.WHITE);
         } else {
-            int toNext = settlement.getLevel().getMaxPopulation() - settlement.population;
+            int toNext = settlement.getMaxPopulation() - settlement.population;
             if (toNext < Integer.MAX_VALUE && toNext > 0) {
                 font.draw(batch, "To next level: " + toNext + " pop", textX, textY);
             }

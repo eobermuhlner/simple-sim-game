@@ -84,11 +84,11 @@ public class Settlement {
     }
 
     private void updateLevel() {
-        SettlementLevel newLevel = SettlementLevel.fromPopulation(population);
+        SettlementLevel newLevel = config.getLevelForPopulation(population);
         // Village → Town requires explicit specialization choice; cap population at Village max
         if (newLevel != SettlementLevel.VILLAGE && specialization == Specialization.NONE) {
             settlementLevelIndex = SettlementLevel.VILLAGE.ordinal();
-            population = Math.min(population, SettlementLevel.VILLAGE.getMaxPopulation());
+            population = Math.min(population, config.getMaxPopulation(SettlementLevel.VILLAGE));
             return;
         }
         settlementLevelIndex = newLevel.ordinal();
@@ -106,13 +106,17 @@ public class Settlement {
         return config.getMaxBuildings(getLevel());
     }
 
+    public int getMaxPopulation() {
+        return config.getMaxPopulation(getLevel());
+    }
+
     /**
      * Returns true when the Village has reached max population and the player must
      * choose a specialization to unlock the Town upgrade.
      */
     public boolean needsSpecializationChoice() {
         return getLevel() == SettlementLevel.VILLAGE
-            && population >= SettlementLevel.VILLAGE.getMaxPopulation()
+            && population >= config.getMaxPopulation(SettlementLevel.VILLAGE)
             && specialization == Specialization.NONE;
     }
 
@@ -123,7 +127,7 @@ public class Settlement {
     public boolean needsUpgrade() {
         return getLevel() != SettlementLevel.VILLAGE
             && getLevel() != SettlementLevel.METROPOLIS
-            && population >= getLevel().getMaxPopulation();
+            && population >= config.getMaxPopulation(getLevel());
     }
 
     /**
@@ -135,7 +139,7 @@ public class Settlement {
         this.specialization = spec;
         SettlementLevel[] levels = SettlementLevel.values();
         settlementLevelIndex = Math.min(settlementLevelIndex + 1, levels.length - 1);
-        population = SettlementLevel.TOWN.getMinPopulation();
+        population = config.getMinPopulation(SettlementLevel.TOWN);
     }
 
     /**
@@ -154,7 +158,7 @@ public class Settlement {
         if (!canRespecialize()) return;
         this.specialization = newSpec;
         settlementLevelIndex = Math.max(0, settlementLevelIndex - 1);
-        population = getLevel().getMaxPopulation();
+        population = config.getMaxPopulation(getLevel());
     }
 
     /** Upgrades a Town/City to the next level (no specialization required). */
@@ -163,7 +167,7 @@ public class Settlement {
             SettlementLevel[] levels = SettlementLevel.values();
             settlementLevelIndex = Math.min(settlementLevelIndex + 1, levels.length - 1);
             SettlementLevel newLevel = levels[settlementLevelIndex];
-            population = newLevel.getMinPopulation();
+            population = config.getMinPopulation(newLevel);
         }
     }
 
@@ -227,6 +231,6 @@ public class Settlement {
     }
 
     public float getCurrentPrice(ResourceType type) {
-        return type.basePrice * getPriceMult(type);
+        return config.getBasePrice(type) * getPriceMult(type);
     }
 }

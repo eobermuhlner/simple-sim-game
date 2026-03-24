@@ -323,7 +323,7 @@ public class BuildMode implements GameMode {
 
         BuildingType type = BuildingType.fromId(buildingId);
         if (type != null) {
-            settlement.addPopulation(type.getPopulationCapacity());
+            settlement.addPopulation(controller.getGameConfig().getBuildingPopulationCapacity(type));
         }
     }
 
