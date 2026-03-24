@@ -37,6 +37,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Headless economy simulation for balance testing without UI.
 
+**Only run this when the user explicitly asks for simulation balance adjustments.** This is not part of normal development workflow.
+
 ```bash
 ./gradlew core:runSimulation    # Run simulation (500 ticks)
 ./gradlew core:test --tests "ch.obermuhlner.sim.SimulationRunnerTest"  # Quick run (200 ticks)
