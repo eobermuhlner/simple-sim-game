@@ -420,8 +420,8 @@ public class Main extends ApplicationAdapter implements GameController {
             addResearchButtons();
 
         } else {
-            // New Settlement — only available when outside any settlement
-            if (onTile == null && nearby == null) {
+            // New Settlement — only available where the new radius won't overlap any existing
+            if (onTile == null && !wouldOverlapExistingSettlement(selectedTileX, selectedTileY)) {
                 availableTools.add(new BuildToolbar.ToolButton(TOOL_NEW_SETTLEMENT, "New Settlement", null));
             }
 
@@ -545,7 +545,8 @@ public class Main extends ApplicationAdapter implements GameController {
 
     private void placeRoadWithCost(int tx, int ty, RoadType type) {
         float cost = gameConfig.getRoadCost(type);
-        Settlement payer = getClosestSettlement(tx, ty);
+        Settlement payer = getNearbySettlement(tx, ty);
+        if (payer == null) payer = getClosestSettlement(tx, ty);
         if (cost > 0 && (payer == null || payer.gold < cost)) return;
         if (world.placeRoad(tx, ty, type) && cost > 0 && payer != null) {
             payer.gold -= cost;
@@ -577,7 +578,9 @@ public class Main extends ApplicationAdapter implements GameController {
     }
 
     private Settlement getNearbySettlement(int tx, int ty) {
-        for (Settlement s : world.getSettlements()) {
+        java.util.List<Settlement> settlements = world.getSettlements();
+        for (int i = settlements.size() - 1; i >= 0; i--) {
+            Settlement s = settlements.get(i);
             int radius = gameConfig.getSettlementRadius(s.getLevel());
             double dist = Math.hypot(tx - s.centerX, ty - s.centerY);
             if (dist <= radius) {
@@ -585,6 +588,19 @@ public class Main extends ApplicationAdapter implements GameController {
             }
         }
         return null;
+    }
+
+    private boolean wouldOverlapExistingSettlement(int tx, int ty) {
+        SettlementLevel villageLevel = gameConfig.getLevelById("VILLAGE");
+        int newRadius = villageLevel != null ? gameConfig.getSettlementRadius(villageLevel) : 3;
+        for (Settlement s : world.getSettlements()) {
+            int existingRadius = gameConfig.getSettlementRadius(s.getLevel());
+            double dist = Math.hypot(tx - s.centerX, ty - s.centerY);
+            if (dist < newRadius + existingRadius) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Settlement getClosestSettlement(int tx, int ty) {
@@ -778,6 +794,7 @@ public class Main extends ApplicationAdapter implements GameController {
         if (!tile.isBuildable()) return;
         if (world.getSettlementAt(tx, ty) != null) return;
         if (!world.hasRevealedNeighbor(tx, ty)) return;
+        if (wouldOverlapExistingSettlement(tx, ty)) return;
 
         String name = "Settlement " + (world.getSettlements().size() + 1);
         world.createSettlement(name, tx, ty);
