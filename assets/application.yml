@@ -698,7 +698,7 @@ tech_tree:
       branch: GENERAL
       cost: 150.0
       required_tech: ""
-      required_level: TOWN
+      required_level: VILLAGE
       allow:
         buildings: [HARBOR]
     LARGE_SHIPS:

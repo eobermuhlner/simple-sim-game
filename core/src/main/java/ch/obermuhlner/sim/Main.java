@@ -578,8 +578,9 @@ public class Main extends ApplicationAdapter implements GameController {
 
     private Settlement getNearbySettlement(int tx, int ty) {
         for (Settlement s : world.getSettlements()) {
+            int radius = gameConfig.getSettlementRadius(s.getLevel());
             double dist = Math.hypot(tx - s.centerX, ty - s.centerY);
-            if (dist <= gameConfig.getNearbySettlementRadius()) {
+            if (dist <= radius) {
                 return s;
             }
         }
