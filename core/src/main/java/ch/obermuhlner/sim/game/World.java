@@ -100,14 +100,26 @@ public class World {
         Settlement settlement = new Settlement(name, tx, ty, config);
         settlements.add(settlement);
         revealArea(tx, ty, 3);
+        // Update adjacent road tiles so they connect toward this settlement center
+        updateRoadConnections(tx, ty + 1);
+        updateRoadConnections(tx, ty - 1);
+        updateRoadConnections(tx + 1, ty);
+        updateRoadConnections(tx - 1, ty);
         routesDirty = true;
         return settlement;
     }
 
     public void removeSettlement(int id) {
-        settlements.removeIf(s -> s.id == id);
+        Settlement s = getSettlement(id);
+        settlements.removeIf(st -> st.id == id);
         tradeRoutes.removeIf(r -> r.connects(id));
         caravans.removeIf(c -> c.fromSettlementId == id || c.toSettlementId == id);
+        if (s != null) {
+            updateRoadConnections(s.centerX, s.centerY + 1);
+            updateRoadConnections(s.centerX, s.centerY - 1);
+            updateRoadConnections(s.centerX + 1, s.centerY);
+            updateRoadConnections(s.centerX - 1, s.centerY);
+        }
         routesDirty = true;
     }
 
@@ -320,6 +332,14 @@ public class World {
         getChunk(cx, cy).markDirty();
     }
 
+    private boolean isRoadConnector(int tx, int ty) {
+        if (getTile(tx, ty).roadType != 0) return true;
+        for (Settlement s : settlements) {
+            if (s.centerX == tx && s.centerY == ty) return true;
+        }
+        return false;
+    }
+
     private void updateRoadConnections(int tx, int ty) {
         Tile tile = getTile(tx, ty);
         if (tile.roadType == 0) {
@@ -327,10 +347,10 @@ public class World {
             return;
         }
         int conn = 0;
-        if (getTile(tx, ty + 1).roadType != 0) conn |= ROAD_NORTH;
-        if (getTile(tx, ty - 1).roadType != 0) conn |= ROAD_SOUTH;
-        if (getTile(tx + 1, ty).roadType != 0) conn |= ROAD_EAST;
-        if (getTile(tx - 1, ty).roadType != 0) conn |= ROAD_WEST;
+        if (isRoadConnector(tx, ty + 1)) conn |= ROAD_NORTH;
+        if (isRoadConnector(tx, ty - 1)) conn |= ROAD_SOUTH;
+        if (isRoadConnector(tx + 1, ty)) conn |= ROAD_EAST;
+        if (isRoadConnector(tx - 1, ty)) conn |= ROAD_WEST;
         tile.roadConnection = conn;
     }
 
