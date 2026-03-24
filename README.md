@@ -51,6 +51,40 @@ A top-down 2D settlement-building simulation built with [libGDX](https://libgdx.
 ./gradlew core:test --info # Run with verbose output
 ```
 
+### Simulation Runner
+
+A headless simulation runner for testing economy balance without UI.
+
+```bash
+./gradlew core:runSimulation    # Run simulation (500 ticks)
+./gradlew core:test --tests "ch.obermuhlner.sim.SimulationRunnerTest"  # Quick test run (200 ticks)
+```
+
+The simulation:
+1. Creates 4 settlements with different specializations
+2. Builds roads between them
+3. Runs the economy for specified ticks
+4. Outputs balance analysis with recommendations
+
+**Example output:**
+```
+=== BALANCE ANALYSIS ===
+
+--- Farming Village ---
+  [ISSUE] Food deficit: avg -0.36/tick
+    -> Food production insufficient for population
+    -> Consider: increase GRASS_FOOD, adjust growth_rate
+
+=== CONFIGURATION RECOMMENDATIONS ===
+
+To adjust in application.yml:
+simulation:
+  food_demand_per_pop: 0.15
+  growth_rate: 0.01
+  terrain_production:
+    GRASS_FOOD: 0.5
+```
+
 ### Test Structure
 
 Tests live in `core/src/test/java/ch/obermuhlner/sim/game/`:

@@ -33,6 +33,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew core:test --info  # verbose output
 ```
 
+## Simulation Runner
+
+Headless economy simulation for balance testing without UI.
+
+```bash
+./gradlew core:runSimulation    # Run simulation (500 ticks)
+./gradlew core:test --tests "ch.obermuhlner.sim.SimulationRunnerTest"  # Quick run (200 ticks)
+```
+
+**What it tests:**
+- Creates 4 settlements with different specializations
+- Builds roads to enable trade
+- Runs economy simulation
+- Tracks: food balance, population growth, starvation, resource production, price volatility
+
+**Output includes:**
+- Balance issues per settlement (food deficits, starvation, price volatility)
+- Configuration recommendations for rebalancing (adjust `application.yml` values)
+
 ## Testing
 
 ### Philosophy
