@@ -21,6 +21,7 @@ public class Settlement {
     public float food  = 0f;
     public float goods = 0f;
     public float gold;
+    public float tradeRevenue = 0f;
 
     public float storageCapacity;
 

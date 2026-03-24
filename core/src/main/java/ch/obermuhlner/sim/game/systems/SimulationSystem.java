@@ -349,6 +349,7 @@ public class SimulationSystem {
                 float payment = received * price * 0.1f;
                 dst.gold = Math.max(0, dst.gold - payment);
                 src.gold += payment;
+                src.tradeRevenue += payment;
             }
         }
 

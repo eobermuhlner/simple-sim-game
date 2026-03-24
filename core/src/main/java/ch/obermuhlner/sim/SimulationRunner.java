@@ -274,8 +274,8 @@ public class SimulationRunner {
                     world.reveal(tx, ty);
                     Settlement s = world.createSettlement(name, tx, ty);
                     if (s != null) {
-                        s.specialize(spec);
                         s.population = 50;
+                        s.specialize(spec);
                         return s;
                     }
                 }
@@ -369,11 +369,16 @@ public class SimulationRunner {
         
         System.out.println();
         System.out.println("=== Tech Tree Expansion Test ===");
+        List<Settlement> settlements = world.getSettlements();
+        System.out.println("Settlement specializations: " + settlements.stream()
+            .map(s -> s.name + ":" + s.specialization.name()).collect(java.util.stream.Collectors.toList()));
         for (GameConfig.CrossSpecializationTechConfig csTech : config.getAllCrossSpecializationTechs()) {
             boolean researched = world.techTree.isResearched(csTech.id);
-            boolean canResearch = world.techTree.canResearchCrossSpecialization(csTech, world.getSettlements());
-            System.out.printf("  %s: researched=%s, canResearch=%s%n", 
-                csTech.id, researched, canResearch);
+            boolean canResearch = world.techTree.canResearchCrossSpecialization(csTech, settlements);
+            String lockHint = !researched && !canResearch ? 
+                " (requires: " + csTech.requires + ")" : "";
+            System.out.printf("  %s: researched=%s, canResearch=%s%s%n", 
+                csTech.id, researched, canResearch, lockHint);
         }
         for (GameConfig.ConditionalTechConfig condTech : config.getAllConditionalTechs()) {
             boolean researched = world.techTree.isResearched(condTech.id);
@@ -746,6 +751,7 @@ public class SimulationRunner {
         int starvationTicks = 0;
         
         double tradeRevenue = 0;
+        double prevTradeRevenue = 0;
         
         double minPrice = Float.MAX_VALUE;
         double maxPrice = 0;
@@ -782,7 +788,12 @@ public class SimulationRunner {
             if (sampleCount == 0) {
                 initialPop = s.population;
                 prevGold = s.gold;
+                prevTradeRevenue = s.tradeRevenue;
+            } else {
+                tradeRevenue += s.tradeRevenue - prevTradeRevenue;
             }
+            prevTradeRevenue = s.tradeRevenue;
+            
             finalPop = s.population;
             maxPop = Math.max(maxPop, s.population);
             
