@@ -33,13 +33,13 @@ public class GameConfig {
         public float price_lerp_alpha = 0.2f;
         public float smoothing_alpha = 0.15f;
         public float caravan_base_speed = 0.5f;
-        public float cargo_threshold = 0.2f;
+        public float cargo_threshold = 0.1f;
         public float cargo_batch = 0.3f;
         public float caravan_upkeep_per_tile = 0.005f;
         public float price_min = 0.5f;
         public float price_max = 2.0f;
         public float goods_demand_multiplier = 0.01f;
-        public float arbitrage_threshold = 0.8f;
+        public float arbitrage_threshold = 0.5f;
         public Map<String, Float> level_growth_multipliers = new HashMap<String, Float>() {{
             put("VILLAGE", 1.0f); put("TOWN", 0.8f); put("CITY", 0.6f); put("METROPOLIS", 0.4f);
         }};

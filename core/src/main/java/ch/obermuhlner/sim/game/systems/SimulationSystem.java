@@ -35,6 +35,7 @@ public class SimulationSystem {
         List<Settlement> settlements = world.getSettlements();
         gatherResources(settlements);
         consumeAndGrow(settlements);
+        constructBuildings(settlements);
         updatePrices(settlements);
         if (world.routesDirty || tickCount % 10 == 0) {
             rebuildTradeRoutes(settlements);
@@ -125,13 +126,219 @@ public class SimulationSystem {
                 if (intGrowth > 0) s.addPopulation(intGrowth);
 
             } else if (s.food <= 0 && prodVsConsume < -0.1f) {
-                float deficit = -prodVsConsume;
-                float starvation = deficit * starvationRate;
-                starvation = Math.min(starvation, s.population * 0.1f);
-                int intStarve = Math.max(0, (int) Math.ceil(starvation));
-                if (intStarve > 0) s.addPopulation(-intStarve);
+                boolean boughtFood = buyEmergencyFood(s, settlements);
+                if (!boughtFood) {
+                    float deficit = -prodVsConsume;
+                    float starvation = deficit * starvationRate;
+                    starvation = Math.min(starvation, s.population * 0.1f);
+                    int intStarve = Math.max(0, (int) Math.ceil(starvation));
+                    if (intStarve > 0) s.addPopulation(-intStarve);
+                }
             }
         }
+
+        upgradeSettlements(settlements);
+    }
+
+    private boolean buyEmergencyFood(Settlement buyer, List<Settlement> settlements) {
+        if (buyer.gold < 5) return false;
+
+        float foodThreshold = buyer.population * config.getFoodDemandPerPop() * 3;
+        if (buyer.food > foodThreshold) return false;
+
+        float bestPrice = Float.MAX_VALUE;
+        Settlement bestSeller = null;
+
+        for (Settlement s : settlements) {
+            if (s == buyer) continue;
+            if (s.food <= s.population * config.getFoodDemandPerPop() * 2) continue;
+            
+            float price = s.getCurrentPrice(ResourceType.FOOD);
+            if (price < bestPrice) {
+                bestPrice = price;
+                bestSeller = s;
+            }
+        }
+
+        if (bestSeller != null) {
+            float foodToBuy = Math.min(30, bestSeller.food - bestSeller.population * config.getFoodDemandPerPop());
+            float cost = foodToBuy * bestPrice;
+            
+            if (cost <= buyer.gold && foodToBuy > 0) {
+                buyer.gold -= cost;
+                buyer.food = Math.min(buyer.storageCapacity, buyer.food + foodToBuy);
+                bestSeller.food -= foodToBuy;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void upgradeSettlements(List<Settlement> settlements) {
+        SettlementLevel firstLevel = config.getFirstLevel();
+
+        for (Settlement s : settlements) {
+            if (s.population <= 0) continue;
+
+            SettlementLevel currentLevel = s.getLevel();
+
+            if (currentLevel.equals(firstLevel) && s.specialization == Specialization.NONE) {
+                if (s.population >= currentLevel.getMaxPopulation()) {
+                    autoSpecialize(s);
+                }
+            } else if (!currentLevel.equals(config.getLastLevel())) {
+                if (s.population >= currentLevel.getMaxPopulation()) {
+                    int nextLevelIndex = s.settlementLevelIndex + 1;
+                    List<SettlementLevel> levels = config.getSettlementTypes();
+                    if (nextLevelIndex < levels.size()) {
+                        s.settlementLevelIndex = nextLevelIndex;
+                    }
+                }
+            }
+        }
+    }
+
+    private void autoSpecialize(Settlement s) {
+        if (s.specialization != Specialization.NONE) return;
+
+        Specialization bestSpec = selectBestSpecialization(s);
+        if (bestSpec != null) {
+            s.specialize(bestSpec);
+            int levelPopThreshold = s.getLevel().getMaxPopulation();
+            if (s.population < levelPopThreshold) {
+                s.population = levelPopThreshold;
+            }
+        }
+    }
+
+    private Specialization selectBestSpecialization(Settlement s) {
+        float bestProd = 0;
+        Specialization best = Specialization.NONE;
+
+        for (Specialization spec : Specialization.values()) {
+            if (spec == Specialization.NONE) continue;
+            float foodProd = getTerrainProductionForSpec(s, ResourceType.FOOD, spec);
+            float woodProd = getTerrainProductionForSpec(s, ResourceType.WOOD, spec);
+            float stoneProd = getTerrainProductionForSpec(s, ResourceType.STONE, spec);
+
+            float totalProd;
+            switch (spec) {
+                case FARMING_VILLAGE: totalProd = foodProd * 2.0f; break;
+                case LOGGING_CAMP: totalProd = woodProd * 2.0f; break;
+                case MINING_TOWN: totalProd = stoneProd * 2.0f; break;
+                default: totalProd = foodProd + woodProd + stoneProd;
+            }
+
+            if (totalProd > bestProd) {
+                bestProd = totalProd;
+                best = spec;
+            }
+        }
+
+        return best;
+    }
+
+    private float getTerrainProductionForSpec(Settlement s, ResourceType type, Specialization spec) {
+        int scanRadius = config.getScanRadius();
+        float prod = 0;
+        String configKey;
+
+        switch (type) {
+            case FOOD: configKey = "GRASS_FOOD"; break;
+            case WOOD: configKey = "FOREST_WOOD"; break;
+            case STONE: configKey = "STONE_STONE"; break;
+            default: return 0;
+        }
+
+        for (int dy = -scanRadius; dy <= scanRadius; dy++) {
+            for (int dx = -scanRadius; dx <= scanRadius; dx++) {
+                if (dx * dx + dy * dy > scanRadius * scanRadius) continue;
+                Tile tile = world.getTile(s.centerX + dx, s.centerY + dy);
+                switch (type) {
+                    case FOOD:
+                        if (tile.terrain == TerrainType.GRASS) prod += config.getTerrainProduction(configKey);
+                        break;
+                    case WOOD:
+                        if (tile.terrain == TerrainType.FOREST) prod += config.getTerrainProduction(configKey);
+                        break;
+                    case STONE:
+                        if (tile.terrain == TerrainType.STONE) prod += config.getTerrainProduction(configKey);
+                        break;
+                }
+            }
+        }
+
+        return prod;
+    }
+
+    // ---- Building Construction ----
+
+    private void constructBuildings(List<Settlement> settlements) {
+        for (Settlement s : settlements) {
+            if (s.population <= 0) continue;
+
+            int maxBuildings = s.getMaxBuildings();
+            if (s.buildingIds.size() >= maxBuildings) continue;
+
+            if (s.gold >= 10) {
+                BuildingType bestBuilding = selectBestBuilding(s);
+                if (bestBuilding != null) {
+                    float cost = config.getBuildingCost(bestBuilding);
+                    if (s.gold >= cost) {
+                        s.gold -= cost;
+                        s.addBuilding(bestBuilding.getId());
+                        s.addPopulation(config.getBuildingPopulationCapacity(bestBuilding));
+                    }
+                }
+            }
+        }
+    }
+
+    private int getBuildingPopulationBonus(Settlement s) {
+        int bonus = 0;
+        for (Integer buildingId : s.buildingIds) {
+            BuildingType type = BuildingType.fromId(buildingId);
+            if (type != null) {
+                bonus += config.getBuildingPopulationCapacity(type);
+            }
+        }
+        return bonus;
+    }
+
+    private BuildingType selectBestBuilding(Settlement s) {
+        float foodMult = config.getSpecFoodMultiplier(s.specialization);
+        
+        if (foodMult < 1.0f) {
+            BuildingType[] farmFirst = {
+                BuildingType.FARM_SMALL,
+                BuildingType.HOUSE_SIMPLE,
+                BuildingType.WAREHOUSE,
+                BuildingType.WELL_WATER
+            };
+            for (BuildingType type : farmFirst) {
+                if (world.techTree.isAllowed("buildings", type.name(), config)) {
+                    if (!s.buildingIds.contains(type.getId())) {
+                        return type;
+                    }
+                }
+            }
+        }
+
+        BuildingType[] priorities = {
+            BuildingType.HOUSE_SIMPLE,
+            BuildingType.FARM_SMALL,
+            BuildingType.WAREHOUSE,
+            BuildingType.WELL_WATER
+        };
+
+        for (BuildingType type : priorities) {
+            if (world.techTree.isAllowed("buildings", type.name(), config)) {
+                if (!s.buildingIds.contains(type.getId())) {
+                    return type;
+                }
+            }
+        }
+        return null;
     }
 
     // ---- Dynamic Pricing ----

@@ -179,7 +179,9 @@ public class SimulationRunner {
         if (options.enableResearch) {
             printResearchResults(world, result);
         }
-        
+
+        result.tradeRouteCount = world.getTradeRoutes().size();
+
         if (!options.quiet) {
             System.out.println();
         }
@@ -212,6 +214,8 @@ public class SimulationRunner {
         if (s2 != null) {
             s2.specialize(Specialization.LOGGING_CAMP);
             s2.population = 20;
+            s2.gold = 200;
+            addLoggingBuildings(s2);
         }
         
         world.reveal(-10, 6);
@@ -219,6 +223,8 @@ public class SimulationRunner {
         if (s3 != null) {
             s3.specialize(Specialization.MINING_TOWN);
             s3.population = 15;
+            s3.gold = 200;
+            addMiningBuildings(s3);
         }
         
         world.reveal(3, -8);
@@ -226,6 +232,8 @@ public class SimulationRunner {
         if (s4 != null) {
             s4.specialize(Specialization.FARMING_VILLAGE);
             s4.population = 25;
+            s4.gold = 200;
+            addFarmingBuildings(s4);
         }
         
         for (int x = 0; x <= 2; x++) {
@@ -244,6 +252,7 @@ public class SimulationRunner {
         world.createStarterSettlement();
         
         Settlement starterSettlement = world.getSettlements().get(0);
+        starterSettlement.gold = 200;
         int starterX = starterSettlement.centerX;
         int starterY = starterSettlement.centerY;
         
@@ -253,6 +262,11 @@ public class SimulationRunner {
         Settlement tradeHub = createSettlementAtDistance(world, "Trade Hub", starterX, starterY, -4, -4, Specialization.TRADE_HUB);
 
         buildRoadsBetweenSettlements(world, starterSettlement, loggingCamp, miningCamp, farmingVillage, tradeHub);
+
+        if (loggingCamp != null) loggingCamp.gold = 200;
+        if (miningCamp != null) miningCamp.gold = 200;
+        if (farmingVillage != null) farmingVillage.gold = 200;
+        if (tradeHub != null) tradeHub.gold = 200;
 
         addBasicBuildings(loggingCamp);
         addBasicBuildings(miningCamp);
@@ -391,6 +405,7 @@ public class SimulationRunner {
     public void placeBuilding(Settlement s, BuildingType type, int offsetX, int offsetY) {
         if (s != null) {
             s.addBuilding(type.getId());
+            s.addPopulation(type.getPopulationCapacity());
         }
     }
     
@@ -648,6 +663,7 @@ public class SimulationRunner {
     static class SimulationResult {
         long seed;
         int settlementCount;
+        int tradeRouteCount;
         Map<String, SettlementResult> settlementResults = new LinkedHashMap<>();
         
         SimulationResult(long seed, int settlementCount) {
@@ -662,6 +678,7 @@ public class SimulationRunner {
         void printDetailedOutput() {
             System.out.println("Duration: " + 500 + " ticks (" + (500 / 60.0) + " sim-minutes)");
             System.out.println("Settlements: " + settlementCount);
+            System.out.println("Trade Routes: " + tradeRouteCount);
             System.out.println();
             
             for (Map.Entry<String, SettlementResult> entry : settlementResults.entrySet()) {

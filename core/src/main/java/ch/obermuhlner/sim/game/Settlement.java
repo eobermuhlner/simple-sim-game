@@ -53,6 +53,7 @@ public class Settlement {
         this.gold = config.getStartingGold();
         this.storageCapacity = config.getStorageCapacity();
         this.settlementLevelIndex = 0;
+        this.food = Math.min(config.getStorageCapacity(), config.getStartingPopulation() * 5.0f);
     }
 
     /** Package-private constructor for deserialization — does NOT trigger normal initialization. */
