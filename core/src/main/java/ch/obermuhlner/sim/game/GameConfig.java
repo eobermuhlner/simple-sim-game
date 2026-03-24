@@ -106,6 +106,7 @@ public class GameConfig {
 
     public static class TerrainTypeConfig {
         public int tile_index = -1;
+        public String description = "";
     }
 
     public static class TerrainObjectConfig {
@@ -114,6 +115,7 @@ public class GameConfig {
         public String image = "";
         public boolean walkable = false;
         public float destroy_cost = 0f;
+        public String description = "";
         public Map<String, Float> spawn = new LinkedHashMap<>();
         public Map<String, Float> harvest = new LinkedHashMap<>();
     }
@@ -124,6 +126,7 @@ public class GameConfig {
         public String image = "";
         public float cost = 0f;
         public int population_capacity = 0;
+        public String description = "";
     }
 
     public static class SettlementImageConfig {
@@ -143,6 +146,7 @@ public class GameConfig {
         public String reward_type = "ONE_TIME"; // ONE_TIME or BONUS
         public String required_level = "VILLAGE";
         public String required_unlock = ""; // if non-empty, isAllowed("rewards", required_unlock) must be true
+        public String description = "";
         public Map<String, Float> rewards = new LinkedHashMap<>();          // resource -> one-time amount
         public Map<String, Float> bonus_production = new LinkedHashMap<>();  // resource -> per-tick bonus
         public Map<String, Float> spawn = new LinkedHashMap<>();             // terrain -> spawn probability
@@ -370,6 +374,7 @@ public class GameConfig {
                 if (e.getValue() instanceof Map) {
                     Map<String, Object> tData = (Map<String, Object>) e.getValue();
                     if (tData.containsKey("tile_index")) tc.tile_index = ((Number) tData.get("tile_index")).intValue();
+                    if (tData.containsKey("description")) tc.description = (String) tData.get("description");
                 }
                 t.types.put(e.getKey().toUpperCase(), tc);
             }
@@ -391,6 +396,7 @@ public class GameConfig {
             if (data.containsKey("image")) toc.image = (String) data.get("image");
             if (data.containsKey("walkable")) toc.walkable = (Boolean) data.get("walkable");
             if (data.containsKey("destroy_cost")) toc.destroy_cost = ((Number) data.get("destroy_cost")).floatValue();
+            if (data.containsKey("description")) toc.description = (String) data.get("description");
             Map<String, Object> spawnRaw = (Map<String, Object>) data.get("spawn");
             if (spawnRaw != null) {
                 for (Map.Entry<String, Object> se : spawnRaw.entrySet()) {
@@ -424,6 +430,7 @@ public class GameConfig {
             if (data.containsKey("reward_type")) erc.reward_type = ((String) data.get("reward_type")).toUpperCase();
             if (data.containsKey("required_level")) erc.required_level = ((String) data.get("required_level")).toUpperCase();
             if (data.containsKey("required_unlock")) erc.required_unlock = ((String) data.get("required_unlock")).toUpperCase();
+            if (data.containsKey("description")) erc.description = (String) data.get("description");
             Map<String, Object> rewardsRaw = (Map<String, Object>) data.get("rewards");
             if (rewardsRaw != null) {
                 for (Map.Entry<String, Object> re : rewardsRaw.entrySet()) {
@@ -480,6 +487,7 @@ public class GameConfig {
             if (data.containsKey("image")) bc.image = (String) data.get("image");
             if (data.containsKey("cost")) bc.cost = ((Number) data.get("cost")).floatValue();
             if (data.containsKey("population_capacity")) bc.population_capacity = ((Number) data.get("population_capacity")).intValue();
+            if (data.containsKey("description")) bc.description = (String) data.get("description");
             r.buildings.put(key, bc);
         }
     }
@@ -818,6 +826,36 @@ public class GameConfig {
             return bc.image;
         }
         return type.getTexturePath();
+    }
+
+    public String getBuildingDescription(BuildingType type) {
+        BuildingConfig bc = root.buildings.get(type.name());
+        return bc != null ? bc.description : "";
+    }
+
+    public String getTerrainDescription(TerrainType type) {
+        TerrainTypeConfig tc = root.terrain.types.get(type.name());
+        return tc != null ? tc.description : "";
+    }
+
+    public String getTerrainObjectDescription(int objectId) {
+        for (TerrainObjectConfig toc : root.terrain_objects.values()) {
+            if (toc.id == objectId) return toc.description;
+        }
+        return "";
+    }
+
+    public String getExplorationRewardDescription(int objectId) {
+        ExplorationRewardConfig erc = getExplorationReward(objectId);
+        return erc != null ? erc.description : "";
+    }
+
+    public String getRoadDescription(RoadType type) {
+        Map<String, Object> data = root.roads.get(type.name());
+        if (data != null && data.containsKey("description")) {
+            return (String) data.get("description");
+        }
+        return "";
     }
 
     public String getSettlementImage(String settlementLevel) {

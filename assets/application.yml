@@ -82,12 +82,24 @@ terrain:
     forest: 0.60
     stone: 0.65
   types:
-    DEEP_SEA:    { tile_index: 0 }
-    SHALLOW_SEA: { tile_index: 1 }
-    GRASS:       { tile_index: 2 }
-    FOREST:      { tile_index: 3 }
-    STONE:       { tile_index: 4 }
-    SNOW:        { tile_index: 5 }
+    DEEP_SEA:
+      tile_index: 0
+      description: "Deep open ocean. Impassable and unbuildable."
+    SHALLOW_SEA:
+      tile_index: 1
+      description: "Coastal waters. Harbors can be built here."
+    GRASS:
+      tile_index: 2
+      description: "Fertile plains ideal for farming and settlement."
+    FOREST:
+      tile_index: 3
+      description: "Dense woodland rich in timber resources."
+    STONE:
+      tile_index: 4
+      description: "Rocky highland. Good source of stone for construction."
+    SNOW:
+      tile_index: 5
+      description: "Frozen tundra. Harsh but traversable terrain."
 
 terrain_objects:
   TREE_LARGE:
@@ -95,6 +107,7 @@ terrain_objects:
     image: 64x64/objects/tree-large.png
     walkable: false
     destroy_cost: 2.0
+    description: "A towering ancient tree. Clear it to harvest a large amount of timber."
     harvest:
       WOOD: 5.0
     spawn:
@@ -105,6 +118,7 @@ terrain_objects:
     image: 64x64/objects/tree-small.png
     walkable: false
     destroy_cost: 1.0
+    description: "A young tree. Yields modest timber when cleared."
     harvest:
       WOOD: 2.0
     spawn:
@@ -115,6 +129,7 @@ terrain_objects:
     image: 64x64/objects/boulder-large.png
     walkable: false
     destroy_cost: 2.0
+    description: "A massive rock formation. Quarry it for a large haul of stone."
     harvest:
       STONE: 5.0
     spawn:
@@ -126,6 +141,7 @@ terrain_objects:
     image: 64x64/objects/boulder-small.png
     walkable: true
     destroy_cost: 1.0
+    description: "A loose boulder. Passable but yields some stone if removed."
     harvest:
       STONE: 2.0
     spawn:
@@ -136,6 +152,7 @@ terrain_objects:
     image: 64x64/objects/boulder-large-snow.png
     walkable: true
     destroy_cost: 1.0
+    description: "A snow-covered boulder. Passable; no harvestable resources."
     spawn:
       SNOW: 0.20
 
@@ -146,31 +163,35 @@ roads:
     speed_multiplier: 1.0
     capacity: 2
     upkeep_per_tick: 0.0
+    description: "A simple dirt path. Cheap to build, basic trade capacity."
   STONE:
     cost: 20
     destroy_cost: 3.0
     speed_multiplier: 1.5
     capacity: 4
     upkeep_per_tick: 0.01
+    description: "A paved stone road. Faster travel and higher trade throughput."
   COBBLESTONE:
     cost: 50
     destroy_cost: 5.0
     speed_multiplier: 2.0
     capacity: 6
     upkeep_per_tick: 0.02
+    description: "Carefully laid cobblestones. Reliable all-weather road for busy routes."
   ROMAN:
     cost: 100
     destroy_cost: 10.0
     speed_multiplier: 3.0
     capacity: 10
     upkeep_per_tick: 0.05
+    description: "An engineered Roman road. The pinnacle of road construction—fast and high-capacity."
 
 specializations:
   NONE:            { wood: 1.0, stone: 1.0, food: 1.0, goods: 1.0 }
   LOGGING_CAMP:    { wood: 2.0, stone: 0.5, food: 0.5, goods: 1.0 }
   MINING_TOWN:     { wood: 0.5, stone: 2.0, food: 0.5, goods: 1.0 }
   FARMING_VILLAGE: { wood: 0.5, stone: 0.5, food: 2.0, goods: 1.0 }
-  TRADE_HUB:       { wood: 1.0, stone: 1.0, food: 1.0, goods: 1.5 }
+  TRADE_HUB:       { wood: 0.8, stone: 0.8, food: 0.8, goods: 1.6 }
 
 exploration_rewards:
   WOOD_CACHE:
@@ -179,6 +200,7 @@ exploration_rewards:
     walkable: false
     reward_type: ONE_TIME
     required_level: VILLAGE
+    description: "A hidden cache of timber. Claim it for a one-time wood bonus."
     rewards:
       WOOD: 20.0
     spawn:
@@ -190,6 +212,7 @@ exploration_rewards:
     walkable: false
     reward_type: ONE_TIME
     required_level: VILLAGE
+    description: "A stash of quarried stone. Claim it for a one-time stone bonus."
     rewards:
       STONE: 20.0
     spawn:
@@ -201,6 +224,7 @@ exploration_rewards:
     walkable: false
     reward_type: ONE_TIME
     required_level: VILLAGE
+    description: "Stored provisions left by earlier settlers. A one-time food windfall."
     rewards:
       FOOD: 30.0
     spawn:
@@ -211,6 +235,7 @@ exploration_rewards:
     walkable: true
     reward_type: BONUS
     required_level: TOWN
+    description: "Exceptionally rich soil. Permanently boosts food production in this settlement."
     bonus_production:
       FOOD: 2.0
     spawn:
@@ -221,6 +246,7 @@ exploration_rewards:
     walkable: true
     reward_type: BONUS
     required_level: TOWN
+    description: "Mineral veins beneath the surface. Permanently increases stone output."
     bonus_production:
       STONE: 2.0
     spawn:
@@ -232,6 +258,7 @@ exploration_rewards:
     walkable: false
     reward_type: ONE_TIME
     required_level: CITY
+    description: "Crumbling remnants of a lost civilization. Excavate for a massive haul of all resources."
     rewards:
       WOOD: 50.0
       STONE: 50.0
@@ -242,62 +269,286 @@ exploration_rewards:
       SNOW: 0.003
 
 buildings:
-  HOUSE_SIMPLE:    { cost: 10,  population_capacity: 4,  image: 64x64/objects/house-simple.png }
-  HOUSE_LARGE:     { cost: 15,  population_capacity: 8,  image: 64x64/objects/house-large.png }
-  HOUSE_STONE:     { cost: 12,  population_capacity: 6,  image: 64x64/objects/house-stone.png }
-  HOUSE_THATCHED:  { cost: 10,  population_capacity: 5,  image: 64x64/objects/house-thatched.png }
-  FARM_SMALL:      { cost: 15,  population_capacity: 3,  image: 64x64/objects/farm-small.png }
-  FARM_LARGE:      { cost: 25,  population_capacity: 6,  image: 64x64/objects/farm-large.png }
-  WELL_EMPTY:      { cost: 8,   population_capacity: 1,  image: 64x64/objects/well-empty.png }
-  WELL_WATER:      { cost: 10,  population_capacity: 2,  image: 64x64/objects/well-water.png }
-  WELL_DECORATED:  { cost: 12,  population_capacity: 2,  image: 64x64/objects/well-decorated.png }
-  MARKET_SMALL:    { cost: 20,  population_capacity: 5,  image: 64x64/objects/market-small.png }
-  MARKET_LARGE:    { cost: 35,  population_capacity: 10, image: 64x64/objects/market-large.png }
-  BAKERY:          { cost: 18,  population_capacity: 4,  image: 64x64/objects/bakery.png }
-  BLACKSMITH:      { cost: 20,  population_capacity: 4,  image: 64x64/objects/blacksmith.png }
-  INN_SMALL:       { cost: 18,  population_capacity: 5,  image: 64x64/objects/inn-small.png }
-  INN_LARGE:       { cost: 30,  population_capacity: 8,  image: 64x64/objects/inn-large.png }
-  WAREHOUSE:       { cost: 20,  population_capacity: 3,  image: 64x64/objects/warehouse-small.png }
-  GRANARY:         { cost: 18,  population_capacity: 3,  image: 64x64/objects/granary.png }
-  CHURCH_SMALL:    { cost: 25,  population_capacity: 6,  image: 64x64/objects/church-small.png }
-  CHURCH_LARGE:    { cost: 50,  population_capacity: 12, image: 64x64/objects/church-large.png }
-  TEMPLE_SMALL:    { cost: 40,  population_capacity: 8,  image: 64x64/objects/temple-small.png }
-  TEMPLE_LARGE:    { cost: 80,  population_capacity: 15, image: 64x64/objects/temple-large.png }
-  CASTLE_SMALL:    { cost: 100, population_capacity: 20, image: 64x64/objects/castle-small.png }
-  CASTLE_LARGE:    { cost: 200, population_capacity: 40, image: 64x64/objects/castle-large.png }
-  PALACE:          { cost: 500, population_capacity: 50, image: 64x64/objects/palace.png }
-  TOWER_SMALL:     { cost: 30,  population_capacity: 4,  image: 64x64/objects/tower-small.png }
-  TOWER_LARGE:     { cost: 60,  population_capacity: 8,  image: 64x64/objects/tower-large.png }
-  WALL_STONE:      { cost: 15,  population_capacity: 2,  image: 64x64/objects/wall-stone.png }
-  WALL_WOOD:       { cost: 8,   population_capacity: 1,  image: 64x64/objects/wall-wood.png }
-  GATE_STONE:      { cost: 20,  population_capacity: 3,  image: 64x64/objects/gate-stone.png }
-  GATE_WOOD:       { cost: 12,  population_capacity: 2,  image: 64x64/objects/gate-wood.png }
-  MILL_WIND:       { cost: 22,  population_capacity: 5,  image: 64x64/objects/mill-wind.png }
-  MILL_WATER:      { cost: 28,  population_capacity: 6,  image: 64x64/objects/mill-water.png }
-  TAVERN:          { cost: 25,  population_capacity: 6,  image: 64x64/objects/tavern.png }
-  SQUARE:          { cost: 20,  population_capacity: 5,  image: 64x64/objects/plaza.png }
-  MONUMENT:        { cost: 50,  population_capacity: 10, image: 64x64/objects/monument.png }
-  SHRINE:          { cost: 15,  population_capacity: 4,  image: 64x64/objects/shrine.png }
-  BARRACKS:        { cost: 30,  population_capacity: 6,  image: 64x64/objects/barracks.png }
-  TRAINING_YARD:   { cost: 25,  population_capacity: 5,  image: 64x64/objects/training-yard.png }
-  ARCHERY_RANGE:   { cost: 25,  population_capacity: 5,  image: 64x64/objects/archery-range.png }
-  FORGE_SMALL:     { cost: 20,  population_capacity: 5,  image: 64x64/objects/forge-small.png }
-  FORGE_LARGE:     { cost: 40,  population_capacity: 10, image: 64x64/objects/forge-large.png }
-  BUTCHER:         { cost: 15,  population_capacity: 3,  image: 64x64/objects/butcher.png }
-  TANNER:          { cost: 15,  population_capacity: 3,  image: 64x64/objects/tanner.png }
-  WEAVER:          { cost: 15,  population_capacity: 3,  image: 64x64/objects/weaver.png }
-  COOPER:          { cost: 15,  population_capacity: 3,  image: 64x64/objects/cooper.png }
-  FOUNTAIN:        { cost: 12,  population_capacity: 3,  image: 64x64/objects/fountain-small.png }
-  GARDEN:          { cost: 18,  population_capacity: 5,  image: 64x64/objects/garden-formal.png }
-  ORCHARD:         { cost: 15,  population_capacity: 4,  image: 64x64/objects/orchard.png }
-  VINEYARD:        { cost: 18,  population_capacity: 4,  image: 64x64/objects/vineyard.png }
-  FIELD_WHEAT:     { cost: 10,  population_capacity: 2,  image: 64x64/objects/field-wheat.png }
-  FIELD_VEGETABLE: { cost: 10,  population_capacity: 2,  image: 64x64/objects/field-vegetable.png }
-  PEN_SHEEP:       { cost: 12,  population_capacity: 3,  image: 64x64/objects/pen-sheep.png }
-  PEN_CATTLE:      { cost: 15,  population_capacity: 4,  image: 64x64/objects/pen-cattle.png }
-  PIG_STY:         { cost: 12,  population_capacity: 3,  image: 64x64/objects/pig-sty.png }
-  CHICKEN_COOP:    { cost: 8,   population_capacity: 2,  image: 64x64/objects/chicken-coop.png }
-  HARBOR:          { cost: 80,  population_capacity: 5,  image: 64x64/objects/harbor-small.png }
+  HOUSE_SIMPLE:
+    cost: 10
+    population_capacity: 4
+    image: 64x64/objects/house-simple.png
+    description: "A modest wooden dwelling for common folk."
+  HOUSE_LARGE:
+    cost: 15
+    population_capacity: 8
+    image: 64x64/objects/house-large.png
+    description: "A spacious home housing a larger family."
+  HOUSE_STONE:
+    cost: 12
+    population_capacity: 6
+    image: 64x64/objects/house-stone.png
+    description: "A sturdy stone house, more durable than wood."
+  HOUSE_THATCHED:
+    cost: 10
+    population_capacity: 5
+    image: 64x64/objects/house-thatched.png
+    description: "A rustic thatched cottage, common in rural villages."
+  FARM_SMALL:
+    cost: 15
+    population_capacity: 3
+    image: 64x64/objects/farm-small.png
+    description: "A small farmstead producing food for the settlement."
+  FARM_LARGE:
+    cost: 25
+    population_capacity: 6
+    image: 64x64/objects/farm-large.png
+    description: "A larger farm with fields and outbuildings for greater yields."
+  WELL_EMPTY:
+    cost: 8
+    population_capacity: 1
+    image: 64x64/objects/well-empty.png
+    description: "A dry well shaft. Awaiting water and better times."
+  WELL_WATER:
+    cost: 10
+    population_capacity: 2
+    image: 64x64/objects/well-water.png
+    description: "A working well providing fresh water to nearby residents."
+  WELL_DECORATED:
+    cost: 12
+    population_capacity: 2
+    image: 64x64/objects/well-decorated.png
+    description: "An ornate well that doubles as a civic gathering point."
+  MARKET_SMALL:
+    cost: 20
+    population_capacity: 5
+    image: 64x64/objects/market-small.png
+    description: "A small market stall where goods are bought and sold."
+  MARKET_LARGE:
+    cost: 35
+    population_capacity: 10
+    image: 64x64/objects/market-large.png
+    description: "A bustling market square drawing traders from afar."
+  BAKERY:
+    cost: 18
+    population_capacity: 4
+    image: 64x64/objects/bakery.png
+    description: "Converts grain into bread, boosting food availability."
+  BLACKSMITH:
+    cost: 20
+    population_capacity: 4
+    image: 64x64/objects/blacksmith.png
+    description: "A forge for crafting tools and iron goods."
+  INN_SMALL:
+    cost: 18
+    population_capacity: 5
+    image: 64x64/objects/inn-small.png
+    description: "A cozy inn offering lodging and meals to travelers."
+  INN_LARGE:
+    cost: 30
+    population_capacity: 8
+    image: 64x64/objects/inn-large.png
+    description: "A large inn and tavern, a hub of commerce and gossip."
+  WAREHOUSE:
+    cost: 20
+    population_capacity: 3
+    image: 64x64/objects/warehouse-small.png
+    description: "A storage building for goods and raw materials."
+  GRANARY:
+    cost: 18
+    population_capacity: 3
+    image: 64x64/objects/granary.png
+    description: "Stores surplus food to sustain the settlement through lean times."
+  CHURCH_SMALL:
+    cost: 25
+    population_capacity: 6
+    image: 64x64/objects/church-small.png
+    description: "A small chapel serving the spiritual needs of the community."
+  CHURCH_LARGE:
+    cost: 50
+    population_capacity: 12
+    image: 64x64/objects/church-large.png
+    description: "A grand church, a landmark of faith and civic pride."
+  TEMPLE_SMALL:
+    cost: 40
+    population_capacity: 8
+    image: 64x64/objects/temple-small.png
+    description: "A modest temple dedicated to the old gods."
+  TEMPLE_LARGE:
+    cost: 80
+    population_capacity: 15
+    image: 64x64/objects/temple-large.png
+    description: "A grand temple complex drawing pilgrims and offerings."
+  CASTLE_SMALL:
+    cost: 100
+    population_capacity: 20
+    image: 64x64/objects/castle-small.png
+    description: "A fortified keep providing defense and housing a garrison."
+  CASTLE_LARGE:
+    cost: 200
+    population_capacity: 40
+    image: 64x64/objects/castle-large.png
+    description: "A great castle dominating the landscape and projecting power."
+  PALACE:
+    cost: 500
+    population_capacity: 50
+    image: 64x64/objects/palace.png
+    description: "A magnificent palace befitting royalty and the seat of power."
+  TOWER_SMALL:
+    cost: 30
+    population_capacity: 4
+    image: 64x64/objects/tower-small.png
+    description: "A watchtower providing a vantage point over the surrounding land."
+  TOWER_LARGE:
+    cost: 60
+    population_capacity: 8
+    image: 64x64/objects/tower-large.png
+    description: "A tall fortified tower, formidable in defense and observation."
+  WALL_STONE:
+    cost: 15
+    population_capacity: 2
+    image: 64x64/objects/wall-stone.png
+    description: "A solid stone wall section for enclosing and protecting the settlement."
+  WALL_WOOD:
+    cost: 8
+    population_capacity: 1
+    image: 64x64/objects/wall-wood.png
+    description: "A wooden palisade section. Quick to build, easier to breach."
+  GATE_STONE:
+    cost: 20
+    population_capacity: 3
+    image: 64x64/objects/gate-stone.png
+    description: "A sturdy stone gatehouse controlling entry to the settlement."
+  GATE_WOOD:
+    cost: 12
+    population_capacity: 2
+    image: 64x64/objects/gate-wood.png
+    description: "A wooden gate providing a basic controlled entrance."
+  MILL_WIND:
+    cost: 22
+    population_capacity: 5
+    image: 64x64/objects/mill-wind.png
+    description: "A windmill grinding grain into flour for the bakery and settlers."
+  MILL_WATER:
+    cost: 28
+    population_capacity: 6
+    image: 64x64/objects/mill-water.png
+    description: "A watermill harnessing river current to grind grain efficiently."
+  TAVERN:
+    cost: 25
+    population_capacity: 6
+    image: 64x64/objects/tavern.png
+    description: "A lively tavern where settlers unwind and traders swap news."
+  SQUARE:
+    cost: 20
+    population_capacity: 5
+    image: 64x64/objects/plaza.png
+    description: "A public square for gatherings, markets, and civic life."
+  MONUMENT:
+    cost: 50
+    population_capacity: 10
+    image: 64x64/objects/monument.png
+    description: "A grand monument commemorating a victory or founding event."
+  SHRINE:
+    cost: 15
+    population_capacity: 4
+    image: 64x64/objects/shrine.png
+    description: "A small roadside shrine for daily offerings and blessings."
+  BARRACKS:
+    cost: 30
+    population_capacity: 6
+    image: 64x64/objects/barracks.png
+    description: "Quarters and training facilities for the settlement's soldiers."
+  TRAINING_YARD:
+    cost: 25
+    population_capacity: 5
+    image: 64x64/objects/training-yard.png
+    description: "An open yard where soldiers drill and hone their combat skills."
+  ARCHERY_RANGE:
+    cost: 25
+    population_capacity: 5
+    image: 64x64/objects/archery-range.png
+    description: "A practice range for archers to improve their aim."
+  FORGE_SMALL:
+    cost: 20
+    population_capacity: 5
+    image: 64x64/objects/forge-small.png
+    description: "A small smithy producing basic metal goods and tools."
+  FORGE_LARGE:
+    cost: 40
+    population_capacity: 10
+    image: 64x64/objects/forge-large.png
+    description: "A large forge capable of producing weapons, armor, and heavy goods."
+  BUTCHER:
+    cost: 15
+    population_capacity: 3
+    image: 64x64/objects/butcher.png
+    description: "Processes livestock into meat and supplies for the settlement."
+  TANNER:
+    cost: 15
+    population_capacity: 3
+    image: 64x64/objects/tanner.png
+    description: "Cures hides into leather for clothing, armor, and goods."
+  WEAVER:
+    cost: 15
+    population_capacity: 3
+    image: 64x64/objects/weaver.png
+    description: "Produces cloth and textiles from raw wool and fibers."
+  COOPER:
+    cost: 15
+    population_capacity: 3
+    image: 64x64/objects/cooper.png
+    description: "Crafts barrels, casks, and wooden containers for storage and trade."
+  FOUNTAIN:
+    cost: 12
+    population_capacity: 3
+    image: 64x64/objects/fountain-small.png
+    description: "A decorative fountain enriching the neighborhood and morale."
+  GARDEN:
+    cost: 18
+    population_capacity: 5
+    image: 64x64/objects/garden-formal.png
+    description: "A formal garden providing beauty and a place for rest."
+  ORCHARD:
+    cost: 15
+    population_capacity: 4
+    image: 64x64/objects/orchard.png
+    description: "Rows of fruit trees providing seasonal harvests of food."
+  VINEYARD:
+    cost: 18
+    population_capacity: 4
+    image: 64x64/objects/vineyard.png
+    description: "Grape vines cultivated for wine production and trade."
+  FIELD_WHEAT:
+    cost: 10
+    population_capacity: 2
+    image: 64x64/objects/field-wheat.png
+    description: "Cultivated wheat fields supplying grain to mills and granaries."
+  FIELD_VEGETABLE:
+    cost: 10
+    population_capacity: 2
+    image: 64x64/objects/field-vegetable.png
+    description: "A vegetable plot providing fresh produce directly to settlers."
+  PEN_SHEEP:
+    cost: 12
+    population_capacity: 3
+    image: 64x64/objects/pen-sheep.png
+    description: "Sheep are kept here for wool and meat."
+  PEN_CATTLE:
+    cost: 15
+    population_capacity: 4
+    image: 64x64/objects/pen-cattle.png
+    description: "Cattle are raised here for meat, leather, and draft work."
+  PIG_STY:
+    cost: 12
+    population_capacity: 3
+    image: 64x64/objects/pig-sty.png
+    description: "Pigs are fattened here for a reliable supply of pork."
+  CHICKEN_COOP:
+    cost: 8
+    population_capacity: 2
+    image: 64x64/objects/chicken-coop.png
+    description: "A small henhouse providing eggs and poultry."
+  HARBOR:
+    cost: 80
+    population_capacity: 5
+    image: 64x64/objects/harbor-small.png
+    description: "A harbor facility enabling sea trade and naval access."
 
 settlement_images:
   VILLAGE:

@@ -155,7 +155,7 @@ public class Main extends ApplicationAdapter implements GameController {
         collectCacheIcon = createCollectCacheIcon();
         researchIcon = createResearchIcon();
 
-        settlementPanel = new SettlementInfoPanel();
+        settlementPanel = new SettlementInfoPanel(gameConfig);
         buildToolbar = new BuildToolbar();
         createHudFont();
 
